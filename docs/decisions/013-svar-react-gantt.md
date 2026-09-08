@@ -62,14 +62,17 @@ fim somente na projeção e não envia simultaneamente `duration`; a duração �
 permanece em um campo informativo próprio. Isso preserva finais de semana e
 feriados dentro da extensão visual exata da barra.
 
-Relações existentes podem ser isoladas por seletor ou clique no hitbox oficial
+Relações existentes podem ser destacadas por seletor ou clique no hitbox oficial
 da linha. Uma nova ligação visual aceita somente FS com lag zero e tarefas
 executáveis do mesmo projeto; auto-dependência, resumo, duplicidade e ciclo são
-rejeitados antes da persistência. Lag e remoção continuam na Tabela.
+rejeitados antes da persistência. O menu de contexto oferece criação e remoção;
+a Tabela continua disponível para edição detalhada. As demais linhas permanecem
+visíveis e selecionáveis quando uma relação recebe destaque.
 
 Tarefas livres podem ser movidas ou redimensionadas. Em tarefa com predecessora,
-início e movimento completo são bloqueados: somente a borda final pode mudar a
-duração, e o scheduler propaga o novo fim aos sucessores. Resumos não são
+o movimento completo ajusta automaticamente o lag FS não negativo; a borda
+inicial permanece protegida. A borda final muda a duração, e o scheduler
+propaga o novo fim aos sucessores. Resumos não são
 editáveis. O inspetor permanece a alternativa operável por teclado.
 
 Finais de semana e feriados são destacados pelo calendário do ProjectFlow. Não

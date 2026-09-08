@@ -47,6 +47,11 @@ com WCAG.
 
 ## Evidências
 
+Os 117 testes abaixo representam a auditoria histórica de UX. A validação
+consolidada de 08/09/2026 contém 122 testes regulares e 3 cenários desktop reais,
+conforme [webview2-testing.md](webview2-testing.md). Narrador e escalas em VM
+continuam sem nova evidência.
+
 - 117 testes TypeScript/React regulares, incluindo foco preso e restaurado em
   diálogo, fechamento de menu com `Esc`, projeto atual, legenda da Tabela,
   menu de atalhos, fechamento dos detalhes, arraste no Kanban, edição temporal
@@ -102,5 +107,5 @@ Na VM Windows limpa:
 - A validação com Narrador e diferentes escalas do Windows deve ser repetida no
   instalador da próxima release, na VM limpa. Essa pendência pertence ao teste
   de distribuição e não invalida os controles semânticos automatizados.
-- O harness automatizado da janela Tauri permanece diagnóstico pela regressão
-  WebView2 registrada no ADR 019; o gate obrigatório continua em camadas.
+- O harness automatizado passou localmente com isolamento e permanece
+  diagnóstico até validação em VM/CI; o gate obrigatório continua em camadas.

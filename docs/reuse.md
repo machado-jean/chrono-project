@@ -24,8 +24,8 @@ calendário específico da tarefa. As tarefas aplicadas iniciam em modo `AUTO`,
 com progresso zero, e usam o calendário do projeto de destino.
 
 Templates ficam no mesmo SQLite do workspace. Portanto, uma cópia integral do
-banco os contém. O backup/restore e o pacote portátil `.projectflow` serão
-implementados na Fase 6 conforme [import-export.md](import-export.md).
+banco os contém. Backup/restore e exportação de workspace `.projectflow`
+incluem templates conforme [import-export.md](import-export.md).
 
 ## Auditoria manual da Fase 5
 

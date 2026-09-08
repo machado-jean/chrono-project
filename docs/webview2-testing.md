@@ -10,7 +10,7 @@ associados ao perfil. Os artefatos da execução são preservados.
 Cinco aberturas consecutivas e a jornada desktop real passaram fora do sandbox.
 A comparação cobre o workspace completo após importar e reabrir, exceto os
 timestamps dos dois calendários internos recriados pelas migrations. Lint,
-typecheck, 119 testes regulares, 30 testes Rust, jornada em camadas, dois testes
+typecheck, 122 testes regulares, 30 testes Rust, jornada em camadas, dois testes
 de desempenho, build frontend/desktop E2E e Clippy passaram.
 
 No sandbox houve timeout de CDP. Fora dele, a janela funcionou; isso não prova

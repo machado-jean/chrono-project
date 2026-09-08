@@ -39,7 +39,7 @@ vez; o conteúdo persistido não é alterado silenciosamente.
 ## Kanban
 
 As cinco colunas iniciais representam os status definidos no domínio. Um cartão
-pode mudar de status por drag-and-drop nativo ou pelo campo **Status**.
+pode mudar de status por arraste com Pointer Events ou pelo campo **Status**.
 Ambos chamam o mesmo `onSave` utilizado pela Tabela, portanto a alteração é
 validada, persistida e refletida imediatamente em todas as views.
 
@@ -67,13 +67,17 @@ enquanto a coluna **Dias úteis** continua mostrando a duração calculada pelo
 calendário do domínio.
 
 Por padrão todas as relações aparecem. Ao clicar em uma linha, ou escolher uma
-relação em **Dependência em foco**, somente aquela relação permanece visível,
+relação em **Dependência em foco**, aquela relação recebe destaque,
 com predecessor e sucessora realçados. Isso permite seguir dependências longas
 sem confundi-las com as demais. As outras relações permanecem visíveis com
 menor intensidade e continuam selecionáveis; **Todas as dependências** remove o
 realce.
 
-O renderer fica em modo somente leitura. O painel **Inspecionar tarefa** permite
+Os gestos do renderer são interceptados e submetidos ao domínio: mover ajusta
+datas ou lag FS, a borda direita altera duração e o marcador altera conclusão.
+O menu de contexto permite criar ou excluir dependências FS. Tarefas-resumo
+mantêm datas derivadas; a seleção de relação não oculta as demais linhas.
+O painel **Inspecionar tarefa** permite
 alterar início e duração apenas quando isso é seguro; tarefas-resumo exibem a
 explicação de que suas datas são derivadas. O salvamento usa o scheduler do
 ProjectFlow e nunca o mecanismo de agendamento da biblioteca.

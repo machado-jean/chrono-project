@@ -149,7 +149,7 @@ regras detalhadas e a matriz de testes estão em [scheduling.md](scheduling.md).
   interceptados antes da gravação e convertidos em comandos do domínio do
   ProjectFlow, sem transformar o estado interno do renderer em fonte de verdade;
 - o Gantt converte o fim inclusivo para o limite exclusivo esperado pelo
-  renderer e permite isolar relações longas por clique ou seletor;
+  renderer e permite destacar relações longas por clique ou seletor;
 - a janela desktop inicia maximizada, preservando dimensões mínimas para
   restauração; ver [ADR 013](decisions/013-svar-react-gantt.md).
 
@@ -165,13 +165,15 @@ estão em [ux-accessibility.md](ux-accessibility.md).
 - CSP bloqueia origens remotas por padrão. Além dos protocolos locais de
   IPC/assets, somente `https://api.github.com` é permitido para a verificação
   manual de atualização.
-- Capabilities habilitam `core:default`, leitura/carga SQL padrão, logging e
+- Capabilities habilitam os plugins de updater/processo, `core:default`, leitura/carga SQL padrão, logging e
   abertura exclusivamente dos dois links permanentes de instalador do
   repositório ProjectFlow.
 - Não há backend remoto, telemetria, conta ou sincronização.
 - Nenhuma consulta remota ocorre na inicialização. **Ajuda > Verificar
   atualizações** consulta a release pública somente após ação do usuário, sem
-  enviar dados do workspace; ver [ADR 018](decisions/018-manual-update-check.md).
+  enviar dados do workspace. O plugin nativo consulta `latest.json`, verifica a
+  assinatura e instala o NSIS em modo passivo; a CSP do frontend não controla
+  as requisições nativas. Ver [ADR 020](decisions/020-signed-passive-updater.md).
 - Logs usam o diretório recomendado `LocalAppData` e nível máximo `Info`.
 - Bancos e backups de desenvolvimento ficam em `.local/`, fora do Git; builds
   instaláveis não dependem desse diretório.
@@ -189,8 +191,9 @@ valida o comportamento completo sem depender de automação global do Windows.
 Um harness adicional tenta dirigir a janela Tauri real por CDP. A feature Cargo
 `e2e` isola banco, backups e logs em `.local/e2e/` e habilita destinos de diálogo
 determinísticos somente nesse build; produção não interpreta essas variáveis.
-Esse harness é diagnóstico e não bloqueia o release enquanto a regressão do
-WebView2 150+ impede a criação confiável da janela automatizada. Ver
+Esse harness usa `.local/e2e/runs/<UUID>/`, porta dinâmica e perfil WebView2
+exclusivo por abertura. Passou localmente fora do sandbox em 08/09/2026;
+permanece diagnóstico até cumprir os critérios de VM e CI. Ver
 [ADR 019](decisions/019-webview2-cdp-e2e.md).
 
 ## Qualidade

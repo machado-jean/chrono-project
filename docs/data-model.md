@@ -114,7 +114,7 @@ grafo FS acíclico e dependências estritamente internas.
 - persistência de calendário, exceções, override, dependência e recalculações é testada;
 - uma falha em qualquer item do `ScheduleChangeSet` reverte a transação inteira;
 - persistência e exclusão de templates, duplicação atômica e rollback são testados;
-- importação/exportação receberá implementação própria na Fase 6.
+- importação/exportação foi implementada na Fase 6 com validação e transações.
 
 Ao alterar o schema, atualizar `schemaVersion`, criar migration nova, testar banco novo e upgrade, e revisar o impacto no pacote `.projectflow`.
 

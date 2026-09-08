@@ -2,6 +2,10 @@
 
 ## Estado
 
+Substituída parcialmente pelo [ADR 020](020-signed-passive-updater.md) desde
+v0.1.3: a consulta permanece manual, mas download e instalação passiva agora
+usam o updater assinado. O restante deste documento preserva a decisão inicial.
+
 Aceita em 30/08/2026 para a Fase 7.
 
 ## Contexto

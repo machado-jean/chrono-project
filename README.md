@@ -45,7 +45,8 @@ As Fases 0 a 6 estão concluídas e o Checkpoint Git 7 foi consolidado no commit
 - navegação por teclado com link de salto, foco visível, menus e diálogos com
   retorno de foco, além de alternativas nativas às interações visuais;
 - verificação manual de nova versão pelo GitHub, sem consulta na inicialização,
-  com download aberto no navegador padrão.
+  com download, validação de assinatura, instalação passiva e reinício;
+- download alternativo do instalador offline pelo navegador padrão.
 
 A Fase 7 está em andamento. O primeiro incremento adicionou orçamentos de
 desempenho, navegação das views por teclado, instaladores NSIS padrão/offline e
@@ -53,8 +54,9 @@ um fluxo automatizado mínimo em camadas. A revisão final de UX/acessibilidade
 foi concluída e está registrada em
 [docs/ux-accessibility.md](docs/ux-accessibility.md). A validação manual em uma
 máquina Windows limpa ainda é critério de saída pendente. A automação da janela
-Tauri permanece como diagnóstico não bloqueante
-devido a uma regressão do WebView2 150+ registrada no ADR 019.
+Tauri passou localmente com isolamento de dados e perfil WebView2. Permanece
+diagnóstica e não bloqueante até completar a validação remota e em VM,
+conforme o ADR 019.
 
 O progresso por fase, os checkpoints e o histórico de entregas são mantidos em [docs/roadmap.md](docs/roadmap.md).
 
@@ -78,6 +80,9 @@ Documentação principal:
 - [importação, exportação e backup](docs/import-export.md);
 - [instalação e manutenção no Windows](docs/installation-windows.md);
 - [auditoria de UX e acessibilidade](docs/ux-accessibility.md);
+- [diretrizes e evidências WebView2](docs/webview2-testing.md);
+- [validação da atualização em VM](docs/vm-validation-record.md);
+- [preparação do próximo release](docs/releases/next.md);
 - [decisões arquiteturais](docs/decisions/).
 
 ## Preparação
@@ -134,6 +139,7 @@ variante documentada interrompe a abertura sem escrita; detalhes estão no
 npm run lint
 npm run typecheck
 npm test
+npm run test:e2e
 npm run test:performance
 npm run build
 
@@ -181,6 +187,9 @@ npm run tauri:build -- --no-bundle
 
 NSIS padrão e offline são as estratégias de distribuição definidas no ADR 017.
 Atualizações são verificadas manualmente conforme o ADR 018.
+
+A instalação passiva assinada substituiu o fluxo inicial da ADR 018; a decisão
+vigente está no [ADR 020](docs/decisions/020-signed-passive-updater.md).
 
 ## Estrutura
 

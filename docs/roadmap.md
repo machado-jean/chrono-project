@@ -37,7 +37,7 @@ Não usar percentuais subjetivos. O progresso deve ser demonstrado por entregáv
 | Versão da aplicação | `0.1.4` |
 | Versão do schema SQLite | `4` |
 | Último commit de referência | `8b59c88` — `Implement ProjectFlow foundation and core planning features` |
-| Branch de trabalho | `main`, preparando os artefatos locais da `v0.1.4` |
+| Branch de trabalho | `main`; próximo release em revisão documental, versão a confirmar |
 | Checkpoints obrigatórios | A, B, C e D concluídos; E reservado à distribuição |
 | Funcionalidades de negócio | Core, scheduler, views, reutilização e portabilidade implementados |
 
@@ -260,6 +260,20 @@ deve ser promovido a gate nem motivar troca do runtime antes de cumprir essa
 matriz no host, na VM limpa e no CI Windows.
 
 ## Histórico de evolução
+
+### 8 de setembro de 2026 — Validação desktop e revisão para release
+
+- Commit `faef024`: isolamento e ciclo de vida E2E desktop consolidados.
+- Validações locais: 122 testes regulares, 30 Rust, 3 cenários desktop reais,
+  1 jornada em camadas e 2 testes de desempenho aprovados; lint/typecheck/fmt/
+  check/Clippy aprovados.
+- Workflow diagnóstico manual preparado; duas execuções remotas pendentes.
+- Usuário relatou atualização bem-sucedida para v0.1.5. A consulta pública e os
+  manifests locais ainda mostram v0.1.4; confirmar identidade do build testado
+  antes de escolher a próxima tag. Preservação detalhada não foi confirmada.
+- Revisadas descrições de Gantt, updater, portabilidade e estado dos testes.
+- Notas e checklist do próximo release em [releases/next.md](releases/next.md).
+- Revisão documental ainda não commitada; nenhum artefato regenerado.
 
 ### 26 de agosto de 2026 — Estado zero
 

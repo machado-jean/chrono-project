@@ -42,11 +42,11 @@ executável NSIS oferece o fluxo mais simples.
 
 ## Segurança e publicação
 
-Os artefatos locais da fase de desenvolvimento não são assinados. Antes de uma
-distribuição pública, será necessário escolher e proteger um certificado de
-assinatura de código, assinar o executável e o instalador e validar o resultado
-com a política do Windows SmartScreen. A escolha do fornecedor do certificado
-é externa a esta ADR.
+Os instaladores publicados até v0.1.4 não possuem Authenticode e podem exibir
+aviso de editor desconhecido. Desde v0.1.3 possuem assinatura do updater Tauri,
+independente de Authenticode, obrigatória para instalação pelo aplicativo.
+Um futuro certificado de assinatura de código exige decisão própria; não deve
+ser confundido com a chave permanente do updater. Ver ADR 020.
 
 ## Consequências
 
