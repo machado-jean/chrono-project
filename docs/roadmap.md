@@ -34,10 +34,10 @@ Não usar percentuais subjetivos. O progresso deve ser demonstrado por entregáv
 | Etapa do produto | Hardening e distribuição Windows em andamento |
 | Fase ativa | Fase 7 — isolamento e validação E2E desktop; auditoria em VM pendente |
 | Próxima fase | Validar instalação, atualização, preservação de dados e operação offline em máquina limpa |
-| Versão da aplicação | `0.1.5` |
+| Versão da aplicação | `0.1.6` |
 | Versão do schema SQLite | `4` |
 | Último commit de referência | `8b59c88` — `Implement ProjectFlow foundation and core planning features` |
-| Branch de trabalho | `main`; artefatos locais da `v0.1.5` prontos para commit e publicação |
+| Branch de trabalho | `main`; artefatos locais da `v0.1.6` prontos para commit e publicação |
 | Checkpoints obrigatórios | A, B, C e D concluídos; E reservado à distribuição |
 | Funcionalidades de negócio | Core, scheduler, views, reutilização e portabilidade implementados |
 
@@ -919,6 +919,19 @@ matriz no host, na VM limpa e no CI Windows.
   exclusão de linhas no Gantt.
 - O foco de dependência passou de filtro para realce: a relação selecionada fica
   evidente, enquanto as demais permanecem visíveis, atenuadas e selecionáveis.
+- Commit: `não commitado`; nenhum push, tag ou release foi executado pelo agente.
+
+### 8 de setembro de 2026 — Preparação da v0.1.6
+
+- Manifests alinhados em `0.1.6`; schema SQLite permanece 4.
+- A auditoria automatizada da janela desktop passou a cobrir escalas simuladas
+  de 125% e 150%, estrutura acessível, atalhos e fechamento com `Esc`.
+- Foram aprovados 122 testes regulares, 30 Rust/SQLite, 1 jornada E2E em
+  camadas, 2 testes de desempenho e 5 cenários Tauri/WebView2 reais.
+- Instaladores padrão e offline assinados foram preparados localmente em
+  `.local/distribution/v0.1.6/`; a publicação não foi executada.
+- Escala real do Windows e leitura com Narrador continuam como verificações
+  manuais da VM, sem serem apresentadas como concluídas.
 - Commit: `não commitado`; nenhum push, tag ou release foi executado pelo agente.
 
 ## Regras permanentes de acompanhamento

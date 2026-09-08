@@ -376,3 +376,20 @@ iniciou neste host porque o WebView2 retornou `Recurso solicitado em uso` antes
 de expor o CDP. O gate regular, 30 testes Rust/SQLite, a jornada E2E da aplicação
 e os testes de desempenho foram aprovados; a atualização instalada deve ser
 validada novamente na VM limpa.
+
+## Artefatos da v0.1.6
+
+Nenhuma ferramenta global ou dependência externa foi adicionada. Os manifests
+do frontend, Rust e Tauri foram atualizados em conjunto para `0.1.6`; o schema
+SQLite permanece na versão 4.
+
+Artefatos locais em `.local/distribution/v0.1.6/`:
+
+| Arquivo | Tamanho | SHA-256 |
+| --- | ---: | --- |
+| `ProjectFlow-Windows-x64-Setup.exe` | 4.980.434 bytes | `3CEAA1CE9B5328F3B5E0B6E558B8360D7FF4C84CA67FEDBC9C103C308DA9C408` |
+| `ProjectFlow-Windows-x64-Offline-Setup.exe` | 266.981.897 bytes | `EDE80D7899BB608B0EC3C0CD992CB0451CE97FCE6E4714C34E66DDE5FE33324F` |
+
+Os hashes integrais ficam em `SHA256SUMS.txt`. Os dois instaladores foram
+assinados com a chave permanente do updater; `latest.json` referencia a URL
+imutável da tag `v0.1.6`. Os pacotes continuam sem Authenticode.
