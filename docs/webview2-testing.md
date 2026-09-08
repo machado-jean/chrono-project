@@ -1,5 +1,28 @@
 # Diretrizes de validação do WebView2 no Windows
 
+## Execução de 8 de setembro de 2026
+
+Implementado: diretório `.local/e2e/runs/<UUID>/`, perfil WebView2 exclusivo
+por abertura, porta dinâmica, banco/backups/logs por execução, fechamento normal
+com fallback limitado ao processo de teste e verificação de processos WebView2
+associados ao perfil. Os artefatos da execução são preservados.
+
+Cinco aberturas consecutivas e a jornada desktop real passaram fora do sandbox.
+A comparação cobre o workspace completo após importar e reabrir, exceto os
+timestamps dos dois calendários internos recriados pelas migrations. Lint,
+typecheck, 119 testes regulares, 30 testes Rust, jornada em camadas, dois testes
+de desempenho, build frontend/desktop E2E e Clippy passaram.
+
+No sandbox houve timeout de CDP. Fora dele, a janela funcionou; isso não prova
+retroativamente uma causa única para o HRESULT relatado anteriormente.
+
+O workflow `desktop-e2e.yml` é manual e coleta evidências. Duas execuções remotas
+e validação em VM continuam pendentes. A consulta Hyper-V foi negada pela
+permissão do Windows, mesmo fora do sandbox. Não há alegação de auditoria em VM
+concluída nem de correção universal de falhas WebView2.
+
+As regras abaixo continuam sendo os critérios para promover o teste ao gate.
+
 Este documento define como validar o WebView2 usado pelo ProjectFlow e como
 evoluir o teste E2E da janela Tauri sem colocar dados reais, o ambiente do
 usuário ou o gate de release em risco.
@@ -177,4 +200,3 @@ camadas e `npm run test:e2e:desktop` continua diagnóstico.
 - [Tauri — instalador Windows e modos do WebView2](https://v2.tauri.app/distribute/windows-installer/)
 - [Tauri — WebDriver](https://v2.tauri.app/develop/tests/webdriver/)
 - [Regressão upstream WebView2 150+](https://github.com/webdriverio/desktop-mobile/issues/542)
-

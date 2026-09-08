@@ -1,6 +1,7 @@
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
-import { mkdir, rm, stat } from "node:fs/promises";
+import { mkdir, rm, stat, writeFile, open } from "node:fs/promises";
 import { createServer } from "node:net";
 import { join, relative, resolve } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
@@ -9,20 +10,20 @@ import { chromium, type Browser, type Locator, type Page } from "playwright-core
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 const PROJECT_ROOT = resolve(import.meta.dirname, "..", "..");
-const E2E_ROOT = resolve(PROJECT_ROOT, ".local", "e2e");
+const RUN_ID = randomUUID();
+const E2E_ROOT = resolve(PROJECT_ROOT, ".local", "e2e", "runs", RUN_ID);
 const DATA_DIR = resolve(E2E_ROOT, "data");
 const WEBVIEW_DIR = resolve(E2E_ROOT, "webview");
 const ARTIFACTS_DIR = resolve(E2E_ROOT, "artifacts");
 const PACKAGE_PATH = resolve(ARTIFACTS_DIR, "workspace.projectflow");
 const EXECUTABLE = resolve(PROJECT_ROOT, "src-tauri", "target", "debug", "project-flow.exe");
-const CDP_PORT = 9_222;
-const CDP_URL = `http://127.0.0.1:${String(CDP_PORT)}`;
 type SearchContext = Page | Locator;
 
 interface RunningApp {
   readonly browser: Browser;
   readonly child: ChildProcess;
   readonly page: Page;
+  readonly profile: string;
 }
 
 function assertInsideE2eRoot(path: string): void {
@@ -33,10 +34,9 @@ function assertInsideE2eRoot(path: string): void {
 }
 
 async function resetE2eRoot(): Promise<void> {
-  if (relative(PROJECT_ROOT, E2E_ROOT) !== join(".local", "e2e")) {
+  if (relative(PROJECT_ROOT, E2E_ROOT) !== join(".local", "e2e", "runs", RUN_ID)) {
     throw new Error(`Raiz E2E inesperada: ${E2E_ROOT}`);
   }
-  await rm(E2E_ROOT, { force: true, recursive: true });
   await Promise.all([mkdir(DATA_DIR, { recursive: true }), mkdir(ARTIFACTS_DIR, { recursive: true })]);
 }
 
@@ -48,16 +48,16 @@ async function resetRuntimeData(): Promise<void> {
   await mkdir(DATA_DIR, { recursive: true });
 }
 
-async function isPortAvailable(): Promise<boolean> {
+async function allocatePort(): Promise<number> {
   const server = createServer();
   try {
     await new Promise<void>((resolveListen, reject) => {
       server.once("error", reject);
-      server.listen(CDP_PORT, "127.0.0.1", resolveListen);
+      server.listen(0, "127.0.0.1", resolveListen);
     });
-    return true;
-  } catch {
-    return false;
+    const address = server.address();
+    if (address === null || typeof address === "string") throw new Error("Porta CDP indisponível");
+    return address.port;
   } finally {
     if (server.listening) {
       await new Promise<void>((resolveClose) => { server.close(() => { resolveClose(); }); });
@@ -82,17 +82,27 @@ async function waitUntil<T>(operation: () => Promise<T | false> | T | false, des
 }
 
 async function startApp(): Promise<RunningApp> {
-  if (!await isPortAvailable()) throw new Error(`A porta CDP ${String(CDP_PORT)} está em uso.`);
+  const lock = await open(resolve(E2E_ROOT, "active.lock"), "wx");
+  await lock.close();
+  const port = await allocatePort();
+  const cdpUrl = `http://127.0.0.1:${String(port)}`;
+  const launchId = randomUUID();
+  const profile = resolve(WEBVIEW_DIR, launchId);
+  await mkdir(profile, { recursive: true });
   const child = spawn(EXECUTABLE, [], {
     cwd: PROJECT_ROOT,
     env: {
       ...process.env,
+      PROJECTFLOW_E2E_RUN_ID: RUN_ID,
+      WEBVIEW2_USER_DATA_FOLDER: profile,
+      WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${String(port)}`,
       PROJECTFLOW_E2E_EXPORT_PATH: PACKAGE_PATH,
       PROJECTFLOW_E2E_IMPORT_PATH: PACKAGE_PATH,
     },
     stdio: ["ignore", "pipe", "pipe"],
   });
   let diagnostic = "";
+  await writeFile(resolve(ARTIFACTS_DIR, `${launchId}.json`), JSON.stringify({ runId: RUN_ID, pid: child.pid, port, profile, startedAt: new Date().toISOString() }, null, 2));
   child.stdout.on("data", (chunk: Buffer) => { diagnostic += chunk.toString(); });
   child.stderr.on("data", (chunk: Buffer) => { diagnostic += chunk.toString(); });
 
@@ -102,28 +112,33 @@ async function startApp(): Promise<RunningApp> {
         throw new Error(`ProjectFlow E2E encerrou com código ${String(child.exitCode)}.`);
       }
       try {
-        const response = await fetch(`${CDP_URL}/json/version`);
+        const response = await fetch(`${cdpUrl}/json/version`);
         return response.ok && diagnostic.includes("started with database schema");
       } catch {
         return false;
       }
-    }, `o WebView2 expor CDP em ${CDP_URL}`);
+    }, `o WebView2 expor CDP em ${cdpUrl}`);
   } catch (error) {
     stopProcessTree(child);
+    await writeFile(resolve(ARTIFACTS_DIR, `${launchId}.log`), diagnostic);
+    await rm(resolve(E2E_ROOT, "active.lock"));
     const message = error instanceof Error ? error.message : "Falha desconhecida ao iniciar o E2E.";
     throw new Error(`${message}\n${diagnostic}`, { cause: error });
   }
 
   try {
-    const browser = await chromium.connectOverCDP(CDP_URL);
+    const browser = await chromium.connectOverCDP(cdpUrl);
     const page = await waitUntil(() => {
       const pages = browser.contexts().flatMap((context) => context.pages());
       return pages.find((candidate) => !candidate.url().startsWith("devtools://")) ?? false;
     }, "a página principal do ProjectFlow");
     await page.waitForLoadState("domcontentloaded");
-    return { browser, child, page };
+    const version = browser.version();
+    await writeFile(resolve(ARTIFACTS_DIR, `${launchId}-runtime.json`), JSON.stringify({ version, url: page.url(), connectedAt: new Date().toISOString() }, null, 2));
+    return { browser, child, page, profile };
   } catch (error) {
     stopProcessTree(child);
+    await rm(resolve(E2E_ROOT, "active.lock"));
     throw error;
   }
 }
@@ -142,9 +157,39 @@ function stopProcessTree(child: ChildProcess | null): void {
 
 async function stopApp(app: RunningApp | null): Promise<void> {
   if (app === null) return;
-  await app.browser.close().catch(() => undefined);
-  stopProcessTree(app.child);
-  await delay(500);
+  if (app.child.pid !== undefined && app.child.exitCode === null) {
+    spawnSync("powershell.exe", ["-NoProfile", "-Command", `(Get-Process -Id ${String(app.child.pid)} -ErrorAction SilentlyContinue).CloseMainWindow()`], { windowsHide: true });
+    try {
+      await waitUntil(() => app.child.exitCode !== null, "o fechamento normal da janela");
+    } catch {
+      stopProcessTree(app.child);
+    }
+  }
+  await app.browser.close();
+  await waitUntil(() => app.child.exitCode !== null || app.child.signalCode !== null, "o encerramento do processo de teste");
+  const profileLiteral = app.profile.replaceAll("'", "''");
+  await waitUntil(() => {
+    const result = spawnSync("powershell.exe", ["-NoProfile", "-Command", `$p = @(Get-CimInstance Win32_Process -Filter "name = 'msedgewebview2.exe'" -ErrorAction Stop | Where-Object { $_.CommandLine -and $_.CommandLine.Contains('${profileLiteral}') }); Write-Output $p.Count`], { windowsHide: true, encoding: "utf8" });
+    if (result.status !== 0) throw new Error(result.stderr);
+    return result.stdout.trim() === "0";
+  }, "o encerramento do WebView2 isolado");
+  await rm(resolve(E2E_ROOT, "active.lock"));
+}
+
+async function workspaceSnapshot(page: Page): Promise<unknown> {
+  return await page.evaluate(async () => {
+    const bridge = Reflect.get(window, "__TAURI_INTERNALS__") as { invoke: (command: string) => Promise<unknown> };
+    const workspace = await bridge.invoke("load_workspace") as { calendars: Record<string, unknown>[] };
+    // Built-in calendars are recreated by migrations in the empty destination.
+    // Compare their scheduling content, not destination creation timestamps.
+    for (const calendar of workspace.calendars) {
+      if (calendar.id === "00000000-0000-4000-8000-000000000001" || calendar.id === "00000000-0000-4000-8000-000000000002") {
+        delete calendar.createdAt;
+        delete calendar.updatedAt;
+      }
+    }
+    return workspace;
+  });
 }
 
 async function findByExactText(context: SearchContext, selector: string, text: string): Promise<Locator> {
@@ -217,6 +262,25 @@ describe("fluxo mínimo do ProjectFlow no Tauri real", () => {
 
   afterAll(async () => { await stopApp(app); });
 
+  it("abre e encerra cinco vezes com perfis exclusivos", async () => {
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      app = await startApp();
+      await findByExactText(app.page, "h1,h2,h3", "Organize seu primeiro projeto");
+      await stopApp(app);
+      app = null;
+    }
+  });
+
+  it("impede duas instâncias no mesmo workspace e recupera após interrupção", async () => {
+    app = await startApp();
+    await expect(startApp()).rejects.toThrow();
+    stopProcessTree(app.child);
+    await stopApp(app); app = null;
+    app = await startApp();
+    await findByExactText(app.page, "h1,h2,h3", "Organize seu primeiro projeto");
+    await stopApp(app); app = null;
+  });
+
   it("planeja, propaga, visualiza, duplica, exporta e importa um workspace", async () => {
     app = await startApp();
     let { page } = app;
@@ -272,6 +336,7 @@ describe("fluxo mínimo do ProjectFlow no Tauri real", () => {
     await (await findByExactText(page, "button", "Exportar workspace")).click();
     await waitUntil(async () => (await page.locator("body").innerText()).includes("Workspace exportado para"), "a exportação do workspace");
     expect((await stat(PACKAGE_PATH)).size).toBeGreaterThan(0);
+    const exportedWorkspace = await workspaceSnapshot(page);
 
     await stopApp(app); app = null;
     await resetRuntimeData();
@@ -297,5 +362,10 @@ describe("fluxo mínimo do ProjectFlow no Tauri real", () => {
     await (await findByExactText(page, '[role="tab"]', "Gantt")).click();
     await findByExactText(page, "h1,h2,h3", "Gráfico de Gantt");
     await page.locator('[data-testid="projectflow-gantt"]').waitFor();
+    expect(await workspaceSnapshot(page)).toEqual(exportedWorkspace);
+    await stopApp(app); app = null;
+    app = await startApp();
+    await waitForTaskCount(app.page, 7);
+    expect(await workspaceSnapshot(app.page)).toEqual(exportedWorkspace);
   });
 });

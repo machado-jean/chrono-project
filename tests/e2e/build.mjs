@@ -12,7 +12,6 @@ writeFileSync(configPath, `${JSON.stringify({
   app: {
     windows: [
       {
-        additionalBrowserArgs: "--remote-debugging-port=9222 --remote-allow-origins=*",
         height: 800,
         label: "main",
         maximized: true,

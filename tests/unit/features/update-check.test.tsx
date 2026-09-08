@@ -15,6 +15,24 @@ afterEach(() => {
 });
 
 describe("verificação de atualização no menu Ajuda", () => {
+  it("não consulta atualizações ao abrir o aplicativo", () => {
+    render(<WorkspaceHelpMenu />);
+    expect(check).not.toHaveBeenCalled();
+    expect(relaunch).not.toHaveBeenCalled();
+  });
+
+  it.each(["download interrompido", "assinatura inválida"])("informa %s e permite tentar novamente sem reiniciar", async (message) => {
+    const downloadAndInstall = vi.fn().mockRejectedValue(new Error(message));
+    vi.mocked(check).mockResolvedValue({ version: "0.2.0", downloadAndInstall } as never);
+    render(<WorkspaceHelpMenu />);
+    fireEvent.click(screen.getByText("Ajuda"));
+    fireEvent.click(screen.getByRole("button", { name: "Verificar atualizações" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Baixar e instalar atualização" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(message);
+    expect(relaunch).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Baixar e instalar atualização" })).toBeEnabled();
+  });
+
   it("baixa, instala passivamente e reinicia quando há nova versão", async () => {
     const downloadAndInstall = vi.fn().mockImplementation((onEvent: (event: unknown) => void) => {
       onEvent({ event: "Started", data: { contentLength: 100 } });

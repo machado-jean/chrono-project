@@ -129,6 +129,12 @@ Instalação global:
 
 ## Validação final
 
+Em 08/09/2026, o E2E desktop passou fora do sandbox após isolamento do perfil
+WebView2, porta e dados por execução. Nenhuma ferramenta global ou dependência
+foi instalada. O build modificado é `debug` com feature `e2e`; instaladores e
+executáveis release não foram regenerados. Ver evidências e pendências em
+[webview2-testing.md](webview2-testing.md).
+
 ```powershell
 npm ci
 npm run check

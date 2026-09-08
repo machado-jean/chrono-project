@@ -1,5 +1,12 @@
 # Testes E2E
 
+Atualização em 08/09/2026: o desktop passou localmente com isolamento por UUID,
+porta dinâmica e perfil WebView2 por abertura. Banco e logs ficam em
+`.local/e2e/runs/<UUID>/`. Execute em terminal Windows com permissão para abrir
+a janela. O workflow manual `desktop-e2e.yml` preserva evidências; a promoção
+ao gate ainda depende das execuções remotas e da VM. O relato histórico abaixo
+não representa uma falha inevitável da configuração atual.
+
 O fluxo mínimo definido no `AGENTS.md` é validado por um gate em duas camadas:
 
 ```powershell

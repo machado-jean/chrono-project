@@ -2,6 +2,11 @@
 
 ## Estado
 
+Reavaliada em 08/09/2026: isolamento implementado e jornada desktop aprovada
+localmente fora do sandbox. Mantida a decisão de gate em camadas até validação
+na VM e no CI. O diagnóstico histórico abaixo não estabelece a causa definitiva
+do erro. Evidências em [webview2-testing.md](../webview2-testing.md).
+
 Aceita em 1º de setembro de 2026 para a Fase 7.
 
 ## Contexto

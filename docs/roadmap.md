@@ -4,7 +4,7 @@ Este é o registro vivo de execução do ProjectFlow. Ele traduz o roadmap defin
 
 `AGENTS.md` continua sendo a fonte de verdade para produto, arquitetura e regras operacionais. Este documento não substitui a especificação e não deve introduzir escopo incompatível com ela.
 
-Última atualização: **2 de setembro de 2026**.
+Última atualização: **8 de setembro de 2026**.
 
 ## Como manter este documento
 
@@ -32,11 +32,11 @@ Não usar percentuais subjetivos. O progresso deve ser demonstrado por entregáv
 | Item | Estado |
 | --- | --- |
 | Etapa do produto | Hardening e distribuição Windows em andamento |
-| Fase ativa | Fase 7 — updater passivo v0.1.3 pronto para auditoria em VM |
+| Fase ativa | Fase 7 — isolamento e validação E2E desktop; auditoria em VM pendente |
 | Próxima fase | Validar instalação, atualização, preservação de dados e operação offline em máquina limpa |
 | Versão da aplicação | `0.1.4` |
 | Versão do schema SQLite | `4` |
-| Último commit estável | `87352f4` — `Add layered E2E coverage and finalize UX accessibility audit` |
+| Último commit de referência | `8b59c88` — `Implement ProjectFlow foundation and core planning features` |
 | Branch de trabalho | `main`, preparando os artefatos locais da `v0.1.4` |
 | Checkpoints obrigatórios | A, B, C e D concluídos; E reservado à distribuição |
 | Funcionalidades de negócio | Core, scheduler, views, reutilização e portabilidade implementados |
@@ -216,8 +216,8 @@ Estado: **Em andamento**.
 - [x] Avaliar e documentar MSI/NSIS e estratégia WebView2 offline.
 - [x] Gerar build release Windows x64 e instaladores padrão/offline.
 - [x] Definir e referenciar a matriz de validação WebView2/E2E desktop.
-- [ ] Isolar User Data Folder e porta CDP por execução no harness desktop.
-- [ ] Validar cinco inicializações consecutivas sem recursos órfãos.
+- [x] Isolar User Data Folder e porta CDP por execução no harness desktop.
+- [x] Validar cinco inicializações consecutivas com verificação dos processos do perfil.
 - [ ] Testar instalação em máquina Windows limpa sem toolchain.
 - [ ] Validar funcionamento integralmente offline.
 - [ ] Validar preservação de dados em atualização, reinstalação e desinstalação.

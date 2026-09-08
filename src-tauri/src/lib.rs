@@ -19,11 +19,7 @@ pub fn run() {
     let log_builder = log_builder.clear_targets().targets([
         Target::new(TargetKind::Stdout),
         Target::new(TargetKind::Folder {
-            path: std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-                .join("..")
-                .join(".local")
-                .join("e2e")
-                .join("logs"),
+            path: database::e2e_root().join("logs"),
             file_name: Some("ProjectFlow-e2e".into()),
         }),
     ]);

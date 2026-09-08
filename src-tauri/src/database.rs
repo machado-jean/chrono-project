@@ -35,11 +35,21 @@ pub fn shared_development_database_path() -> PathBuf {
 }
 
 pub fn e2e_database_path() -> PathBuf {
-    project_root()
-        .join(".local")
-        .join("e2e")
-        .join("data")
-        .join(DATABASE_FILENAME)
+    e2e_root().join("data").join(DATABASE_FILENAME)
+}
+
+pub fn e2e_root() -> PathBuf {
+    let root = project_root().join(".local").join("e2e");
+    if cfg!(feature = "e2e") {
+        if let Ok(id) = std::env::var("PROJECTFLOW_E2E_RUN_ID") {
+            assert!(
+                !id.is_empty() && id.bytes().all(|c| c.is_ascii_alphanumeric() || c == b'-'),
+                "Invalid E2E run identifier"
+            );
+            return root.join("runs").join(id);
+        }
+    }
+    root
 }
 
 pub fn database_path(app_config_dir: &Path) -> PathBuf {
@@ -55,7 +65,7 @@ pub fn database_path(app_config_dir: &Path) -> PathBuf {
 
 pub fn database_backup_dir(app_config_dir: &Path) -> PathBuf {
     if uses_e2e_database() {
-        project_root().join(".local").join("e2e").join("backups")
+        e2e_root().join("backups")
     } else if uses_shared_development_database() {
         project_root().join(".local").join("backups")
     } else {
