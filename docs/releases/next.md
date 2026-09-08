@@ -5,10 +5,10 @@ gerados ficam em `.local/distribution/<versão>/`, fora do Git.
 
 ## Identidade confirmada
 
-Manifests locais e última release pública: `0.1.4`. O usuário confirmou que
+Manifests locais: `0.1.5`; última release pública durante a preparação: `v0.1.4`. O usuário confirmou que
 a atualização testada na VM terminou em `0.1.4`; `0.1.5` ainda não foi lançada.
-Próximo release: `v0.1.5`. Antes do build, atualizar os manifests conforme o
-checklist abaixo. Esta revisão não altera versões compiladas ou instaladores.
+Próximo release: `v0.1.5`. Instaladores, assinaturas, manifesto e hashes foram
+gerados e verificados em `.local/distribution/v0.1.5/`.
 
 ## Notas propostas
 

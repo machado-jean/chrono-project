@@ -135,6 +135,19 @@ foi instalada. O build modificado é `debug` com feature `e2e`; instaladores e
 executáveis release não foram regenerados. Ver evidências e pendências em
 [webview2-testing.md](webview2-testing.md).
 
+## Artefatos da v0.1.5
+
+Gerados em 08/09/2026, sem novas ferramentas globais ou dependências:
+
+| Arquivo | Tamanho | SHA-256 |
+| --- | ---: | --- |
+| `ProjectFlow-Windows-x64-Setup.exe` | 4.979.158 bytes | `F84D2DDDA743E4201C407A552AA776586B5DA07268DB1F12780D0412CC54C59C` |
+| `ProjectFlow-Windows-x64-Offline-Setup.exe` | 266.986.020 bytes | `821B80F60367125A9432616FB6E06A0558ED05B0F0296FA65011613A1E7B2EFD` |
+
+As duas assinaturas Minisign do updater foram verificadas contra a chave pública
+incorporada. O `latest.json` referencia o instalador padrão pela URL da tag
+v0.1.5. Os pacotes continuam sem Authenticode.
+
 ```powershell
 npm ci
 npm run check

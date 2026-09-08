@@ -34,10 +34,10 @@ Não usar percentuais subjetivos. O progresso deve ser demonstrado por entregáv
 | Etapa do produto | Hardening e distribuição Windows em andamento |
 | Fase ativa | Fase 7 — isolamento e validação E2E desktop; auditoria em VM pendente |
 | Próxima fase | Validar instalação, atualização, preservação de dados e operação offline em máquina limpa |
-| Versão da aplicação | `0.1.4` |
+| Versão da aplicação | `0.1.5` |
 | Versão do schema SQLite | `4` |
 | Último commit de referência | `8b59c88` — `Implement ProjectFlow foundation and core planning features` |
-| Branch de trabalho | `main`; preparando a documentação da próxima versão `v0.1.5` |
+| Branch de trabalho | `main`; artefatos locais da `v0.1.5` prontos para commit e publicação |
 | Checkpoints obrigatórios | A, B, C e D concluídos; E reservado à distribuição |
 | Funcionalidades de negócio | Core, scheduler, views, reutilização e portabilidade implementados |
 
@@ -274,6 +274,19 @@ matriz no host, na VM limpa e no CI Windows.
 - Revisadas descrições de Gantt, updater, portabilidade e estado dos testes.
 - Notas e checklist do próximo release em [releases/next.md](releases/next.md).
 - Revisão documental ainda não commitada; nenhum artefato regenerado.
+
+### 8 de setembro de 2026 — Preparação da v0.1.5
+
+- Manifests alinhados em `0.1.5`; schema SQLite permanece 4.
+- Instaladores NSIS padrão e offline gerados com a chave permanente do updater.
+- Assinaturas dos dois pacotes verificadas com a chave pública incorporada.
+- `latest.json` usa URL imutável da tag v0.1.5 e a assinatura do pacote padrão.
+- Hashes, notas e script de publicação defensivo preparados em
+  `.local/distribution/v0.1.5/`.
+- Aprovados 122 testes regulares, 30 Rust/SQLite, jornada E2E em camadas,
+  2 testes de desempenho e 3 cenários desktop reais; lint, typecheck, build,
+  Rust fmt/check/Clippy e auditoria npm sem vulnerabilidades aprovados.
+- Publicação e validação da atualização v0.1.4 → v0.1.5 permanecem pendentes.
 
 ### 26 de agosto de 2026 — Estado zero
 
