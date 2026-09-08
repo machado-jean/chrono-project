@@ -3,10 +3,10 @@
 Estado em 08/09/2026: pendente. A conta de execução não conseguiu listar VMs
 Hyper-V por falta de permissão do Windows. Preencher com evidências reais.
 
-Relato posterior do usuário: atualização concluída para `v0.1.5`. Registrar
-como sucesso relatado do fluxo, ainda sem evidência da versão de origem e
-da preservação detalhada. GitHub consultado e manifests locais mostram
-`v0.1.4`; confirmar a versão exibida em Ajuda antes de fechar o aceite.
+O usuário confirmou atualização bem-sucedida para `v0.1.4`, identificada em
+Ajuda. A menção anterior a `v0.1.5` foi corrigida: essa versão ainda não foi
+lançada. O fluxo de atualização tem sucesso relatado pelo usuário; versão de
+origem e preservação detalhada dos dados ainda não têm registro específico.
 
 ## Prioridade definida pelo usuário: atualização pelo aplicativo
 

@@ -1,14 +1,14 @@
-# Próximo release — preparação
+# ProjectFlow v0.1.5 — preparação do release
 
 Revisado em 08/09/2026. Este arquivo é versionado; os instaladores e hashes
 gerados ficam em `.local/distribution/<versão>/`, fora do Git.
 
-## Identidade pendente
+## Identidade confirmada
 
-Manifests locais: `0.1.4`. Última release pública consultada: `v0.1.4`.
-Usuário relatou teste de `v0.1.5`; confirmar origem desse build antes de definir
-a nova tag. Não sobrescrever releases existentes nem assumir versão por relato
-sem reconciliar os manifests. Esta revisão não altera versões ou instaladores.
+Manifests locais e última release pública: `0.1.4`. O usuário confirmou que
+a atualização testada na VM terminou em `0.1.4`; `0.1.5` ainda não foi lançada.
+Próximo release: `v0.1.5`. Antes do build, atualizar os manifests conforme o
+checklist abaixo. Esta revisão não altera versões compiladas ou instaladores.
 
 ## Notas propostas
 
