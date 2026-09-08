@@ -6,7 +6,7 @@ import { createServer } from "node:net";
 import { join, relative, resolve } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 
-import { chromium, type Browser, type Locator, type Page } from "playwright-core";
+import { chromium, type Browser, type CDPSession, type Locator, type Page } from "playwright-core";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 const PROJECT_ROOT = resolve(import.meta.dirname, "..", "..");
@@ -24,6 +24,11 @@ interface RunningApp {
   readonly child: ChildProcess;
   readonly page: Page;
   readonly profile: string;
+}
+
+interface AccessibilityNode {
+  readonly name?: { readonly value?: string };
+  readonly role?: { readonly value?: string };
 }
 
 function assertInsideE2eRoot(path: string): void {
@@ -189,6 +194,17 @@ async function workspaceSnapshot(page: Page): Promise<unknown> {
       }
     }
     return workspace;
+  });
+}
+
+async function emulateWindowsScale(cdp: CDPSession, scale: number): Promise<void> {
+  await cdp.send("Emulation.setDeviceMetricsOverride", {
+    deviceScaleFactor: scale,
+    height: 640,
+    mobile: false,
+    screenHeight: 640,
+    screenWidth: 960,
+    width: 960,
   });
 }
 
@@ -367,5 +383,49 @@ describe("fluxo mínimo do ProjectFlow no Tauri real", () => {
     app = await startApp();
     await waitForTaskCount(app.page, 7);
     expect(await workspaceSnapshot(app.page)).toEqual(exportedWorkspace);
+  });
+
+  it.each([1.25, 1.5])("mantém o conteúdo utilizável na escala de %sx", async (scale) => {
+    if (app === null) app = await startApp();
+    const cdp = await app.page.context().newCDPSession(app.page);
+    await emulateWindowsScale(cdp, scale);
+    await app.page.reload();
+    await app.page.waitForLoadState("domcontentloaded");
+    if (await app.page.locator('[role="tab"]').count() === 0) {
+      await app.page.locator('[aria-label="Criar projeto"]').click();
+      const projectForm = app.page.locator("form.create-project-form");
+      await setValue(projectForm.locator("input"), "E2E — Escala e acessibilidade");
+      await setValue(projectForm.locator("textarea"), "Projeto sintético para auditoria visual.");
+      await (await findByExactText(projectForm, "button", "Criar")).click();
+      await waitForInputValue(app.page.locator("#project-name"), "E2E — Escala e acessibilidade");
+    }
+
+    const layout = await app.page.evaluate(() => ({
+      bodyWidth: document.body.scrollWidth,
+      documentWidth: document.documentElement.scrollWidth,
+      viewportWidth: window.innerWidth,
+    }));
+    expect(layout.bodyWidth).toBeLessThanOrEqual(layout.viewportWidth);
+    expect(layout.documentWidth).toBeLessThanOrEqual(layout.viewportWidth);
+    await findByExactText(app.page, '[role="tab"]', "Tabela");
+    await findByExactText(app.page, '[role="tab"]', "Kanban");
+    await findByExactText(app.page, '[role="tab"]', "Gantt");
+
+    await app.page.getByText("Ajuda", { exact: true }).click();
+    await app.page.getByRole("button", { name: "Atalhos de teclado" }).click();
+    await app.page.getByRole("dialog").waitFor();
+    await app.page.keyboard.press("Escape");
+    expect(await app.page.getByRole("dialog").count()).toBe(0);
+
+    const tree = await cdp.send("Accessibility.getFullAXTree") as { readonly nodes: AccessibilityNode[] };
+    const exposed = tree.nodes.map((node) => `${node.role?.value ?? ""}:${node.name?.value ?? ""}`);
+    expect(exposed).toContain("complementary:Projetos");
+    expect(exposed).toContain("navigation:Lista de projetos");
+    expect(exposed).toContain("navigation:Menu principal");
+    expect(exposed).toContain("main:");
+    expect(exposed).toContain("tab:Tabela");
+    expect(exposed).toContain("tab:Kanban");
+    expect(exposed).toContain("tab:Gantt");
+    await cdp.detach();
   });
 });

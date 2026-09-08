@@ -288,6 +288,16 @@ matriz no host, na VM limpa e no CI Windows.
   Rust fmt/check/Clippy e auditoria npm sem vulnerabilidades aprovados.
 - Publicação e validação da atualização v0.1.4 → v0.1.5 permanecem pendentes.
 
+### 8 de setembro de 2026 — Início da validação de acessibilidade da v0.1.6
+
+- E2E desktop passou em densidades simuladas de 125% e 150%, no viewport mínimo
+  de 960 × 640, sem rolagem horizontal global.
+- Tabela, Kanban, Gantt, diálogo de atalhos e fechamento por `Esc` permaneceram
+  operáveis.
+- A árvore WebView2 expôs landmarks e abas com papéis e nomes esperados.
+- O controle do Windows não iniciou por falha interna do helper; escala real do
+  sistema e experiência auditiva com Narrador continuam pendentes na VM.
+
 ### 26 de agosto de 2026 — Estado zero
 
 - Especificação inicial adicionada ao repositório.

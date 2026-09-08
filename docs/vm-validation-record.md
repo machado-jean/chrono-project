@@ -51,8 +51,8 @@ versão anterior usada no upgrade, escala de tela e data da execução.
 | Updater de versão anterior preserva projetos/tarefas | Pendente | |
 | Reparo da mesma versão preserva dados | Pendente | |
 | Desinstalação e reinstalação: registrar destino dos dados | Pendente | |
-| Teclado, Esc, foco e Narrador | Pendente | |
-| Escala 125% e 150%, largura mínima | Pendente | |
+| Teclado, Esc, foco e Narrador | Parcial | Estrutura AX e Esc aprovados; síntese do Narrador pendente |
+| Escala 125% e 150%, largura mínima | Parcial | Emulação WebView2 aprovada; escala real do Windows pendente |
 | E2E desktop cinco aberturas e jornada completa | Pendente | |
 | Duas execuções do workflow desktop diagnóstico | Pendente | |
 

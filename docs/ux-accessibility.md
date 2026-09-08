@@ -47,6 +47,16 @@ com WCAG.
 
 ## Evidências
 
+Em 08/09/2026, o E2E desktop passou também nas densidades simuladas de 125% e
+150%, com viewport mínimo de 960 × 640: sem rolagem horizontal global, abas
+Tabela/Kanban/Gantt disponíveis e diálogo de atalhos operável e fechando com
+`Esc`. A árvore de acessibilidade do WebView2 expôs os landmarks **Projetos**,
+**Lista de projetos**, **Menu principal**, conteúdo principal e as três abas.
+
+Essa automação verifica a estrutura consumida por tecnologia assistiva, mas não
+ouve a síntese do Narrador. A passagem manual com Narrador continua necessária
+para avaliar pronúncia, ordem auditiva e clareza das mensagens dinâmicas.
+
 Os 117 testes abaixo representam a auditoria histórica de UX. A validação
 consolidada de 08/09/2026 contém 122 testes regulares e 3 cenários desktop reais,
 conforme [webview2-testing.md](webview2-testing.md). Narrador e escalas em VM
@@ -104,8 +114,7 @@ Na VM Windows limpa:
 - O renderer SVAR fornece a camada visual do Gantt. As informações essenciais
   e a edição permanecem disponíveis nos controles nativos do ProjectFlow e na
   Tabela, que é a interface acessível de referência.
-- A validação com Narrador e diferentes escalas do Windows deve ser repetida no
-  instalador da próxima release, na VM limpa. Essa pendência pertence ao teste
-  de distribuição e não invalida os controles semânticos automatizados.
+- A simulação automatizada de 125%/150% foi aprovada. Ainda é necessário repetir
+  no instalador com a escala real do Windows e ouvir o Narrador na VM limpa.
 - O harness automatizado passou localmente com isolamento e permanece
   diagnóstico até validação em VM/CI; o gate obrigatório continua em camadas.
