@@ -1,10 +1,12 @@
 import { lazy, Suspense, useMemo, useState, type KeyboardEvent } from "react";
 
 import type { Calendar } from "../../domain/calendars/calendar";
+import type { Project } from "../../domain/projects/project";
 import type { TaskDependency } from "../../domain/scheduling/dependency";
 import type { SchedulingConflict } from "../../domain/scheduling/scheduler";
 import type { Task } from "../../domain/tasks/task";
 import { TaskKanban } from "../kanban/TaskKanban";
+import { ProjectPdfExport } from "../reporting/ProjectPdfExport";
 import { TaskTable } from "../table/TaskTable";
 import { TaskFilterBar } from "./TaskFilterBar";
 import { ViewErrorBoundary } from "./ViewErrorBoundary";
@@ -24,6 +26,7 @@ const TaskGantt = lazy(async () => {
 });
 
 interface ProjectViewsProps {
+  readonly project: Project;
   readonly tasks: readonly Task[];
   readonly calendars: readonly Calendar[];
   readonly projectCalendarId: string;
@@ -49,6 +52,7 @@ interface ProjectViewsProps {
     readonly name: string;
     readonly description: string | null;
   }) => Promise<unknown>;
+  readonly onSavePdf: (suggestedName: string, bytes: readonly number[]) => Promise<string | null>;
 }
 
 const VIEW_LABELS: Readonly<Record<ProjectView, string>> = {
@@ -58,6 +62,7 @@ const VIEW_LABELS: Readonly<Record<ProjectView, string>> = {
 };
 
 export function ProjectViews({
+  project,
   tasks,
   calendars,
   projectCalendarId,
@@ -72,6 +77,7 @@ export function ProjectViews({
   onDeleteDependency,
   onDuplicateTask,
   onCreateTemplate,
+  onSavePdf,
 }: ProjectViewsProps) {
   const [activeView, setActiveView] = useState<ProjectView>("TABLE");
   const [filters, setFilters] = useState<TaskFilters>(EMPTY_TASK_FILTERS);
@@ -124,7 +130,18 @@ export function ProjectViews({
             </button>
           ))}
         </nav>
-        <span className="shared-source-note">Uma tarefa, três visualizações</span>
+        <div className="view-command-actions">
+          <span className="shared-source-note">Uma tarefa, três visualizações</span>
+          <ProjectPdfExport
+            project={project}
+            tasks={tasks}
+            dependencies={dependencies}
+            visibleTaskIds={visibleTaskIds}
+            filtersActive={filtersActive}
+            disabled={disabled || tasks.length === 0}
+            onSave={onSavePdf}
+          />
+        </div>
       </div>
 
       <TaskFilterBar

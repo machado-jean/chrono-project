@@ -36,6 +36,7 @@ As Fases 0 a 6 estão concluídas e o Checkpoint Git 7 foi consolidado no commit
 - biblioteca global de templates de árvores, com aplicação em qualquer projeto
   e data de início escolhida;
 - exportação de projeto e workspace em pacote `.projectflow` validado;
+- relatórios PDF locais com atividades, indicadores e cronograma Gantt;
 - importação seletiva com atualização por UUID ou cópia independente;
 - seleção individual de templates e tratamento seguro de calendários;
 - backup SQLite verificado e restauração integral com backup de segurança;
@@ -78,7 +79,9 @@ Documentação principal:
 - [duplicação, templates e auditoria manual](docs/reuse.md);
 - [roadmap e histórico](docs/roadmap.md);
 - [importação, exportação e backup](docs/import-export.md);
+- [relatórios PDF](docs/pdf-reports.md);
 - [instalação e manutenção no Windows](docs/installation-windows.md);
+- [processo de release e verificação obrigatória do CI](docs/release-process.md);
 - [auditoria de UX e acessibilidade](docs/ux-accessibility.md);
 - [diretrizes e evidências WebView2](docs/webview2-testing.md);
 - [validação da atualização em VM](docs/vm-validation-record.md);

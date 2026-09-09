@@ -350,6 +350,10 @@ class MemoryWorkspaceRepository implements WorkspaceRepository {
     return Promise.resolve({ path: "C:\\exports\\workspace.projectflow", projectCount: this.projects.length, templateCount: this.templates.length });
   }
 
+  savePdfReport(): Promise<{ readonly path: string } | null> {
+    return Promise.resolve({ path: "C:\\exports\\relatorio.pdf" });
+  }
+
   chooseImportPackage(): Promise<ImportPackagePreview | null> {
     return Promise.resolve(this.importPreview);
   }
@@ -382,6 +386,28 @@ class MemoryWorkspaceRepository implements WorkspaceRepository {
 }
 
 describe("aplicação ProjectFlow", () => {
+  it("oferece relatório, atividades e Gantt no diálogo de PDF", async () => {
+    const repository = new MemoryWorkspaceRepository({
+      projects: [project()],
+      tasks: [scheduledTask(TASK_ID, "Planejar relatório", "2026-09-08")],
+    });
+    render(<App repository={repository} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Gerar PDF" }));
+    const dialog = screen.getByRole("dialog", { name: "Gerar PDF do projeto" });
+
+    expect(within(dialog).getByText("Relatório completo")).toBeVisible();
+    expect(within(dialog).getByText("Lista de atividades")).toBeVisible();
+    expect(within(dialog).getByText("Cronograma Gantt")).toBeVisible();
+    expect(within(dialog).getByRole("option", { name: "Todas (1)" })).toBeVisible();
+    expect(within(dialog).getByRole("option", { name: "Visíveis pelos filtros (1)" })).toBeDisabled();
+    expect(within(dialog).getByLabelText("Cronograma de")).toHaveValue("2026-09-08");
+    expect(within(dialog).getByLabelText("Cronograma até")).toHaveValue("2026-09-08");
+
+    fireEvent.keyDown(dialog, { key: "Escape" });
+    expect(screen.queryByRole("dialog", { name: "Gerar PDF do projeto" })).not.toBeInTheDocument();
+  });
+
   it("permite escolher projetos e templates de um pacote antes de importar", async () => {
     const repository = new MemoryWorkspaceRepository({ projects: [project()] });
     repository.importPreview = {

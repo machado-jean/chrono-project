@@ -41,6 +41,7 @@ pub fn run() {
             commands::delete_template,
             commands::export_project,
             commands::export_workspace,
+            commands::save_pdf_report,
             commands::choose_import_package,
             commands::apply_import_package,
             commands::create_backup,

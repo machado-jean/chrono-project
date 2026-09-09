@@ -125,6 +125,7 @@ function App({ repository }: AppProps) {
               onSave={workspace.saveProject}
             />
             <ProjectViews
+              project={workspace.selectedProject}
               tasks={workspace.selectedProjectTasks}
               calendars={workspace.calendars}
               projectCalendarId={workspace.selectedProject.calendarId}
@@ -141,6 +142,10 @@ function App({ repository }: AppProps) {
               onDeleteDependency={workspace.removeDependency}
               onDuplicateTask={workspace.duplicateTask}
               onCreateTemplate={workspace.createTemplate}
+              onSavePdf={async (suggestedName, bytes) => {
+                const result = await activeRepository.savePdfReport(suggestedName, bytes);
+                return result?.path ?? null;
+              }}
             />
           </div>
         )}

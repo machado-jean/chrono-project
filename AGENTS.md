@@ -676,6 +676,23 @@ Checkpoint Git 8 — empacotamento Windows
 
 Dentro de cada checkpoint podem existir vários commits locais coerentes.
 
+## 12.6 Verificação obrigatória após release
+
+Depois de publicar uma tag ou release, o trabalho de distribuição ainda não está
+concluído até que o workflow `CI` disparado pela própria tag termine com sucesso.
+
+O agente deve:
+
+1. localizar a execução cuja branch/ref seja exatamente a tag publicada;
+2. aguardar sua conclusão;
+3. confirmar resultado `success`;
+4. em caso de falha, abrir os logs do job que falhou, registrar a causa e corrigir
+   antes de considerar o release validado;
+5. informar separadamente o resultado do CI de `main` e o resultado do CI da tag.
+
+Uma execução verde de `main` não substitui a verificação da tag. Nunca mover ou
+recriar uma tag já publicada para corrigir uma falha sem autorização explícita.
+
 O GitHub versiona:
 
 - código;

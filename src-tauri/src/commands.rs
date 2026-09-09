@@ -193,6 +193,51 @@ fn with_extension(path: PathBuf, extension: &str) -> PathBuf {
     }
 }
 
+fn validate_pdf_bytes(bytes: &[u8]) -> Result<(), String> {
+    const MAX_PDF_SIZE: usize = 50 * 1024 * 1024;
+    if bytes.len() > MAX_PDF_SIZE {
+        return Err("O relatório PDF excede o limite de 50 MB.".to_owned());
+    }
+    if !bytes.starts_with(b"%PDF-") || !bytes.windows(5).rev().any(|window| window == b"%%EOF") {
+        return Err("O arquivo gerado não possui uma estrutura PDF válida.".to_owned());
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn save_pdf_report(
+    app: AppHandle,
+    suggested_name: String,
+    bytes: Vec<u8>,
+) -> Result<Option<serde_json::Value>, String> {
+    validate_pdf_bytes(&bytes)?;
+
+    #[cfg(feature = "e2e")]
+    let selected = e2e_path("PROJECTFLOW_E2E_PDF_PATH").map(tauri_plugin_dialog::FilePath::Path);
+    #[cfg(not(feature = "e2e"))]
+    let selected = None;
+
+    let selected = match selected {
+        Some(path) => Some(path),
+        None => app
+            .dialog()
+            .file()
+            .set_title("Salvar relatório PDF do ProjectFlow")
+            .set_file_name(format!("{suggested_name}.pdf"))
+            .add_filter("Documento PDF", &["pdf"])
+            .blocking_save_file(),
+    };
+    let Some(selected) = selected else {
+        return Ok(None);
+    };
+    let destination = with_extension(file_path(selected)?, "pdf");
+    std::fs::write(&destination, bytes)
+        .map_err(|error| format!("Não foi possível salvar o relatório PDF: {error}"))?;
+    Ok(Some(
+        serde_json::json!({ "path": destination.to_string_lossy() }),
+    ))
+}
+
 fn portability_error(context: &str, error: String) -> String {
     warn!("ProjectFlow portability error during {context}: {error}");
     error
@@ -384,4 +429,20 @@ pub async fn restore_backup(
     portability::restore_backup(&pool, Path::new(&backup_path), &backup_dir(&app)?)
         .await
         .map_err(|error| portability_error("backup restore", error))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::validate_pdf_bytes;
+
+    #[test]
+    fn accepts_a_complete_pdf_envelope() {
+        assert!(validate_pdf_bytes(b"%PDF-1.7\nconteudo\n%%EOF").is_ok());
+    }
+
+    #[test]
+    fn rejects_content_without_a_pdf_envelope() {
+        let error = validate_pdf_bytes(b"arquivo incorreto").expect_err("invalid PDF must fail");
+        assert!(error.contains("estrutura PDF válida"));
+    }
 }

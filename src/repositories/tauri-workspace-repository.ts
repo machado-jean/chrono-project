@@ -14,6 +14,7 @@ import {
 import type {
   BackupResult,
   ExportResult,
+  PdfExportResult,
   ImportPackagePreview,
   ImportResult,
   ImportSelection,
@@ -135,6 +136,10 @@ export class TauriWorkspaceRepository implements WorkspaceRepository {
 
   exportWorkspace(): Promise<ExportResult | null> {
     return invoke("export_workspace");
+  }
+
+  savePdfReport(suggestedName: string, bytes: readonly number[]): Promise<PdfExportResult | null> {
+    return invoke("save_pdf_report", { suggestedName, bytes });
   }
 
   chooseImportPackage(): Promise<ImportPackagePreview | null> {

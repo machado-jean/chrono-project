@@ -62,7 +62,7 @@ describe("verificação de atualização no menu Ajuda", () => {
     fireEvent.click(screen.getByText("Ajuda"));
     fireEvent.click(screen.getByRole("button", { name: "Verificar atualizações" }));
 
-    expect(await screen.findByText("Você já está na versão mais recente (0.1.6)."))
+    expect(await screen.findByText("Você já está na versão mais recente (0.1.7)."))
       .toBeVisible();
   });
 

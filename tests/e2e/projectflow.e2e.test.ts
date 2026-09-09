@@ -1,7 +1,7 @@
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
-import { mkdir, rm, stat, writeFile, open } from "node:fs/promises";
+import { mkdir, open, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { createServer } from "node:net";
 import { join, relative, resolve } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
@@ -16,6 +16,7 @@ const DATA_DIR = resolve(E2E_ROOT, "data");
 const WEBVIEW_DIR = resolve(E2E_ROOT, "webview");
 const ARTIFACTS_DIR = resolve(E2E_ROOT, "artifacts");
 const PACKAGE_PATH = resolve(ARTIFACTS_DIR, "workspace.projectflow");
+const PDF_PATH = resolve(ARTIFACTS_DIR, "project-report.pdf");
 const EXECUTABLE = resolve(PROJECT_ROOT, "src-tauri", "target", "debug", "project-flow.exe");
 type SearchContext = Page | Locator;
 
@@ -103,6 +104,7 @@ async function startApp(): Promise<RunningApp> {
       WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${String(port)}`,
       PROJECTFLOW_E2E_EXPORT_PATH: PACKAGE_PATH,
       PROJECTFLOW_E2E_IMPORT_PATH: PACKAGE_PATH,
+      PROJECTFLOW_E2E_PDF_PATH: PDF_PATH,
     },
     stdio: ["ignore", "pipe", "pipe"],
   });
@@ -341,6 +343,15 @@ describe("fluxo mínimo do ProjectFlow no Tauri real", () => {
     await findByExactText(page, "h1,h2,h3", "Gráfico de Gantt");
     await page.locator('[data-testid="projectflow-gantt"]').waitFor();
     await (await findByExactText(page, '[role="tab"]', "Tabela")).click();
+
+    await (await findByExactText(page, "button", "Gerar PDF")).click();
+    const pdfDialog = page.getByRole("dialog", { name: "Gerar PDF do projeto" });
+    await pdfDialog.waitFor();
+    await (await findByExactText(pdfDialog, "button", "Escolher local e salvar")).click();
+    await waitUntil(async () => (await page.locator("body").innerText()).includes("PDF salvo em"), "a exportação PDF");
+    const pdfBytes = await readFile(PDF_PATH);
+    expect(pdfBytes.subarray(0, 5).toString()).toBe("%PDF-");
+    expect(pdfBytes.length).toBeGreaterThan(10_000);
 
     const summaryRow = await taskRow(page, "Entrega com subtarefa");
     await (await findByExactText(summaryRow, "button", "Detalhes")).click();

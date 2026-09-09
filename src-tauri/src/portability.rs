@@ -49,10 +49,44 @@ fn rename_after_validation(source: &Path, destination: &Path) -> std::io::Result
                 // with a bounded delay, so permanent failures still surface.
                 thread::sleep(Duration::from_millis(50 * (attempt + 1).min(5)));
             }
-            Err(error) => return Err(error),
+            Err(error) => {
+                if matches!(error.raw_os_error(), Some(5 | 32)) {
+                    // A connection already closed by SQLite can remain visible
+                    // to a Windows filter driver (notably antivirus) for longer
+                    // than our bounded retry. Publish an independent byte copy
+                    // through a second staging file, which keeps the final move
+                    // atomic without depending on deletion rights for `source`.
+                    return publish_independent_copy(source, destination);
+                }
+                return Err(error);
+            }
         }
     }
     unreachable!("the retry loop always returns on its final attempt")
+}
+
+fn publish_independent_copy(source: &Path, destination: &Path) -> std::io::Result<()> {
+    let copy =
+        destination.with_extension(format!("publish-{}.tmp", &Uuid::new_v4().to_string()[..8]));
+    let expected_bytes = fs::metadata(source)?.len();
+    let copied_bytes = fs::copy(source, &copy)?;
+    if copied_bytes != expected_bytes {
+        let _ = fs::remove_file(&copy);
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::UnexpectedEof,
+            "the staged backup copy is incomplete",
+        ));
+    }
+    match fs::rename(&copy, destination) {
+        Ok(()) => {
+            let _ = fs::remove_file(source);
+            Ok(())
+        }
+        Err(error) => {
+            let _ = fs::remove_file(&copy);
+            Err(error)
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -1421,8 +1455,8 @@ mod tests {
     use zip::{write::SimpleFileOptions, CompressionMethod, ZipWriter};
 
     use super::{
-        export_workspace, import_package, inspect_package, restore_backup, ImportSelection,
-        ProjectImportMode, ProjectImportSelection,
+        export_workspace, import_package, inspect_package, publish_independent_copy,
+        restore_backup, ImportSelection, ProjectImportMode, ProjectImportSelection,
     };
     use crate::{
         database::{CORE_SCHEMA, INITIAL_SCHEMA, REUSE_SCHEMA, SCHEDULING_SCHEMA},
@@ -1451,6 +1485,29 @@ mod tests {
         fn drop(&mut self) {
             let _ = std::fs::remove_dir_all(&self.0);
         }
+    }
+
+    #[test]
+    fn independent_copy_publishes_validated_bytes_atomically() {
+        let directory = TestDirectory::new();
+        let source = directory.path().join("validated.tmp");
+        let destination = directory.path().join("backup.sqlite");
+        std::fs::write(&source, b"validated-backup").expect("source should be written");
+
+        publish_independent_copy(&source, &destination).expect("copy should be published");
+
+        assert_eq!(
+            std::fs::read(&destination).expect("destination should be readable"),
+            b"validated-backup"
+        );
+        assert!(!source.exists());
+        assert_eq!(
+            std::fs::read_dir(directory.path())
+                .expect("directory should be readable")
+                .count(),
+            1,
+            "no staging file should remain"
+        );
     }
 
     async fn database(path: &Path) -> SqlitePool {

@@ -160,6 +160,16 @@ mesmo fechamento previsível aos menus superiores. Nenhuma dessas primitivas
 acessa domínio, repository ou persistência. A auditoria e o roteiro manual
 estão em [ux-accessibility.md](ux-accessibility.md).
 
+## Relatórios PDF
+
+`src/domain/reporting/` constrói uma projeção imutável e testável a partir de
+Project, Task e TaskDependency. `src/features/reporting/` cuida somente das
+opções e do feedback ao usuário. O pdfmake é importado sob demanda, gera os
+bytes no WebView2 e o repository os entrega ao comando Rust que valida tamanho
+e envelope, abre o seletor nativo e grava o arquivo. Não existe acesso ao banco
+durante a composição nem uma segunda fonte de verdade. Ver
+[pdf-reports.md](pdf-reports.md) e [ADR 021](decisions/021-local-pdf-reports.md).
+
 ## Segurança e operação local
 
 - CSP bloqueia origens remotas por padrão. Além dos protocolos locais de

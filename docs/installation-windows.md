@@ -105,3 +105,10 @@ revise manualmente o diretório acima depois de desinstalar.
 
 Essa prova em máquina limpa não pode ser substituída por teste no computador de
 desenvolvimento.
+
+## Gate pós-publicação
+
+Depois de criar a tag e o release, execute o verificador descrito em
+[`release-process.md`](release-process.md). Uma execução bem-sucedida em `main`
+não substitui a execução disparada pela tag; o release só está validado quando o
+CI da tag também termina com sucesso.

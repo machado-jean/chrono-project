@@ -292,6 +292,10 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .view-tabs button.active { color: #174ea6; background: #fff; box-shadow: 0 1px 4px rgb(31 41 51 / 13%); }
 .view-tabs button:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
 .shared-source-note { color: #7a8796; font-size: 10px; }
+.view-command-actions { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.pdf-export-trigger { min-height: 31px; padding: 6px 11px; color: #174ea6; background: #fff; border: 1px solid #a9bfe1; border-radius: 7px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+.pdf-export-trigger:hover:not(:disabled) { background: #edf4ff; border-color: #6d96d6; }
+.pdf-export-message { overflow: hidden; max-width: 320px; color: #56708d; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
 
 .task-filters { padding: 12px 26px 0; }
 .filter-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px; }
@@ -510,6 +514,25 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .import-warning { padding: 9px 11px; margin: 15px 0 0; color: #79531e; background: #fff7e5; border: 1px solid #ecd49b; border-radius: 6px; font-size: 9px; line-height: 1.45; }
 .portability-modal footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
 .portability-modal:focus, .template-dialog:focus { outline: none; }
+.pdf-export-dialog { width: min(720px, 92vw); max-height: 86vh; overflow: auto; padding: 20px; background: #fff; border: 1px solid #cfd8e3; border-radius: 11px; box-shadow: 0 22px 60px rgb(15 23 42 / 28%); }
+.pdf-export-dialog > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
+.pdf-export-dialog h2 { margin: 0; color: #273649; font-size: 17px; }
+.pdf-export-dialog header p { margin: 5px 0 0; color: #768396; font-size: 11px; }
+.pdf-export-dialog header > button { padding: 0 5px; color: #68778a; background: transparent; border: 0; font-size: 22px; }
+.pdf-format-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 0; margin: 18px 0 14px; border: 0; }
+.pdf-format-options legend { grid-column: 1 / -1; margin-bottom: 7px; color: #536273; font-size: 11px; font-weight: 700; }
+.pdf-format-options label { display: flex; min-width: 0; gap: 8px; padding: 11px; color: #435164; background: #f8fafc; border: 1px solid #dce3eb; border-radius: 8px; cursor: pointer; }
+.pdf-format-options label.selected { color: #174ea6; background: #edf4ff; border-color: #7fa4df; }
+.pdf-format-options input { margin-top: 2px; }
+.pdf-format-options span { display: grid; gap: 4px; }
+.pdf-format-options strong { font-size: 12px; }
+.pdf-format-options small { color: #718096; font-size: 10px; line-height: 1.4; }
+.pdf-export-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.pdf-export-grid label { display: grid; gap: 5px; color: #596879; font-size: 11px; font-weight: 650; }
+.pdf-export-grid input, .pdf-export-grid select { width: 100%; min-height: 34px; padding: 6px 8px; color: #2e3b4b; background: #f9fafb; border: 1px solid #d3dae3; border-radius: 6px; font-size: 12px; }
+.pdf-export-dialog footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+.pdf-export-dialog footer button { min-height: 34px; padding: 7px 12px; }
+.pdf-export-dialog:focus { outline: none; }
 .shortcuts-menu-button { display: flex; align-items: center; justify-content: space-between; width: 100%; margin-top: 10px; }
 kbd { display: inline-block; min-width: 22px; padding: 2px 6px; color: #42526a; background: #f4f6f8; border: 1px solid #cbd5e1; border-bottom-width: 2px; border-radius: 5px; font: 600 10px/1.35 ui-monospace, "Cascadia Mono", Consolas, monospace; text-align: center; white-space: nowrap; }
 .shortcut-list { display: grid; gap: 0; margin: 16px 0 4px; }
@@ -616,6 +639,9 @@ kbd { display: inline-block; min-width: 22px; padding: 2px 6px; color: #42526a; 
   .view-command-bar { align-items: stretch; flex-direction: column; }
   .view-tabs { width: 100%; }
   .view-tabs button { min-width: 0; flex: 1; }
+  .view-command-actions { align-items: flex-start; flex-wrap: wrap; }
+  .pdf-format-options { grid-template-columns: 1fr; }
+  .pdf-export-grid { grid-template-columns: 1fr; }
   .filter-grid { grid-template-columns: 1fr 1fr; }
   .filter-search { grid-column: span 2; }
   .gantt-inspector { display: block; }

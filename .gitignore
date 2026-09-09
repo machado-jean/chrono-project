@@ -30,6 +30,7 @@ Thumbs.db
 coverage/
 test-results/
 playwright-report/
+output/pdf/*.pdf
 
 # Local development data
 .local/

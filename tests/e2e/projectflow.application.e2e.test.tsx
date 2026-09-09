@@ -153,6 +153,10 @@ class JourneyRepository implements WorkspaceRepository {
     return { path: "C:\\e2e\\workspace.projectflow", projectCount: this.projects.length, templateCount: this.templates.length };
   }
 
+  savePdfReport(): Promise<{ readonly path: string } | null> {
+    return Promise.resolve({ path: "C:\\e2e\\relatorio.pdf" });
+  }
+
   chooseImportPackage(): Promise<ImportPackagePreview | null> {
     const project = this.exportedSnapshot?.projects[0];
     if (project === undefined || this.exportedSnapshot === null) return Promise.resolve(null);

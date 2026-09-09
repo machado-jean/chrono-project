@@ -4,7 +4,7 @@ Este é o registro vivo de execução do ProjectFlow. Ele traduz o roadmap defin
 
 `AGENTS.md` continua sendo a fonte de verdade para produto, arquitetura e regras operacionais. Este documento não substitui a especificação e não deve introduzir escopo incompatível com ela.
 
-Última atualização: **8 de setembro de 2026**.
+Última atualização: **9 de setembro de 2026**.
 
 ## Como manter este documento
 
@@ -32,12 +32,12 @@ Não usar percentuais subjetivos. O progresso deve ser demonstrado por entregáv
 | Item | Estado |
 | --- | --- |
 | Etapa do produto | Hardening e distribuição Windows em andamento |
-| Fase ativa | Fase 7 — isolamento e validação E2E desktop; auditoria em VM pendente |
-| Próxima fase | Validar instalação, atualização, preservação de dados e operação offline em máquina limpa |
-| Versão da aplicação | `0.1.6` |
+| Fase ativa | Evolução pós-MVP - relatórios PDF locais na v0.1.7 |
+| Próxima fase | Auditar a v0.1.7, publicar após commit e validar atualização/CI da tag em VM |
+| Versão da aplicação | `0.1.7` |
 | Versão do schema SQLite | `4` |
-| Último commit de referência | `8b59c88` — `Implement ProjectFlow foundation and core planning features` |
-| Branch de trabalho | `main`; artefatos locais da `v0.1.6` prontos para commit e publicação |
+| Último commit de referência | `61cbcd2` — `chore: prepare v0.1.6 release` |
+| Branch de trabalho | `main`; desenvolvimento local da `v0.1.7` não commitado |
 | Checkpoints obrigatórios | A, B, C e D concluídos; E reservado à distribuição |
 | Funcionalidades de negócio | Core, scheduler, views, reutilização e portabilidade implementados |
 
@@ -934,6 +934,28 @@ matriz no host, na VM limpa e no CI Windows.
   manuais da VM, sem serem apresentadas como concluídas.
 - Commit: `não commitado`; nenhum push, tag ou release foi executado pelo agente.
 
+### 9 de setembro de 2026 — Relatórios PDF e gate pós-release da v0.1.7
+
+- A versão passou a gerar localmente relatórios PDF em A4 ou A3, nos formatos
+  executivo completo, lista de atividades ou cronograma Gantt.
+- O relatório preserva hierarquia, datas, progresso, predecessoras, indicadores,
+  descrições e o recorte de filtros ou período escolhido pelo usuário.
+- A geração foi isolada do domínio React, carregada sob demanda e salva pelo
+  seletor nativo do Windows; nenhum dado é enviado para serviços externos.
+- A falha do workflow da tag `v0.1.6` foi identificada como retenção transitória
+  do arquivo de backup SQLite pelo Windows (`os error 32`). A publicação passa a
+  usar uma cópia intermediária independente se a troca atômica continuar
+  bloqueada após as tentativas limitadas.
+- `AGENTS.md`, o processo de release e um verificador PowerShell agora exigem
+  acompanhar especificamente o CI da tag. Um CI verde de `main` não encerra essa
+  verificação.
+- O Gantt do PDF recebeu cabeçalho diário em português, faixas alternadas,
+  finais de semana e linhas FS com indicação para origens fora da página ou do
+  período.
+- Instaladores padrão e offline assinados, manifesto, hashes, notas e script de
+  publicação foram preparados em `.local/distribution/v0.1.7/`.
+- Commit: `não commitado`; nenhum push, tag ou release foi executado pelo agente.
+
 ## Regras permanentes de acompanhamento
 
 - Ler `AGENTS.md` e este documento antes de iniciar uma mudança não trivial.
@@ -944,4 +966,6 @@ matriz no host, na VM limpa e no CI Windows.
 - Atualizar o histórico na mesma entrega que altera o estado do roadmap.
 - Não apagar falhas ou decisões superadas; registrar a resolução em nova entrada.
 - Não executar push, merge, tag ou release sem autorização explícita.
+- Depois de uma publicação autorizada, verificar e informar separadamente o CI
+  de `main` e o CI da tag; o release só fica validado com a tag verde.
 - Não avançar automaticamente para a fase seguinte após concluir um checkpoint.

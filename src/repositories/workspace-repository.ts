@@ -86,6 +86,8 @@ export interface ImportResult {
 
 export interface BackupResult { readonly path: string }
 
+export interface PdfExportResult { readonly path: string }
+
 export interface RestoreResult {
   readonly safetyBackupPath: string;
   readonly projectCount: number;
@@ -107,6 +109,7 @@ export interface WorkspaceRepository {
   deleteTemplate(templateId: string): Promise<void>;
   exportProject(projectId: string, suggestedName: string): Promise<ExportResult | null>;
   exportWorkspace(): Promise<ExportResult | null>;
+  savePdfReport(suggestedName: string, bytes: readonly number[]): Promise<PdfExportResult | null>;
   chooseImportPackage(): Promise<ImportPackagePreview | null>;
   applyImportPackage(packagePath: string, selection: ImportSelection): Promise<ImportResult>;
   createBackup(): Promise<BackupResult | null>;

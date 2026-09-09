@@ -58,10 +58,15 @@ portanto o recurso não foi habilitado nem alterado.
 | Tauri Dialog plugin | 2.7.2 | MIT/Apache-2.0 | seletores nativos de exportação/importação |
 | Tauri Opener plugin | 2.5.4 | MIT/Apache-2.0 | abertura restrita dos instaladores publicados no navegador padrão |
 | Playwright Core | 1.62.1 | Apache-2.0 | diagnóstico CDP local da janela Tauri; sem navegador incorporado |
+| pdfmake / @types/pdfmake | 0.3.11 / 0.3.3 | MIT | relatórios PDF locais com tabelas e gráficos vetoriais, carregados sob demanda |
 | zip (crate) | 8.6.0 | MIT | leitura e escrita estrita de `.projectflow` |
 | sha2 (crate) | 0.11.0 | MIT/Apache-2.0 | integridade SHA-256 dos pacotes |
 | uuid (crate) | 1.26.0 | MIT/Apache-2.0 | remapeamento na importação como cópia |
 | chrono (crate) | 0.4.45 | MIT/Apache-2.0 | timestamps e nomes de backup |
+
+O renderer PDF e as fontes Roboto ficam em chunks carregados somente ao gerar
+um documento. No build da v0.1.7, eles somam aproximadamente 815 KB compactados
+(`pdfmake`: 346 KB; fontes: 469 KB), sem aumentar o custo da abertura inicial.
 
 Versões JavaScript ficam em `package.json`/`package-lock.json`; versões Rust ficam em `Cargo.toml`/`Cargo.lock`. `rust-toolchain.toml` fixa Rust 1.98.0. Não há Tauri CLI, React, TypeScript, Vite ou bibliotecas de teste instalados globalmente.
 
@@ -94,6 +99,8 @@ cargo add tauri-plugin-sql --features sqlite
 npm run tauri add log
 npm install @svar-ui/react-gantt@2.7.1 --save-exact
 npm install --save-dev --save-exact playwright-core@1.62.1
+npm install --save-exact pdfmake@0.3.11
+npm install --save-dev --save-exact @types/pdfmake@0.3.3
 cd src-tauri
 cargo add tauri-plugin-dialog@2.7.2
 cargo add zip@8.6.0 --no-default-features
@@ -393,3 +400,21 @@ Artefatos locais em `.local/distribution/v0.1.6/`:
 Os hashes integrais ficam em `SHA256SUMS.txt`. Os dois instaladores foram
 assinados com a chave permanente do updater; `latest.json` referencia a URL
 imutável da tag `v0.1.6`. Os pacotes continuam sem Authenticode.
+
+## Artefatos da v0.1.7
+
+A dependência local `pdfmake` 0.3.11 e seus tipos 0.3.3 foram adicionados para
+relatórios PDF inteiramente locais. Nenhuma ferramenta global foi instalada ou
+atualizada. Os manifests do frontend, Rust e Tauri estão alinhados em `0.1.7`;
+o schema SQLite permanece na versão 4.
+
+Artefatos locais em `.local/distribution/v0.1.7/`:
+
+| Arquivo | Tamanho | SHA-256 |
+| --- | ---: | --- |
+| `ProjectFlow-Windows-x64-Setup.exe` | 5.647.401 bytes | `2A01B69C97785E75C06E0538553CEEEF5B559CC3A89DD7F9777D7C3951C770C7` |
+| `ProjectFlow-Windows-x64-Offline-Setup.exe` | 267.645.683 bytes | `72D2F721F4DE9A823E13ABBBD0DA0C1A96A86B4F7DAB5A6F872F6B2765A8FC2C` |
+
+Os dois instaladores e o manifesto do updater foram validados contra a chave
+pública incorporada. O script de publicação verifica hashes, assinaturas, CI de
+`main` e, após criar a release, aguarda obrigatoriamente o CI da tag `v0.1.7`.
