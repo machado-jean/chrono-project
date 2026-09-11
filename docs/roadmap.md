@@ -32,12 +32,12 @@ Não usar percentuais subjetivos. O progresso deve ser demonstrado por entregáv
 | Item | Estado |
 | --- | --- |
 | Etapa do produto | Hardening e distribuição Windows em andamento |
-| Fase ativa | Evolução pós-MVP - relatórios PDF locais na v0.1.7 |
-| Próxima fase | Auditar a v0.1.7, publicar após commit e validar atualização/CI da tag em VM |
+| Fase ativa | Fechamento da Fase 7 e auditoria da v0.1.7 |
+| Próxima fase | Fase 8 — Controle do plano: baseline, desvios e prazos-limite |
 | Versão da aplicação | `0.1.7` |
 | Versão do schema SQLite | `4` |
-| Último commit de referência | `61cbcd2` — `chore: prepare v0.1.6 release` |
-| Branch de trabalho | `main`; desenvolvimento local da `v0.1.7` não commitado |
+| Último commit de referência | `33e47af` — `feat: add local PDF reports and release CI verification` |
+| Branch de trabalho | `main`; somente esta atualização documental pendente na consolidação |
 | Checkpoints obrigatórios | A, B, C e D concluídos; E reservado à distribuição |
 | Funcionalidades de negócio | Core, scheduler, views, reutilização e portabilidade implementados |
 
@@ -53,6 +53,11 @@ Não usar percentuais subjetivos. O progresso deve ser demonstrado por entregáv
 | 5 — Reutilização | Entregar duplicação e templates | Concluída | 6 | Árvores e relações internas são recriadas com novos UUIDs |
 | 6 — Portabilidade | Entregar exportação, importação e backup | Concluída | 7 | Round-trip preserva semanticamente o workspace |
 | 7 — Hardening e distribuição | Preparar o produto para uso real no Windows | Em andamento | 8 | Instalador e operação offline validados em máquina limpa |
+| 8 — Controle do plano | Baseline, desvios, prazos-limite e saúde | Planejada | 9 | O plano aprovado pode ser comparado ao cronograma corrente |
+| 9 — Análise do cronograma | Caminho crítico, folgas e explicabilidade | Planejada | 10 | O usuário identifica e entende as tarefas que controlam o término |
+| 10 — Progresso e marcos | Marcos e consolidação automática de progresso | Planejada | 11 | Progresso e eventos-chave são coerentes na hierarquia e nas views |
+| 11 — Produtividade | Visões salvas, edição em massa e histórico global | Planejada | 12 | Operações frequentes são rápidas, reversíveis e acessíveis |
+| 12 — Interoperabilidade | Importação e exportação CSV/XLSX | Planejada | 13 | Dados tabulares transitam com prévia, validação e relatório de erros |
 
 ## Fase 0 — Ambiente
 
@@ -224,6 +229,223 @@ Estado: **Em andamento**.
 - [x] Documentar instalação, atualização, desinstalação e recuperação.
 
 Critério de saída: Checkpoint E concluído e critérios de aceite do MVP verificados em ambiente limpo.
+
+## Roadmap consolidado pós-MVP
+
+As fases seguintes ampliam o planejamento sem transformar o ProjectFlow em
+sistema de apontamento de horas, gestão de pessoas ou colaboração online. A
+ordem é deliberada: primeiro registrar o plano aprovado, depois explicar seus
+riscos, consolidar o progresso e somente então aumentar produtividade e
+interoperabilidade.
+
+Os números de versão abaixo são alvos de planejamento, não compromissos de
+release. Cada fase deve ser auditada e encerrada antes do início da seguinte.
+
+## Fase 8 — Controle do plano
+
+Estado: **Planejada**. Versão-alvo sugerida: `0.1.8`.
+
+### Escopo
+
+- Criar uma baseline nomeada do projeto, com confirmação explícita.
+- Preservar na baseline início, fim, duração e progresso das tarefas existentes.
+- Comparar baseline e cronograma corrente sem alterar o scheduler.
+- Exibir início/fim planejados, atuais e desvio em dias úteis na Tabela.
+- Desenhar as barras da baseline atrás das barras correntes no Gantt.
+- Incluir comparação de baseline nos relatórios PDF quando solicitado.
+- Adicionar prazo-limite opcional, separado da data final agendada.
+- Classificar tarefas de forma explicável como dentro do prazo, em risco ou
+  atrasadas, sem deslocá-las automaticamente.
+- Permitir substituir a baseline somente com confirmação e manter ao menos a
+  data de criação da fotografia substituída no histórico do projeto.
+
+### Integridade e testes obrigatórios
+
+- Migration aditiva, teste de banco novo e upgrade do schema atual.
+- Exportação, importação, backup, restore, duplicação de projeto e templates
+  revisados quanto aos novos dados.
+- Comparação em dias úteis respeitando calendário e exceções do projeto.
+- Baseline imutável durante edições comuns; alterações correntes não podem
+  modificar silenciosamente a fotografia aprovada.
+- Testes de Tabela, Gantt, PDF e round-trip `.projectflow`.
+
+### Critério de saída
+
+O usuário consegue congelar o plano, alterar o cronograma e entender claramente
+o que mudou, por quanto tempo e se algum prazo-limite foi comprometido.
+
+## Fase 9 — Análise e explicação do cronograma
+
+Estado: **Planejada**. Versão-alvo sugerida: `0.1.9`.
+
+### Escopo
+
+- Calcular caminho crítico sobre tarefas-folha e dependências FS.
+- Calcular folga total em dias úteis e identificar tarefas quase críticas.
+- Destacar tarefas críticas no Gantt sem depender somente de cor.
+- Adicionar filtros para tarefas críticas e com baixa folga.
+- Expor caminho crítico e folga na Tabela e, opcionalmente, no PDF.
+- Criar uma explicação de agendamento por tarefa: predecessora controladora,
+  lag, calendário efetivo, próxima data útil e impacto no término do projeto.
+- Indicar quando não existe rede suficiente para determinar caminho crítico.
+
+### Integridade e testes obrigatórios
+
+- Implementação em TypeScript puro, independente de React e Tauri.
+- Casos com cadeias independentes, múltiplas predecessoras, lag, feriados,
+  tarefas MANUAL, tarefas-resumo e redes desconectadas.
+- Nenhuma alteração incidental na política reativa FS já estabilizada.
+- Testes de desempenho nos limites de 1.000 tarefas por projeto.
+
+### Critério de saída
+
+O usuário identifica quais tarefas controlam a data final, quanto cada tarefa
+pode atrasar e por que uma data foi calculada.
+
+## Fase 10 — Progresso hierárquico e marcos
+
+Estado: **Planejada**. Versão-alvo sugerida: `0.2.0`.
+
+### Escopo
+
+- Permitir progresso manual ou calculado em cada tarefa-resumo.
+- Calcular o progresso da tarefa-pai a partir dos filhos, ponderado pela duração
+  útil de cada filho; não serão introduzidos campos de esforço ou horas.
+- Definir comportamento explícito para filhos cancelados, sem datas ou com
+  duração inválida antes de persistir qualquer cálculo.
+- Manter tarefas-folha com progresso editável e opção de derivação coerente a
+  partir do status.
+- Introduzir marco como tipo de item de cronograma de duração zero e data única.
+- Representar marcos de forma própria na Tabela, Gantt, filtros e PDF.
+- Preservar marcos e política de progresso em duplicação, templates e pacotes
+  `.projectflow`.
+
+### Decisões obrigatórias antes da implementação
+
+- Registrar em ADR a exceção do marco à regra atual `duração 1 = mesmo dia`.
+- Definir se a mudança para `Concluída` força 100% e se 100% força o status,
+  incluindo o comportamento de `Cancelada`.
+- Definir se o modo calculado será configurado por tarefa-resumo ou por projeto.
+
+### Integridade e testes obrigatórios
+
+- Migration aditiva, banco novo, upgrade, import/export e rollback.
+- Arredondamento determinístico e resultado estável em hierarquias profundas.
+- Pais com filhos de durações diferentes, cancelados e parcialmente concluídos.
+- Garantir que progresso não altere datas ou dependências.
+
+### Critério de saída
+
+Tarefas-resumo representam o avanço real dos filhos sem registro de horas, e
+marcos representam eventos-chave sem distorcer a duração do cronograma.
+
+## Fase 11 — Produtividade, configuração de views e reversibilidade
+
+Estado: **Planejada**. Versão-alvo sugerida: `0.2.1`.
+
+### Escopo
+
+- Salvar visões com filtros, ordenação, expansão da hierarquia e escala do Gantt.
+- Permitir escolher, ordenar, redimensionar e fixar colunas da Tabela.
+- Fornecer visões iniciais como **Atrasadas**, **Esta semana**, **Críticas** e
+  **Marcos**, sem criar cópias persistidas de tarefas.
+- Implementar edição em massa de status, prioridade, progresso, responsável,
+  tags e calendário, sempre com prévia do alcance.
+- Ampliar desfazer/refazer para alterações da Tabela e ações em massa.
+- Criar histórico local legível para datas, progresso, dependências, status e
+  alterações produzidas pelo scheduler.
+- Manter alternativa por teclado para toda ação em massa ou visual.
+
+### Limites
+
+- O histórico não será trilha multiusuário nem auditoria remota.
+- Não armazenar snapshots completos do banco a cada edição.
+- Ações que alteram estrutura, dependências ou muitas tarefas devem ser
+  transacionais e aparecer como uma única operação reversível.
+
+### Critério de saída
+
+O usuário configura o espaço de trabalho, altera conjuntos grandes com segurança
+e consegue compreender ou desfazer as mudanças relevantes.
+
+## Fase 12 — Interoperabilidade tabular
+
+Estado: **Planejada**. Versão-alvo sugerida: `0.2.2`.
+
+### Escopo
+
+- Exportar a projeção atual ou o projeto completo para CSV e XLSX.
+- Importar CSV/XLSX com prévia, mapeamento de colunas e validação por linha.
+- Tratar hierarquia por código estrutural ou identificador de pai.
+- Resolver predecessoras FS por UUID estável quando disponível e por código
+  visual somente dentro do projeto importado.
+- Permitir importar como novo projeto ou atualizar por UUID, com confirmação.
+- Produzir relatório claro de linhas criadas, atualizadas, ignoradas ou inválidas.
+- Preservar `.projectflow` como único formato de fidelidade completa para backup,
+  templates, calendários, configurações e transporte entre computadores.
+
+### Integridade e testes obrigatórios
+
+- Nenhuma escrita antes da validação integral e da prévia confirmada.
+- Importação em staging e transação, com rollback total em erro bloqueante.
+- Testar caracteres portugueses, fórmulas tratadas como dados, células grandes,
+  datas inválidas, códigos duplicados, ciclos e referências ausentes.
+- Documentar explicitamente quais informações CSV/XLSX não preservam.
+
+### Critério de saída
+
+O ProjectFlow troca listas de tarefas com planilhas de forma previsível e segura,
+sem enfraquecer o pacote `.projectflow` nem a integridade do banco local.
+
+## Escopo explicitamente descartado deste roadmap
+
+- controle de tempo, cronômetro, apontamento ou timesheet;
+- cadastro de recursos, capacidade, carga, sobrealocação ou nivelamento;
+- esforço estimado, realizado ou restante em horas;
+- sincronização em nuvem, contas e colaboração simultânea;
+- telemetria e envio automático de dados;
+- dependências SS, FF e SF enquanto a política exclusiva FS permanecer vigente;
+- dashboards avançados, custos e valor agregado sem nova decisão explícita.
+
+O campo **Responsável** existente continua sendo metadado informativo da tarefa;
+ele não cria entidade de recurso nem interfere no scheduler.
+
+## Ordem e dependências entre as fases pós-MVP
+
+```text
+Fechar Fase 7 / validar v0.1.7
+              │
+              ▼
+Fase 8 — baseline, desvios e prazos-limite
+              │
+              ▼
+Fase 9 — caminho crítico, folgas e explicação
+              │
+              ▼
+Fase 10 — progresso consolidado e marcos
+              │
+              ▼
+Fase 11 — visões salvas, edição em massa e histórico
+              │
+              ▼
+Fase 12 — CSV/XLSX
+```
+
+Baseline precede caminho crítico para que a análise mostre não apenas risco
+atual, mas também desvio em relação ao plano aprovado. Marcos e progresso vêm
+depois porque alteram semântica e schema. A produtividade usa esses campos já
+estáveis; a interoperabilidade fica por último para não cristalizar em planilhas
+um modelo ainda em evolução.
+
+## Referências de produto para as fases futuras
+
+Estas referências orientam conceitos e critérios de UX; não autorizam copiar
+interfaces, código ou ampliar automaticamente o escopo:
+
+- [Microsoft Project — caminho crítico](https://support.microsoft.com/en-us/project/show-the-critical-path-of-your-project-in-project)
+- [Microsoft Project — cargas e nivelamento](https://support.microsoft.com/en-us/project/project-management-goal-resolve-resource-allocation-problems) — consultado para delimitar o recurso que foi descartado
+- [OpenProject — comparação com baseline](https://www.openproject.org/docs/user-guide/work-packages/baseline-comparison/)
+- [OpenProject — acompanhamento de progresso](https://www.openproject.org/docs/user-guide/time-and-costs/progress-tracking/)
 
 ## Checkpoints Git
 
@@ -955,6 +1177,21 @@ matriz no host, na VM limpa e no CI Windows.
 - Instaladores padrão e offline assinados, manifesto, hashes, notas e script de
   publicação foram preparados em `.local/distribution/v0.1.7/`.
 - Commit: `não commitado`; nenhum push, tag ou release foi executado pelo agente.
+
+### 9 de setembro de 2026 — Consolidação do roadmap pós-MVP
+
+- Fases 8 a 12 organizadas por dependência de domínio: controle do plano,
+  análise do cronograma, progresso e marcos, produtividade e interoperabilidade.
+- Baseline, desvios, prazos-limite, caminho crítico, folgas, explicação do
+  scheduler, marcos, visões salvas, edição em massa, histórico e CSV/XLSX foram
+  incorporados ao plano futuro.
+- O progresso calculado de tarefas-resumo será ponderado pela duração útil dos
+  filhos, sem introduzir esforço em horas.
+- Controle de tempo, gestão de recursos, carga de trabalho e esforço em horas
+  foram explicitamente retirados do roadmap por decisão de produto.
+- O fechamento da Fase 7 e a validação da v0.1.7 continuam precedendo qualquer
+  implementação da Fase 8.
+- Commit: `não commitado`; alteração exclusivamente documental.
 
 ## Regras permanentes de acompanhamento
 
