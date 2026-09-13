@@ -435,9 +435,9 @@ Os instaladores NSIS de produção foram gerados em
 
 O pacote padrão usa o WebView2 disponível no Windows. O pacote offline inclui
 o bootstrapper oficial necessário para uma instalação sem rede. Ambos foram
-gerados com `--no-sign`; a chave privada permanente do updater não estava
-disponível no ambiente e deve ser fornecida externamente ao repositório para
-gerar os arquivos `.sig` e o `latest.json`.
+gerados com `--no-sign`. A finalização procura a chave privada permanente em
+`.local/secrets/projectflow-updater.key`, diretório ignorado pelo Git, e gera os
+arquivos `.sig` e o `latest.json` sem copiar a chave para a distribuição.
 
 Antes da abertura foi preservada uma cópia em
 `.local/backups/projectflow-before-phase8-audit-20260910.sqlite`. O processo

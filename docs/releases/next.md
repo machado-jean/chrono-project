@@ -43,10 +43,11 @@ Diretório: `.local/distribution/v0.1.8/`.
 | `ProjectFlow-Windows-x64-Setup.exe` | 5.683.264 bytes | `151535872C85A8487978E587C3F2FF25602DDFF9A7561B6F801E3776E9155B22` |
 | `ProjectFlow-Windows-x64-Offline-Setup.exe` | 221.190.643 bytes | `899E15B636F7BCC05A4557AE8764C8351295C8BAA05DCE1B94607DBF4D83DB56` |
 
-Os instaladores foram gerados sem a assinatura do updater porque
-`TAURI_SIGNING_PRIVATE_KEY` não está presente no ambiente. Execute
-`SIGN_AND_FINALIZE.ps1` com a chave permanente para produzir os arquivos
-`.sig`, o `latest.json` e validar todo o pacote. Os executáveis continuam sem
+Os instaladores foram gerados sem a assinatura do updater. O script
+`SIGN_AND_FINALIZE.ps1` procura por padrão a chave permanente em
+`.local/secrets/projectflow-updater.key`; apenas a senha, quando existir, deve
+ser fornecida por `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`. Ele produz os arquivos
+`.sig`, o `latest.json` e valida todo o pacote. Os executáveis continuam sem
 Authenticode, portanto o Windows pode exibir editor desconhecido.
 
 ## Publicação
