@@ -4,13 +4,14 @@ use tauri_plugin_sql::{Migration, MigrationKind};
 
 pub const PRODUCTION_DATABASE_URL: &str = "sqlite:projectflow.sqlite";
 pub const DATABASE_FILENAME: &str = "projectflow.sqlite";
-pub const DATABASE_SCHEMA_VERSION: i64 = 4;
+pub const DATABASE_SCHEMA_VERSION: i64 = 5;
 pub const SCHEDULING_MIGRATION_VERSION: i64 = 3;
 
 pub(crate) const INITIAL_SCHEMA: &str = include_str!("../migrations/0001_initial.sql");
 pub(crate) const CORE_SCHEMA: &str = include_str!("../migrations/0002_core.sql");
 pub(crate) const SCHEDULING_SCHEMA: &str = include_str!("../migrations/0003_scheduling.sql");
 pub(crate) const REUSE_SCHEMA: &str = include_str!("../migrations/0004_reuse.sql");
+pub(crate) const PLAN_CONTROL_SCHEMA: &str = include_str!("../migrations/0005_plan_control.sql");
 
 pub fn uses_shared_development_database() -> bool {
     !uses_e2e_database() && cfg!(any(debug_assertions, feature = "shared-dev-data"))
@@ -119,9 +120,15 @@ pub fn migrations() -> Vec<Migration> {
             kind: MigrationKind::Up,
         },
         Migration {
-            version: DATABASE_SCHEMA_VERSION,
+            version: 4,
             description: "add reusable task templates",
             sql: REUSE_SCHEMA,
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: DATABASE_SCHEMA_VERSION,
+            description: "add baselines and deadlines",
+            sql: PLAN_CONTROL_SCHEMA,
             kind: MigrationKind::Up,
         },
     ]
@@ -135,8 +142,8 @@ mod tests {
 
     use super::{
         database_path_for_mode, migrations, sqlite_url, CORE_SCHEMA, DATABASE_FILENAME,
-        DATABASE_SCHEMA_VERSION, INITIAL_SCHEMA, REUSE_SCHEMA, SCHEDULING_MIGRATION_VERSION,
-        SCHEDULING_SCHEMA,
+        DATABASE_SCHEMA_VERSION, INITIAL_SCHEMA, PLAN_CONTROL_SCHEMA, REUSE_SCHEMA,
+        SCHEDULING_MIGRATION_VERSION, SCHEDULING_SCHEMA,
     };
 
     #[test]
@@ -210,6 +217,10 @@ mod tests {
             .execute(&mut database)
             .await
             .expect("reuse migration should execute");
+        sqlx::raw_sql(PLAN_CONTROL_SCHEMA)
+            .execute(&mut database)
+            .await
+            .expect("plan control migration should execute");
 
         let schema_version: String =
             sqlx::query_scalar("SELECT value FROM app_metadata WHERE key = 'schema_version'")
@@ -246,6 +257,13 @@ mod tests {
         .await
         .expect("template table should exist");
         assert_eq!(template_table_count, 1);
+        let baseline_table_count: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'project_baselines'",
+        )
+        .fetch_one(&mut database)
+        .await
+        .expect("baseline table should exist");
+        assert_eq!(baseline_table_count, 1);
         println!("SQLite runtime version: {sqlite_version}");
     }
 
@@ -362,6 +380,62 @@ mod tests {
         assert_eq!(schema_version, "4");
     }
 
+    #[tokio::test]
+    async fn plan_control_upgrade_preserves_tasks_and_adds_deadlines_and_baselines() {
+        let mut database = in_memory_database().await;
+        for schema in [INITIAL_SCHEMA, CORE_SCHEMA, SCHEDULING_SCHEMA, REUSE_SCHEMA] {
+            sqlx::raw_sql(schema)
+                .execute(&mut database)
+                .await
+                .expect("schema 4 should execute");
+        }
+        sqlx::query(
+            "INSERT INTO projects (id, name, status, calendar_id, position, is_archived, created_at, updated_at)
+             VALUES ('10000000-0000-4000-8000-000000000001', 'Preservado', 'ACTIVE',
+             '00000000-0000-4000-8000-000000000001', 0, 0,
+             '2026-09-10T12:00:00.000Z', '2026-09-10T12:00:00.000Z')",
+        )
+        .execute(&mut database)
+        .await
+        .expect("project should exist before migration");
+        sqlx::query(
+            "INSERT INTO tasks (id, project_id, title, status, priority, progress, scheduling_mode,
+             position, created_at, updated_at) VALUES
+             ('20000000-0000-4000-8000-000000000001',
+             '10000000-0000-4000-8000-000000000001', 'Tarefa preservada', 'NOT_STARTED',
+             'NORMAL', 0, 'AUTO', 0, '2026-09-10T12:00:00.000Z', '2026-09-10T12:00:00.000Z')",
+        )
+        .execute(&mut database)
+        .await
+        .expect("task should exist before migration");
+
+        sqlx::raw_sql(PLAN_CONTROL_SCHEMA)
+            .execute(&mut database)
+            .await
+            .expect("plan control migration should execute");
+
+        let title: String = sqlx::query_scalar(
+            "SELECT title FROM tasks WHERE id = '20000000-0000-4000-8000-000000000001'",
+        )
+        .fetch_one(&mut database)
+        .await
+        .expect("task should remain");
+        let deadline: Option<String> = sqlx::query_scalar(
+            "SELECT deadline_date FROM tasks WHERE id = '20000000-0000-4000-8000-000000000001'",
+        )
+        .fetch_one(&mut database)
+        .await
+        .expect("deadline column should exist");
+        let version: String =
+            sqlx::query_scalar("SELECT value FROM app_metadata WHERE key = 'schema_version'")
+                .fetch_one(&mut database)
+                .await
+                .expect("schema version should exist");
+        assert_eq!(title, "Tarefa preservada");
+        assert_eq!(deadline, None);
+        assert_eq!(version, "5");
+    }
+
     #[test]
     fn migration_versions_are_unique_and_ordered() {
         let registered = migrations();
@@ -372,7 +446,13 @@ mod tests {
 
         assert_eq!(
             versions,
-            vec![1, 2, SCHEDULING_MIGRATION_VERSION, DATABASE_SCHEMA_VERSION]
+            vec![
+                1,
+                2,
+                SCHEDULING_MIGRATION_VERSION,
+                4,
+                DATABASE_SCHEMA_VERSION
+            ]
         );
     }
 }

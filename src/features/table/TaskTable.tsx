@@ -1,11 +1,17 @@
-import { useMemo, useRef, useState, type KeyboardEvent, type SyntheticEvent } from "react";
+import { useId, useMemo, useRef, useState, type KeyboardEvent, type SyntheticEvent } from "react";
 
 import type { Calendar } from "../../domain/calendars/calendar";
 import { isWorkingDay } from "../../domain/calendars/working-calendar";
+import {
+  compareTaskWithBaseline,
+  type BaselineTask,
+  type ScheduleHealth,
+} from "../../domain/planning/baseline";
 import type { TaskDependency } from "../../domain/scheduling/dependency";
 import { applyScheduleEdit, type ScheduleEdit } from "../../domain/scheduling/schedule-edit";
 import type { SchedulingConflict } from "../../domain/scheduling/scheduler";
 import {
+  canTaskHaveChild,
   collectTaskTreeIds,
   flattenVisibleTasks,
   type VisibleTask,
@@ -36,8 +42,9 @@ interface TaskTableProps {
   readonly projectCalendarId: string;
   readonly dependencies: readonly TaskDependency[];
   readonly conflicts: readonly SchedulingConflict[];
+  readonly baselineTasks: readonly BaselineTask[];
   readonly disabled: boolean;
-  readonly onCreate: (input: { readonly title: string; readonly parentId: string | null }) => Promise<Task | null>;
+  readonly onCreate: (input: { readonly title: string; readonly parentId: string | null; readonly parentDependencyPolicy?: "TRANSFER" | "REMOVE" }) => Promise<Task | null>;
   readonly onSave: (
     task: Task,
     dependencyUpdates: readonly TaskDependency[],
@@ -52,6 +59,39 @@ interface TaskTableProps {
     readonly name: string;
     readonly description: string | null;
   }) => Promise<unknown>;
+}
+
+interface TableColumnHeaderProps {
+  readonly label: string;
+  readonly help: string;
+  readonly className?: string;
+  readonly alignTooltip?: "center" | "left" | "right";
+}
+
+function TableColumnHeader({ label, help, className, alignTooltip = "center" }: TableColumnHeaderProps) {
+  const helpId = useId();
+  return (
+    <th className={className}>
+      <span className="table-column-heading">
+        <span>{label}</span>
+        <span
+          className="table-column-help"
+          tabIndex={0}
+          aria-label={`Informação sobre ${label}`}
+          aria-describedby={helpId}
+        >
+          i
+          <span
+            id={helpId}
+            className={`table-column-help-text tooltip-${alignTooltip}`}
+            role="tooltip"
+          >
+            {help}
+          </span>
+        </span>
+      </span>
+    </th>
+  );
 }
 
 interface DependencyLagEditorProps {
@@ -182,6 +222,8 @@ interface TaskRowProps {
   readonly projectCalendarId: string;
   readonly dependencies: readonly TaskDependency[];
   readonly conflicts: readonly SchedulingConflict[];
+  readonly baselineTask: BaselineTask | null;
+  readonly showBaselineColumns: boolean;
   readonly selected: boolean;
   readonly expanded: boolean;
   readonly disabled: boolean;
@@ -199,6 +241,17 @@ interface TaskRowProps {
   readonly onPrepareTemplate: () => void;
 }
 
+const HEALTH_LABELS: Readonly<Record<ScheduleHealth, string>> = {
+  NO_DEADLINE: "Sem prazo",
+  ON_TRACK: "No prazo",
+  AT_RISK: "Em risco",
+  OVERDUE: "Atrasada",
+};
+
+function HealthBadge({ health }: { readonly health: ScheduleHealth }) {
+  return <span className={`health-badge health-${health.toLocaleLowerCase()}`}>{HEALTH_LABELS[health]}</span>;
+}
+
 function TaskRow({
   row,
   outlineNumber,
@@ -208,6 +261,8 @@ function TaskRow({
   projectCalendarId,
   dependencies,
   conflicts,
+  baselineTask,
+  showBaselineColumns,
   selected,
   expanded,
   disabled,
@@ -235,13 +290,21 @@ function TaskRow({
   const invalidParentIds = useMemo(() => collectTaskTreeIds(tasks, row.task.id), [row.task.id, tasks]);
   const dependencyTaskIds = new Set(dependencies.flatMap(({ predecessorId, successorId }) => [predecessorId, successorId]));
   const parentOptions = tasks.filter(
-    (task) => !invalidParentIds.has(task.id) && !dependencyTaskIds.has(task.id),
+    (task) => !invalidParentIds.has(task.id) && !dependencyTaskIds.has(task.id) && canTaskHaveChild(tasks, task.id),
   );
   const taskCalendar = calendars.find(
     (calendar) => calendar.id === (draft.calendarId ?? projectCalendarId),
   ) ?? calendars[0];
   const taskConflicts = conflicts.filter((conflict) => conflict.taskId === row.task.id);
-  const canHaveSubtask = !dependencyTaskIds.has(row.task.id);
+  const today = new Date();
+  const todayDate = `${String(today.getFullYear())}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  const comparison = taskCalendar === undefined
+    ? null
+    : compareTaskWithBaseline(draft, baselineTask, taskCalendar, todayDate);
+  const canHaveSubtask = canTaskHaveChild(tasks, row.task.id);
+  const subtaskTitle = canHaveSubtask
+    ? "Criar subtarefa"
+    : "A hierarquia já atingiu o limite de quatro níveis.";
   const dependencyUpdates = dependencies
     .filter((dependency) => dependency.successorId === row.task.id)
     .flatMap((dependency) => {
@@ -337,7 +400,7 @@ function TaskRow({
           {row.hasChildren ? <span className="summary-badge">Resumo</span> : null}
         </div>
         <div className="task-row-links" style={{ paddingLeft: `${String(row.depth * 1.25 + 1.6)}rem` }}>
-          <button className="inline-link" type="button" disabled={disabled || !canHaveSubtask} title={canHaveSubtask ? "Criar subtarefa" : "Remova as dependências desta tarefa antes de adicionar subtarefas"} onClick={onPrepareSubtask}>+ Subtarefa</button>
+          <button className="inline-link" type="button" disabled={disabled || !canHaveSubtask} title={subtaskTitle} onClick={onPrepareSubtask}>+ Subtarefa</button>
           <button ref={detailsButtonRef} className="inline-link" type="button" aria-expanded={showDetails} aria-controls={detailsId} onKeyDown={closeDetailsOnEscape} onClick={() => { setShowDetails((visible) => !visible); }}>{showDetails ? "Ocultar detalhes" : "Detalhes"}</button>
         </div>
         {taskConflicts.map((conflict) => <p className="conflict-message" key={`${conflict.kind}-${conflict.requiredStartDate}`}>{conflict.message}</p>)}
@@ -349,6 +412,19 @@ function TaskRow({
       <td><input className="cell-input date-input" type="date" aria-label="Início da tarefa" value={draft.startDate ?? ""} disabled={disabled || row.hasChildren} title={row.hasChildren ? "Data calculada pelas subtarefas" : ""} onChange={(event) => { updateSchedule({ field: "startDate", value: event.target.value || null }); }} /></td>
       <td><input className="cell-input date-input" type="date" aria-label="Fim da tarefa" value={draft.endDate ?? ""} disabled={disabled || row.hasChildren} title={row.hasChildren ? "Data calculada pelas subtarefas" : ""} onChange={(event) => { updateSchedule({ field: "endDate", value: event.target.value || null }); }} /></td>
       <td><input className="cell-input duration-input" type="number" min={1} aria-label="Duração da tarefa" value={draft.durationDays ?? ""} disabled={disabled || row.hasChildren} title={row.hasChildren ? "Duração calculada pelas subtarefas" : ""} onChange={(event) => { updateSchedule({ field: "durationDays", value: event.target.value === "" ? null : Number(event.target.value) }); }} /></td>
+      {showBaselineColumns ? (
+        <>
+          <td className="baseline-date-cell">{baselineTask?.startDate ?? "—"}</td>
+          <td className="baseline-date-cell">{baselineTask?.endDate ?? "—"}</td>
+          <td className={`variance-cell${(comparison?.endVarianceDays ?? 0) > 0 ? " delayed" : ""}`}>
+            {comparison === null || comparison.endVarianceDays === null
+              ? "—"
+              : `${comparison.endVarianceDays > 0 ? "+" : ""}${String(comparison.endVarianceDays)}d`}
+          </td>
+        </>
+      ) : null}
+      <td><input className="cell-input date-input" type="date" aria-label="Prazo-limite da tarefa" value={draft.deadlineDate ?? ""} disabled={disabled} onChange={(event) => { update({ deadlineDate: event.target.value || null }); }} /></td>
+      <td><HealthBadge health={comparison?.health ?? "NO_DEADLINE"} /></td>
       <td><input className="cell-input" aria-label="Responsável pela tarefa" value={draft.assignee ?? ""} disabled={disabled} onChange={(event) => { update({ assignee: event.target.value || null }); }} /></td>
       <td><input className="cell-input tags-input" aria-label="Tags da tarefa" placeholder="tag, tag" value={tagsText} disabled={disabled} onChange={(event) => { setTagsText(event.target.value); setDirty(true); }} /></td>
       <td className="row-actions">
@@ -360,7 +436,7 @@ function TaskRow({
     {showDetails ? (
       <tr className="task-details-row">
         <td className="selection-cell" />
-        <td colSpan={11}>
+        <td colSpan={16}>
           <div className="task-details" id={detailsId} style={{ marginLeft: `${String(row.depth * 1.25)}rem` }} onKeyDown={closeDetailsOnEscape}>
             <label>
               <span className="detail-label">
@@ -402,6 +478,7 @@ export function TaskTable({
   projectCalendarId,
   dependencies,
   conflicts,
+  baselineTasks,
   disabled,
   onCreate,
   onSave,
@@ -412,6 +489,7 @@ export function TaskTable({
   onDuplicate,
   onCreateTemplate,
 }: TaskTableProps) {
+  const showBaselineColumns = baselineTasks.length > 0;
   const [newTitle, setNewTitle] = useState("");
   const [newParentId, setNewParentId] = useState<string | null>(null);
   const [expandedTaskIds, setExpandedTaskIds] = useState<ReadonlySet<string>>(new Set());
@@ -419,6 +497,7 @@ export function TaskTable({
   const [templateSource, setTemplateSource] = useState<Task | null>(null);
   const [templateName, setTemplateName] = useState("");
   const [templateDescription, setTemplateDescription] = useState("");
+  const [dependencyParentId, setDependencyParentId] = useState<string | null>(null);
   const titleInput = useRef<HTMLInputElement>(null);
   const forcedExpandedIds = new Set(
     tasks
@@ -439,6 +518,10 @@ export function TaskTable({
 
   const handleCreate = async (event: SyntheticEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
+    if (newParentId !== null && dependencyTaskIds.has(newParentId)) {
+      setDependencyParentId(newParentId);
+      return;
+    }
     const created = await onCreate({ title: newTitle, parentId: newParentId });
     if (created !== null) {
       setNewTitle("");
@@ -446,6 +529,22 @@ export function TaskTable({
       titleInput.current?.focus();
     }
   };
+
+  const createWithDependencyPolicy = async (policy: "TRANSFER" | "REMOVE"): Promise<void> => {
+    if (dependencyParentId === null) return;
+    const created = await onCreate({
+      title: newTitle,
+      parentId: dependencyParentId,
+      parentDependencyPolicy: policy,
+    });
+    if (created !== null) {
+      setNewTitle("");
+      setExpandedTaskIds((current) => new Set([...current, dependencyParentId]));
+      setDependencyParentId(null);
+      titleInput.current?.focus();
+    }
+  };
+
 
   const prepareSubtask = (parentId: string): void => {
     setNewParentId(parentId);
@@ -476,7 +575,7 @@ export function TaskTable({
         <div><h2 id="task-table-title">Tabela de tarefas</h2><p>{selectedTaskIds.size > 0 ? `${String(selectedTaskIds.size)} selecionada${selectedTaskIds.size === 1 ? "" : "s"}` : "Preencha duas informações de prazo; a terceira será calculada."}</p></div>
         <form className="quick-task-form" onSubmit={(event) => { void handleCreate(event); }}>
           <label className="sr-only" htmlFor="quick-task-title">Título da nova tarefa</label><input id="quick-task-title" ref={titleInput} required placeholder={newParentId === null ? "Nova tarefa" : "Nova subtarefa"} value={newTitle} disabled={disabled} onChange={(event) => { setNewTitle(event.target.value); }} />
-          <label className="sr-only" htmlFor="quick-task-parent">Tarefa-pai</label><select id="quick-task-parent" value={newParentId ?? ""} disabled={disabled} onChange={(event) => { setNewParentId(event.target.value || null); }}><option value="">Sem tarefa-pai</option>{tasks.filter((task) => !dependencyTaskIds.has(task.id)).map((task) => <option value={task.id} key={task.id}>{taskOutlineLabel(task, outlineNumbers)}</option>)}</select>
+          <label className="sr-only" htmlFor="quick-task-parent">Tarefa-pai</label><select id="quick-task-parent" value={newParentId ?? ""} disabled={disabled} onChange={(event) => { setNewParentId(event.target.value || null); }}><option value="">Sem tarefa-pai</option>{tasks.filter((task) => canTaskHaveChild(tasks, task.id)).map((task) => <option value={task.id} key={task.id}>{taskOutlineLabel(task, outlineNumbers)}{dependencyTaskIds.has(task.id) ? " — dependências serão revisadas" : ""}</option>)}</select>
           <button className="primary-button" type="submit" disabled={disabled}>Adicionar</button>
         </form>
       </div>
@@ -484,12 +583,36 @@ export function TaskTable({
       <div className="table-scroll">
         <table className="task-table">
           <caption className="sr-only">Tarefas do projeto com cronograma, predecessoras e ações de edição</caption>
-          <thead><tr><th className="selection-cell"><span className="sr-only">Selecionar</span></th><th>Tarefa</th><th>Predecessoras</th><th>Status</th><th>Prioridade</th><th>Progresso</th><th>Início</th><th>Fim</th><th>Duração</th><th>Responsável</th><th>Tags</th><th>Ações</th></tr></thead>
+          <thead>
+            <tr>
+              <th className="selection-cell"><span className="sr-only">Selecionar</span></th>
+              <TableColumnHeader label="Tarefa" help="Nome da atividade. A numeração mostra sua posição na hierarquia do projeto." alignTooltip="left" />
+              <TableColumnHeader label="Predecessoras" help="Tarefas que precisam terminar antes desta começar. O intervalo define a espera em dias úteis." />
+              <TableColumnHeader label="Status" help="Situação atual da tarefa, como não iniciada, em andamento, bloqueada ou concluída." />
+              <TableColumnHeader label="Prioridade" help="Importância relativa da tarefa. Não altera automaticamente suas datas." />
+              <TableColumnHeader label="Progresso" help="Percentual concluído da tarefa, de 0% a 100%." />
+              <TableColumnHeader label="Início" help="Data atual prevista para começar a tarefa." />
+              <TableColumnHeader label="Fim" help="Data atual prevista para terminar a tarefa." />
+              <TableColumnHeader className="duration-column" label="Duração" help="Quantidade de dias úteis entre o início e o fim, incluindo o primeiro dia." />
+              {showBaselineColumns ? (
+                <>
+                  <TableColumnHeader label="Início planejado" help="Data de início guardada no plano de referência ativo." />
+                  <TableColumnHeader label="Fim planejado" help="Data de término guardada no plano de referência ativo." />
+                  <TableColumnHeader label="Desvio" help="Diferença, em dias úteis, entre o fim planejado e o fim atual. Valor positivo indica atraso." />
+                </>
+              ) : null}
+              <TableColumnHeader label="Prazo-limite" help="Data máxima desejada para conclusão. Ela informa risco, mas não movimenta a tarefa." />
+              <TableColumnHeader label="Saúde" help="Indica se a tarefa está no prazo, em risco ou atrasada em relação ao prazo-limite." />
+              <TableColumnHeader label="Responsável" help="Pessoa ou referência responsável por acompanhar a tarefa." />
+              <TableColumnHeader label="Tags" help="Palavras-chave separadas por vírgulas, usadas para organizar e filtrar tarefas." />
+              <TableColumnHeader label="Ações" help="Comandos para salvar, abrir detalhes, reordenar, duplicar ou excluir a tarefa." alignTooltip="right" />
+            </tr>
+          </thead>
           <tbody>
-            {visibleTasks.length === 0 ? <tr><td className="empty-table" colSpan={12}><strong>{tasks.length === 0 ? "Nenhuma tarefa ainda." : "Nenhuma tarefa corresponde aos filtros."}</strong><span>{tasks.length === 0 ? "Use o campo “Nova tarefa” para começar." : "Limpe ou ajuste os filtros para recuperar as linhas."}</span></td></tr> : visibleTasks.map((row) => {
+            {visibleTasks.length === 0 ? <tr><td className="empty-table" colSpan={showBaselineColumns ? 17 : 14}><strong>{tasks.length === 0 ? "Nenhuma tarefa ainda." : "Nenhuma tarefa corresponde aos filtros."}</strong><span>{tasks.length === 0 ? "Use o campo “Nova tarefa” para começar." : "Limpe ou ajuste os filtros para recuperar as linhas."}</span></td></tr> : visibleTasks.map((row) => {
               const siblings = tasks.filter((task) => task.projectId === row.task.projectId && task.parentId === row.task.parentId).sort((left, right) => left.position - right.position || left.createdAt.localeCompare(right.createdAt));
               const siblingIndex = siblings.findIndex((task) => task.id === row.task.id);
-              return <TaskRow key={`${row.task.id}-${row.task.updatedAt}`} row={row} outlineNumber={outlineNumbers.get(row.task.id) ?? ""} outlineNumbers={outlineNumbers} tasks={tasks} calendars={calendars} projectCalendarId={projectCalendarId} dependencies={dependencies} conflicts={conflicts} disabled={disabled} selected={selectedTaskIds.has(row.task.id)} expanded={effectiveExpandedIds.has(row.task.id)} canMoveUp={siblingIndex > 0} canMoveDown={siblingIndex >= 0 && siblingIndex < siblings.length - 1} onSelect={(selected) => { setSelectedTaskIds((current) => { const next = new Set(current); if (selected) next.add(row.task.id); else next.delete(row.task.id); return next; }); }} onToggleExpanded={() => { setExpandedTaskIds((current) => { const next = new Set(current); if (next.has(row.task.id)) next.delete(row.task.id); else next.add(row.task.id); return next; }); }} onPrepareSubtask={() => { prepareSubtask(row.task.id); }} onSave={onSave} onMove={(direction) => { void onMove(row.task.id, direction); }} onCreateDependency={onCreateDependency} onDeleteDependency={onDeleteDependency} onDuplicate={(includeDescendants) => { void onDuplicate(row.task.id, includeDescendants).then((copy) => { if (copy !== null && includeDescendants) setExpandedTaskIds((current) => new Set([...current, copy.id])); }); }} onPrepareTemplate={() => { prepareTemplate(row.task); }} onDelete={() => { if (window.confirm(`Excluir “${row.task.title}” e todas as suas subtarefas? Esta ação não pode ser desfeita.`)) void onDelete(row.task.id); }} />;
+              return <TaskRow key={`${row.task.id}-${row.task.updatedAt}`} row={row} outlineNumber={outlineNumbers.get(row.task.id) ?? ""} outlineNumbers={outlineNumbers} tasks={tasks} calendars={calendars} projectCalendarId={projectCalendarId} dependencies={dependencies} conflicts={conflicts} baselineTask={baselineTasks.find((task) => task.taskId === row.task.id) ?? null} showBaselineColumns={showBaselineColumns} disabled={disabled} selected={selectedTaskIds.has(row.task.id)} expanded={effectiveExpandedIds.has(row.task.id)} canMoveUp={siblingIndex > 0} canMoveDown={siblingIndex >= 0 && siblingIndex < siblings.length - 1} onSelect={(selected) => { setSelectedTaskIds((current) => { const next = new Set(current); if (selected) next.add(row.task.id); else next.delete(row.task.id); return next; }); }} onToggleExpanded={() => { setExpandedTaskIds((current) => { const next = new Set(current); if (next.has(row.task.id)) next.delete(row.task.id); else next.add(row.task.id); return next; }); }} onPrepareSubtask={() => { prepareSubtask(row.task.id); }} onSave={onSave} onMove={(direction) => { void onMove(row.task.id, direction); }} onCreateDependency={onCreateDependency} onDeleteDependency={onDeleteDependency} onDuplicate={(includeDescendants) => { void onDuplicate(row.task.id, includeDescendants).then((copy) => { if (copy !== null && includeDescendants) setExpandedTaskIds((current) => new Set([...current, copy.id])); }); }} onPrepareTemplate={() => { prepareTemplate(row.task); }} onDelete={() => { if (window.confirm(`Excluir “${row.task.title}” e todas as suas subtarefas? Esta ação não pode ser desfeita.`)) void onDelete(row.task.id); }} />;
             })}
           </tbody>
         </table>
@@ -515,6 +638,17 @@ export function TaskTable({
                 <button className="primary-button" type="submit" disabled={disabled}>Salvar template</button>
               </div>
             </form>
+        </ModalDialog>
+      )}
+      {dependencyParentId === null ? null : (
+        <ModalDialog className="template-dialog" labelledBy="dependency-parent-title" describedBy="dependency-parent-description" onClose={() => { setDependencyParentId(null); }}>
+          <h2 id="dependency-parent-title">Transformar em tarefa-resumo?</h2>
+          <p id="dependency-parent-description">Esta tarefa participa de dependências. Ao criar a subtarefa, escolha como tratar essas relações.</p>
+          <div className="dialog-actions">
+            <button type="button" onClick={() => { setDependencyParentId(null); }}>Cancelar</button>
+            <button type="button" onClick={() => { void createWithDependencyPolicy("REMOVE"); }}>Remover dependências</button>
+            <button className="primary-button" type="button" onClick={() => { void createWithDependencyPolicy("TRANSFER"); }}>Transferir para a nova subtarefa</button>
+          </div>
         </ModalDialog>
       )}
     </section>

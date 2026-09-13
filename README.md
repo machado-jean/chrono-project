@@ -14,7 +14,8 @@ As Fases 0 a 6 estão concluídas e o Checkpoint Git 7 foi consolidado no commit
 - projetos com criação, edição, status, arquivamento e exclusão;
 - tarefas e subtarefas com edição inline, status, prioridade, progresso, datas,
   duração, responsável, tags e detalhes;
-- hierarquia com expansão/recolhimento, troca de pai, reordenação e prevenção de ciclos;
+- hierarquia de até quatro níveis com expansão/recolhimento, troca de pai,
+  reordenação e prevenção de ciclos;
 - numeração hierárquica derivada (`1.`, `1.1.`, `1.1.1.`) nas três views;
 - calendário configurável com segunda a domingo, feriados e exceções;
 - calendário opcional **Todos os dias** para tarefas de fim de semana;
@@ -23,6 +24,9 @@ As Fases 0 a 6 estão concluídas e o Checkpoint Git 7 foi consolidado no commit
 - propagação reativa de tarefas automáticas, para frente ou para trás, e aviso
   para conflitos manuais;
 - tarefas-resumo com datas derivadas;
+- planos de referência nomeados e imutáveis, com histórico de revisões e
+  exclusão confirmada sem impacto nas tarefas atuais;
+- datas planejadas versus atuais, desvio em dias úteis, prazo-limite e saúde;
 - persistência atômica das recalculações;
 - filtros compartilhados por texto, status, prioridade, conclusão, datas e tag;
 - Kanban por status com drag-and-drop e campo **Status** acessível;
@@ -31,12 +35,15 @@ As Fases 0 a 6 estão concluídas e o Checkpoint Git 7 foi consolidado no commit
   feriados, foco de dependência e edição temporal segura;
 - sincronização imediata entre Tabela, Kanban e Gantt;
 - janela principal maximizada na inicialização;
+- barra lateral de projetos recolhível e ajuda contextual acessível na Tabela;
+- menu de contexto para arquivar, restaurar ou excluir projetos;
 - duplicação de tarefa isolada, árvore completa e projeto, sempre com novos UUIDs;
 - preservação somente das dependências internas ao conteúdo duplicado;
 - biblioteca global de templates de árvores, com aplicação em qualquer projeto
   e data de início escolhida;
 - exportação de projeto e workspace em pacote `.projectflow` validado;
 - relatórios PDF locais com atividades, indicadores e cronograma Gantt;
+- comparação opcional da linha de base na Tabela, no Gantt e no PDF;
 - importação seletiva com atualização por UUID ou cópia independente;
 - seleção individual de templates e tratamento seguro de calendários;
 - backup SQLite verificado e restauração integral com backup de segurança;
@@ -49,7 +56,9 @@ As Fases 0 a 6 estão concluídas e o Checkpoint Git 7 foi consolidado no commit
   com download, validação de assinatura, instalação passiva e reinício;
 - download alternativo do instalador offline pelo navegador padrão.
 
-A Fase 7 está em andamento. O primeiro incremento adicionou orçamentos de
+A Fase 8 foi concluída na versão `0.1.8`. A migration 5 adiciona controle do
+plano sem modificar as regras do scheduler. A Fase 7 permanece com
+a validação manual em máquina Windows limpa registrada separadamente. Seu primeiro incremento adicionou orçamentos de
 desempenho, navegação das views por teclado, instaladores NSIS padrão/offline e
 um fluxo automatizado mínimo em camadas. A revisão final de UX/acessibilidade
 foi concluída e está registrada em
@@ -57,7 +66,10 @@ foi concluída e está registrada em
 máquina Windows limpa ainda é critério de saída pendente. A automação da janela
 Tauri passou localmente com isolamento de dados e perfil WebView2. Permanece
 diagnóstica e não bloqueante até completar a validação remota e em VM,
-conforme o ADR 019.
+conforme o ADR 019. A decisão de linha de base e prazo está no ADR 022.
+O Gantt foi auditado com um projeto de 205 tarefas: roda do mouse, barra
+horizontal e barra vertical externa alcançaram integralmente a estrutura sem
+sobrepor o painel de inspeção.
 
 O progresso por fase, os checkpoints e o histórico de entregas são mantidos em [docs/roadmap.md](docs/roadmap.md).
 
@@ -161,6 +173,8 @@ npm run tauri:build:test
 
 O resultado fica em `src-tauri\target\release\project-flow.exe`. Não distribuir
 esse binário, pois ele referencia a `.local` do checkout em que foi compilado.
+Como builds de produção usam o mesmo nome, o comando de teste deve ser sempre o
+último executado antes da auditoria local.
 
 Para gerar instaladores de produção:
 

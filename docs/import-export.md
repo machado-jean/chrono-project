@@ -27,13 +27,14 @@ Limites da versão 1:
 - `data.sqlite`: 500 MiB;
 - `manifest.json`: 256 KiB;
 - `README.txt`: 64 KiB;
-- somente schema SQLite 4 e formato 1.
+- schemas SQLite 4 e 5 e formato 1. O schema 4 é lido por uma cópia temporária
+  migrada para inspeção; o arquivo escolhido permanece intacto.
 
 ## Exportação
 
-**Exportar projeto** cria um snapshot consistente contendo apenas o projeto selecionado, suas tarefas, tags, dependências e calendários referenciados. Templates globais e outros projetos não são incluídos.
+**Exportar projeto** cria um snapshot consistente contendo apenas o projeto selecionado, suas tarefas, tags, dependências, linhas de base e calendários referenciados. Templates globais e outros projetos não são incluídos.
 
-**Exportar workspace** inclui todos os projetos, calendários e templates. O SQLite é copiado com `VACUUM INTO`; o pacote é montado em staging e publicado no caminho escolhido somente depois de finalizado.
+**Exportar workspace** inclui todos os projetos, calendários, linhas de base e templates. O SQLite é copiado com `VACUUM INTO`; o pacote é montado em staging e publicado no caminho escolhido somente depois de finalizado.
 
 ## Importação seletiva
 
@@ -47,7 +48,7 @@ O pacote inteiro é validado antes da tela de escolha. Cada projeto oferece:
 
 - **Importar** quando o UUID ainda não existe: preserva os UUIDs originais;
 - **Atualizar projeto** quando o UUID existe: substitui integralmente apenas aquele projeto, preservando sua posição local;
-- **Importar como cópia**: gera novos UUIDs para projeto, tarefas e dependências, reconstrói pais e relações internas e acrescenta `— importado` ao nome;
+- **Importar como cópia**: gera novos UUIDs para projeto, tarefas, dependências e linhas de base, reconstrói pais e relações internas e acrescenta `— importado` ao nome;
 - **Não importar**.
 
 Templates podem ser selecionados individualmente. Um template com UUID já existente é substituído integralmente; um UUID novo é inserido.
@@ -85,4 +86,4 @@ Antes de escrever, o ProjectFlow verifica tamanho do pacote e entradas, caminhos
 3. Exporte o workspace, modifique dois projetos e importe apenas um; confirme que o não selecionado não mudou.
 4. Crie um backup, faça uma alteração e use **Restaurar backup**; confirme a restauração integral após reabrir o executável.
 
-Os testes Rust reproduzem o round-trip `workspace A → exportação → workspace vazio → importação → comparação semântica`, substituição seletiva, cópia de identidades e relações, rejeição de ZIP inseguro e restauração integral.
+Os testes Rust reproduzem o round-trip `workspace A → exportação → workspace vazio → importação → comparação semântica`, incluindo prazos e linhas de base, substituição seletiva, cópia de identidades e relações, rejeição de ZIP inseguro, compatibilidade não destrutiva do schema 4 e restauração integral.

@@ -2,7 +2,7 @@
 
 ## Versão atual
 
-O schema atual é a versão **4**.
+O schema atual é a versão **5**.
 
 | Migration | Conteúdo |
 | --- | --- |
@@ -10,6 +10,7 @@ O schema atual é a versão **4**.
 | `0002_core.sql` | calendários, projetos, tarefas e tags; versão 2 |
 | `0003_scheduling.sql` | exceções, calendário por tarefa e dependências FS; versão 3 |
 | `0004_reuse.sql` | templates, itens, tags e dependências internas; versão 4 |
+| `0005_plan_control.sql` | prazo-limite, linhas de base e fotografias de tarefas; versão 5 |
 
 As tabelas usam modo `STRICT`. Chaves externas são habilitadas em todas as conexões. Migrations são crescentes e não devem ser alteradas depois de publicadas.
 
@@ -41,7 +42,11 @@ O calendário padrão contém segunda a sexta. O calendário integrado **Todos o
 
 ## Tarefa
 
-`tasks` possui UUID imutável, código opcional, projeto, tarefa-pai, calendário opcional, título, descrição, status, prioridade, progresso, datas, duração, modo de agendamento, posição, responsável, observações e timestamps.
+`tasks` possui UUID imutável, código opcional, projeto, tarefa-pai, calendário opcional, título, descrição, status, prioridade, progresso, datas, duração, prazo-limite opcional, modo de agendamento, posição, responsável, observações e timestamps.
+
+`deadline_date` é uma data `YYYY-MM-DD` independente do fim calculado. Ela
+classifica a saúde da tarefa, mas não desloca o cronograma nem participa das
+restrições FS.
 
 `calendar_id` nulo significa herdar `projects.calendar_id`; um UUID preenchido seleciona um calendário específico para a tarefa.
 
@@ -53,6 +58,7 @@ Invariantes principais:
 - datas em `YYYY-MM-DD`, duração inteira maior ou igual a 1 e fim não anterior ao início;
 - pai e filho no mesmo projeto;
 - sem auto-parentesco ou ciclos de hierarquia;
+- no máximo quatro níveis de hierarquia, contando a tarefa-raiz;
 - exclusão de uma tarefa remove toda a árvore em transação.
 
 Tags permanecem normalizadas em `tags` e `task_tags`, sem JSON duplicado dentro de `tasks`.
@@ -100,12 +106,28 @@ auto-dependência e relações únicas. O domínio TypeScript complementa essas
 constraints validando raiz única, hierarquia acíclica, folhas com duração,
 grafo FS acíclico e dependências estritamente internas.
 
+## Linhas de base
+
+`project_baselines` registra fotografias nomeadas de um projeto. Apenas uma
+linha de base pode estar ativa por projeto; ao criar outra, a anterior recebe
+`replaced_at` e permanece disponível no histórico.
+
+`baseline_tasks` preserva, de forma imutável, identidade, título, número
+hierárquico, início, fim, duração e progresso de cada tarefa no instante da
+fotografia. A referência de tarefa não usa cascade deliberadamente: o
+histórico continua legível mesmo se uma tarefa corrente for excluída. Edições
+comuns nunca atualizam uma fotografia existente.
+
+Ao excluir o plano de referência de um projeto, todas as suas revisões e
+fotografias são removidas por cascade em uma única operação. Projetos, tarefas e
+o cronograma corrente não são alterados.
+
 ## Integridade e evolução
 
 - `projects.calendar_id` e `tasks.calendar_id` usam `ON DELETE RESTRICT`;
 - calendário e exceções usam cascade controlado;
 - índices atendem calendário, hierarquia, ordenação, filtros e travessia por predecessor/sucessor;
-- banco novo, sequência de migrations e upgrade preservando dados da versão 3 para 4 são testados;
+- banco novo, sequência de migrations e upgrades preservando dados até a versão 5 são testados;
 - a única variante conhecida do checksum da migration 3 recebe reparo
   conservador antes da abertura: schema e integridade são validados, uma cópia
   SQLite é criada e somente `_sqlx_migrations.checksum` é atualizado;

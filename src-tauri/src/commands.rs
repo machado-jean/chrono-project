@@ -8,8 +8,8 @@ use tauri_plugin_sql::{DbInstances, DbPool};
 use crate::{
     database,
     persistence::{
-        self, CalendarRecord, DuplicationBundleRecord, ProjectRecord, ScheduleChangeSetRecord,
-        TaskRecord, TaskTemplateBundleRecord, WorkspaceData,
+        self, BaselineBundleRecord, CalendarRecord, DuplicationBundleRecord, ProjectRecord,
+        ScheduleChangeSetRecord, TaskRecord, TaskTemplateBundleRecord, WorkspaceData,
     },
     portability::{
         self, BackupResult, ExportResult, ImportPackagePreview, ImportResult, ImportSelection,
@@ -94,6 +94,28 @@ pub async fn save_task(
     persistence::save_task(&pool, &task)
         .await
         .map_err(|error| format!("Não foi possível salvar a tarefa: {error}"))
+}
+
+#[tauri::command]
+pub async fn save_baseline(
+    db_instances: State<'_, DbInstances>,
+    bundle: BaselineBundleRecord,
+) -> Result<(), String> {
+    let pool = sqlite_pool(&db_instances).await?;
+    persistence::save_baseline(&pool, &bundle)
+        .await
+        .map_err(|error| format!("Não foi possível salvar o plano de referência: {error}"))
+}
+
+#[tauri::command]
+pub async fn delete_project_baselines(
+    db_instances: State<'_, DbInstances>,
+    project_id: String,
+) -> Result<(), String> {
+    let pool = sqlite_pool(&db_instances).await?;
+    persistence::delete_project_baselines(&pool, &project_id)
+        .await
+        .map_err(|error| format!("Não foi possível excluir o plano de referência: {error}"))
 }
 
 #[tauri::command]

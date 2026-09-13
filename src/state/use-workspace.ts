@@ -17,6 +17,11 @@ import {
 } from "../domain/duplication/reuse";
 import { validateProject, type Project, type ProjectStatus } from "../domain/projects/project";
 import {
+  createBaselineBundle,
+  type BaselineTask,
+  type ProjectBaseline,
+} from "../domain/planning/baseline";
+import {
   validateTaskDependency,
   type TaskDependency,
 } from "../domain/scheduling/dependency";
@@ -52,6 +57,7 @@ interface CreateProjectInput {
 interface CreateTaskInput {
   readonly title: string;
   readonly parentId: string | null;
+  readonly parentDependencyPolicy?: "TRANSFER" | "REMOVE";
 }
 
 interface DependencyInput {
@@ -73,6 +79,8 @@ export interface WorkspaceController {
   readonly projects: readonly Project[];
   readonly tasks: readonly Task[];
   readonly dependencies: readonly TaskDependency[];
+  readonly baselines: readonly ProjectBaseline[];
+  readonly baselineTasks: readonly BaselineTask[];
   readonly templates: readonly TaskTemplate[];
   readonly templateItems: readonly TaskTemplateItem[];
   readonly templateDependencies: readonly TaskTemplateDependency[];
@@ -81,6 +89,9 @@ export interface WorkspaceController {
   readonly selectedProject: Project | null;
   readonly selectedProjectTasks: readonly Task[];
   readonly selectedProjectDependencies: readonly TaskDependency[];
+  readonly selectedProjectBaselines: readonly ProjectBaseline[];
+  readonly activeBaseline: ProjectBaseline | null;
+  readonly activeBaselineTasks: readonly BaselineTask[];
   readonly isLoading: boolean;
   readonly isSaving: boolean;
   readonly error: string | null;
@@ -92,6 +103,8 @@ export interface WorkspaceController {
   readonly moveProject: (projectId: string, direction: MoveDirection) => Promise<boolean>;
   readonly removeProject: (projectId: string) => Promise<boolean>;
   readonly saveCalendar: (calendar: Calendar) => Promise<boolean>;
+  readonly createBaseline: (name: string) => Promise<ProjectBaseline | null>;
+  readonly removeProjectBaselines: () => Promise<boolean>;
   readonly createTask: (input: CreateTaskInput) => Promise<Task | null>;
   readonly saveTask: (
     task: Task,
@@ -222,6 +235,8 @@ export function useWorkspace(repository: WorkspaceRepository): WorkspaceControll
   const [projects, setProjects] = useState<readonly Project[]>([]);
   const [tasks, setTasks] = useState<readonly Task[]>([]);
   const [dependencies, setDependencies] = useState<readonly TaskDependency[]>([]);
+  const [baselines, setBaselines] = useState<readonly ProjectBaseline[]>([]);
+  const [baselineTasks, setBaselineTasks] = useState<readonly BaselineTask[]>([]);
   const [templates, setTemplates] = useState<readonly TaskTemplate[]>([]);
   const [templateItems, setTemplateItems] = useState<readonly TaskTemplateItem[]>([]);
   const [templateDependencies, setTemplateDependencies] = useState<readonly TaskTemplateDependency[]>([]);
@@ -281,6 +296,8 @@ export function useWorkspace(repository: WorkspaceRepository): WorkspaceControll
         setProjects(snapshot.projects);
         setTasks(reconciledTasks);
         setDependencies(snapshot.dependencies);
+        setBaselines(snapshot.baselines);
+        setBaselineTasks(snapshot.baselineTasks);
         setTemplates(snapshot.templates);
         setTemplateItems(snapshot.templateItems);
         setTemplateDependencies(snapshot.templateDependencies);
@@ -400,6 +417,13 @@ export function useWorkspace(repository: WorkspaceRepository): WorkspaceControll
         });
         setTasks((currentTasks) => currentTasks.filter((task) => task.projectId !== projectId));
         setDependencies((current) => current.filter((item) => item.projectId !== projectId));
+        const removedBaselineIds = new Set(
+          baselines.filter((baseline) => baseline.projectId === projectId).map(({ id }) => id),
+        );
+        setBaselines((current) => current.filter((baseline) => baseline.projectId !== projectId));
+        setBaselineTasks((current) =>
+          current.filter((task) => !removedBaselineIds.has(task.baselineId)),
+        );
         setSchedulingConflicts((current) =>
           current.filter((conflict) => !removedTaskIds.has(conflict.taskId)),
         );
@@ -407,8 +431,56 @@ export function useWorkspace(repository: WorkspaceRepository): WorkspaceControll
       });
       return result ?? false;
     },
-    [repository, runMutation, tasks],
+    [baselines, repository, runMutation, tasks],
   );
+
+  const createBaseline = useCallback(
+    async (name: string): Promise<ProjectBaseline | null> => {
+      if (selectedProjectId === null) {
+        setError("Selecione um projeto antes de criar um plano de referência.");
+        return null;
+      }
+      return runMutation(async () => {
+        const projectTasks = tasks.filter((task) => task.projectId === selectedProjectId);
+        if (projectTasks.length === 0) {
+          throw new Error("Crie ao menos uma tarefa antes de registrar o plano de referência.");
+        }
+        const createdAt = nowUtc();
+        const bundle = createBaselineBundle(selectedProjectId, name, projectTasks, createdAt);
+        await repository.saveBaseline(bundle);
+        setBaselines((current) => [
+          ...current.map((baseline) =>
+            baseline.projectId === selectedProjectId && baseline.isActive
+              ? { ...baseline, isActive: false, replacedAt: createdAt }
+              : baseline,
+          ),
+          bundle.baseline,
+        ]);
+        setBaselineTasks((current) => [...current, ...bundle.tasks]);
+        return bundle.baseline;
+      });
+    },
+    [repository, runMutation, selectedProjectId, tasks],
+  );
+
+  const removeProjectBaselines = useCallback(async (): Promise<boolean> => {
+    if (selectedProjectId === null) {
+      setError("Selecione um projeto antes de excluir o plano de referência.");
+      return false;
+    }
+    const result = await runMutation(async () => {
+      const removedIds = new Set(
+        baselines
+          .filter((baseline) => baseline.projectId === selectedProjectId)
+          .map((baseline) => baseline.id),
+      );
+      await repository.deleteProjectBaselines(selectedProjectId);
+      setBaselines((current) => current.filter((baseline) => !removedIds.has(baseline.id)));
+      setBaselineTasks((current) => current.filter((task) => !removedIds.has(task.baselineId)));
+      return true;
+    });
+    return result ?? false;
+  }, [baselines, repository, runMutation, selectedProjectId]);
 
   const saveCalendar = useCallback(
     async (calendar: Calendar): Promise<boolean> => {
@@ -519,6 +591,7 @@ export function useWorkspace(repository: WorkspaceRepository): WorkspaceControll
           startDate: null,
           endDate: null,
           durationDays: null,
+          deadlineDate: null,
           schedulingMode: "AUTO",
           position: nextPosition(siblings),
           assignee: null,
@@ -528,11 +601,31 @@ export function useWorkspace(repository: WorkspaceRepository): WorkspaceControll
           updatedAt: createdAt,
         });
         assertValidParentAssignment(tasks, createdTask.id, createdTask.projectId, createdTask.parentId);
+        const parentDependencyIds = new Set(
+          input.parentId === null
+            ? []
+            : projectDependencies
+                .filter((dependency) => dependency.predecessorId === input.parentId || dependency.successorId === input.parentId)
+                .map((dependency) => dependency.id),
+        );
+        if (parentDependencyIds.size > 0 && input.parentDependencyPolicy === undefined) {
+          throw new Error("Escolha como tratar as dependências da tarefa-pai.");
+        }
+        const nextProjectDependencies = projectDependencies.flatMap((dependency) => {
+          if (!parentDependencyIds.has(dependency.id)) return [dependency];
+          if (input.parentDependencyPolicy === "REMOVE") return [];
+          return [{
+            ...dependency,
+            predecessorId: dependency.predecessorId === input.parentId ? createdTask.id : dependency.predecessorId,
+            successorId: dependency.successorId === input.parentId ? createdTask.id : dependency.successorId,
+            updatedAt: createdAt,
+          }];
+        });
         const nextProjectTasks = [...projectTasks, createdTask];
-        validateGraph(nextProjectTasks, projectDependencies);
+        validateGraph(nextProjectTasks, nextProjectDependencies);
         const scheduled = rescheduleAffectedTasks({
           tasks: nextProjectTasks,
-          dependencies: projectDependencies,
+          dependencies: nextProjectDependencies,
           calendars,
           projectCalendarId: project.calendarId,
           changedTaskIds: [createdTask.id],
@@ -542,16 +635,19 @@ export function useWorkspace(repository: WorkspaceRepository): WorkspaceControll
         await repository.applyScheduleChanges({
           calendarsToSave: [],
           tasks: persistedTasks.filter((task) => persistIds.has(task.id)),
-          dependenciesToSave: [],
-          dependencyIdsToDelete: [],
+          dependenciesToSave: nextProjectDependencies.filter((dependency) => parentDependencyIds.has(dependency.id)),
+          dependencyIdsToDelete: [...parentDependencyIds],
           taskTreeIdsToDelete: [],
         });
         setTasks((current) => replaceTasks(current, persistedTasks));
+        setDependencies((current) => current
+          .filter((dependency) => !parentDependencyIds.has(dependency.id))
+          .concat(nextProjectDependencies.filter((dependency) => parentDependencyIds.has(dependency.id))));
         setSchedulingConflicts((current) =>
           replaceProjectConflicts(
             current,
             new Set(persistedTasks.map(({ id }) => id)),
-            projectSchedulingConflicts(project, persistedTasks, projectDependencies, calendars),
+            projectSchedulingConflicts(project, persistedTasks, nextProjectDependencies, calendars),
           ),
         );
         return persistedTasks.find((task) => task.id === createdTask.id) ?? createdTask;
@@ -559,6 +655,7 @@ export function useWorkspace(repository: WorkspaceRepository): WorkspaceControll
     },
     [calendars, dependencies, projects, repository, runMutation, selectedProjectId, tasks],
   );
+
 
   const saveTask = useCallback(
     async (
@@ -1089,12 +1186,27 @@ export function useWorkspace(repository: WorkspaceRepository): WorkspaceControll
     () => dependencies.filter((dependency) => dependency.projectId === selectedProjectId),
     [dependencies, selectedProjectId],
   );
+  const selectedProjectBaselines = useMemo(
+    () => baselines
+      .filter((baseline) => baseline.projectId === selectedProjectId)
+      .sort((left, right) => right.createdAt.localeCompare(left.createdAt)),
+    [baselines, selectedProjectId],
+  );
+  const activeBaseline = selectedProjectBaselines.find((baseline) => baseline.isActive) ?? null;
+  const activeBaselineTasks = useMemo(
+    () => activeBaseline === null
+      ? []
+      : baselineTasks.filter((task) => task.baselineId === activeBaseline.id),
+    [activeBaseline, baselineTasks],
+  );
 
   return {
     calendars,
     projects,
     tasks,
     dependencies,
+    baselines,
+    baselineTasks,
     templates,
     templateItems,
     templateDependencies,
@@ -1103,6 +1215,9 @@ export function useWorkspace(repository: WorkspaceRepository): WorkspaceControll
     selectedProject,
     selectedProjectTasks,
     selectedProjectDependencies,
+    selectedProjectBaselines,
+    activeBaseline,
+    activeBaselineTasks,
     isLoading,
     isSaving,
     error,
@@ -1116,6 +1231,8 @@ export function useWorkspace(repository: WorkspaceRepository): WorkspaceControll
     moveProject,
     removeProject,
     saveCalendar,
+    createBaseline,
+    removeProjectBaselines,
     createTask,
     saveTask,
     moveTask,

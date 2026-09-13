@@ -197,6 +197,13 @@ export function validateTaskTemplateBundle(bundle: TaskTemplateBundle): TaskTemp
       visited.add(candidate.id);
       candidate = itemById.get(candidate.parentId);
     }
+    if (visited.size + 1 > 4) {
+      throw new DomainValidationError(
+        "template_hierarchy_depth_limit",
+        "parentId",
+        "A hierarquia do template pode ter no máximo 4 níveis.",
+      );
+    }
   }
 
   const summaryIds = new Set(items.flatMap((item) => item.parentId === null ? [] : [item.parentId]));

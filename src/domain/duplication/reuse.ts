@@ -288,6 +288,7 @@ export function applyTaskTemplate(input: ApplyTemplateInput): DuplicatedTasks {
       startDate: durationDays === null ? null : anchor,
       endDate: durationDays === null ? null : endDateForDuration(calendar, anchor, durationDays),
       durationDays,
+      deadlineDate: null,
       schedulingMode: "AUTO",
       position: item.id === root.id ? input.rootPosition : item.position,
       assignee: null,

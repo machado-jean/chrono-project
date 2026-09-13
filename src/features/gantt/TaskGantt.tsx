@@ -19,6 +19,7 @@ import {
 } from "react";
 
 import type { Calendar } from "../../domain/calendars/calendar";
+import type { BaselineTask } from "../../domain/planning/baseline";
 import { addCalendarDays } from "../../domain/calendars/date-only";
 import { applyScheduleEdit } from "../../domain/scheduling/schedule-edit";
 import { applyGanttDateEdit, planGanttFsMove, type GanttDateEditMode } from "../../domain/scheduling/gantt-edit";
@@ -42,6 +43,7 @@ interface TaskGanttProps {
   readonly calendars: readonly Calendar[];
   readonly projectCalendarId: string;
   readonly dependencies: readonly TaskDependency[];
+  readonly baselineTasks: readonly BaselineTask[];
   readonly disabled: boolean;
   readonly onSave: (task: Task, dependencyUpdates?: readonly TaskDependency[]) => Promise<boolean>;
   readonly onCreateDependency: (input: {
@@ -68,10 +70,58 @@ interface GanttHistoryEntry {
   readonly afterDependencies: readonly TaskDependency[];
 }
 
+interface GanttVirtualScrollState {
+  readonly _tasks?: readonly unknown[];
+  readonly _chartHeight?: number;
+  readonly _scales?: { readonly height?: number };
+  readonly cellHeight?: number;
+  readonly scrollTop?: number;
+}
+
+function ensureFullVerticalScrollRange(
+  shell: HTMLElement,
+  api: IApi | null,
+  fallbackTaskCount: number,
+): void {
+  const pseudoRows = shell.querySelector<HTMLElement>(".wx-pseudo-rows");
+  if (pseudoRows === null) return;
+  const state = api?.getState() as GanttVirtualScrollState | undefined;
+  const taskCount = Math.max(state?._tasks?.length ?? 0, fallbackTaskCount);
+  const cellHeight = state?.cellHeight ?? 42;
+  const scaleHeight = state?._scales?.height ?? 0;
+  const requiredHeight = scaleHeight + taskCount * cellHeight;
+  pseudoRows.style.setProperty("min-height", `${String(requiredHeight)}px`, "important");
+}
+
+function calculateVerticalMaximum(
+  api: IApi | null,
+  fallbackTaskCount: number,
+  fallbackViewportHeight: number,
+): number {
+  const state = api?.getState() as GanttVirtualScrollState | undefined;
+  const taskCount = Math.max(state?._tasks?.length ?? 0, fallbackTaskCount);
+  const cellHeight = state?.cellHeight ?? 42;
+  const scaleHeight = state?._scales?.height ?? 0;
+  const viewportHeight = fallbackViewportHeight > 0
+    ? fallbackViewportHeight
+    : state?._chartHeight ?? 0;
+  return Math.max(0, scaleHeight + taskCount * cellHeight - viewportHeight);
+}
+
 const GANTT_COLUMNS: IColumnConfig[] = [
-  { id: "text", header: "Tarefa", width: 270, flexgrow: 1, resize: false },
+  {
+    id: "text",
+    header: "Tarefa",
+    width: 270,
+    flexgrow: 1,
+    resize: false,
+    cell: ({ row }) => {
+      const title = String(row.text ?? "");
+      return <span className="gantt-task-title" title={title}>{title}</span>;
+    },
+  },
   { id: "start", header: "Início", width: 105, resize: false },
-  { id: "workDuration", header: "Dias úteis", width: 72, align: "right", resize: false },
+  { id: "workDuration", header: "Duração", width: 102, align: "right", resize: false },
 ];
 
 const MONTH_NAMES = [
@@ -118,6 +168,7 @@ export function TaskGantt({
   calendars,
   projectCalendarId,
   dependencies,
+  baselineTasks,
   disabled,
   onSave,
   onCreateDependency,
@@ -136,12 +187,18 @@ export function TaskGantt({
   const undoStack = useRef<GanttHistoryEntry[]>([]);
   const redoStack = useRef<GanttHistoryEntry[]>([]);
   const contextMenuRef = useRef<HTMLDivElement>(null);
+  const chartShellRef = useRef<HTMLDivElement>(null);
+  const verticalOffsetRef = useRef(0);
+  const [verticalOffset, setVerticalOffset] = useState(0);
+  const [verticalMaximum, setVerticalMaximum] = useState(0);
+  const [timelineOffset, setTimelineOffset] = useState(0);
+  const [timelineMaximum, setTimelineMaximum] = useState(0);
   const [historyState, setHistoryState] = useState({ canUndo: false, canRedo: false, revision: 0 });
   const [contextMenu, setContextMenu] = useState<GanttContextMenuState | null>(null);
   const [contextPredecessorId, setContextPredecessorId] = useState("");
   const projection = useMemo(
-    () => buildGanttProjection(tasks, allProjectTasks, dependencies),
-    [allProjectTasks, dependencies, tasks],
+    () => buildGanttProjection(tasks, allProjectTasks, dependencies, baselineTasks),
+    [allProjectTasks, baselineTasks, dependencies, tasks],
   );
   const scaleConfig = useMemo(() => scalesFor(scale), [scale]);
   const tasksById = useMemo(
@@ -194,6 +251,84 @@ export function TaskGantt({
   const ganttDomId = (value: string | null): string | null =>
     value?.startsWith(":") === true ? value.slice(1) : value;
 
+  const applyVerticalScroll = useCallback((requestedOffset: number): void => {
+    const offset = Math.min(verticalMaximum, Math.max(0, requestedOffset));
+    const verticalScroller = chartShellRef.current?.querySelector<HTMLElement>(".wx-gantt");
+    verticalOffsetRef.current = offset;
+    setVerticalOffset(offset);
+    if (verticalScroller !== null && verticalScroller !== undefined) verticalScroller.scrollTop = offset;
+    ganttApi?.getStores().data.setState({ scrollTop: offset });
+  }, [ganttApi, verticalMaximum]);
+
+  useEffect(() => {
+    const chart = chartShellRef.current;
+    if (chart === null) return;
+    const applyHierarchyColors = (): void => {
+      for (const task of projection.tasks) {
+        const element = chart.querySelector<HTMLElement>(`[data-task-id="${String(task.id)}"]`);
+        if (element !== null) element.dataset.hierarchyLevel = String(task.hierarchyLevel ?? 0);
+      }
+    };
+    applyHierarchyColors();
+    const observer = new MutationObserver(applyHierarchyColors);
+    observer.observe(chart, { childList: true, subtree: true });
+    return () => { observer.disconnect(); };
+  }, [ganttRevision, projection.tasks]);
+
+  useEffect(() => {
+    const shell = chartShellRef.current;
+    if (shell === null) return;
+    let timeline: HTMLElement | null = null;
+    let verticalScroller: HTMLElement | null = null;
+    const syncFromTimeline = (): void => {
+      if (timeline !== null) setTimelineOffset(timeline.scrollLeft);
+    };
+    const syncFromVertical = (): void => {
+      if (verticalScroller === null) return;
+      verticalOffsetRef.current = verticalScroller.scrollTop;
+      setVerticalOffset(verticalScroller.scrollTop);
+    };
+    const measureTimeline = (): void => {
+      ensureFullVerticalScrollRange(shell, ganttApi, projection.tasks.length);
+      const nextTimeline = shell.querySelector<HTMLElement>(".wx-chart");
+      const nextVerticalScroller = shell.querySelector<HTMLElement>(".wx-gantt");
+      if (nextTimeline !== timeline) {
+        timeline?.removeEventListener("scroll", syncFromTimeline);
+        timeline = nextTimeline;
+        timeline?.addEventListener("scroll", syncFromTimeline, { passive: true });
+      }
+      if (nextVerticalScroller !== verticalScroller) {
+        verticalScroller?.removeEventListener("scroll", syncFromVertical);
+        verticalScroller = nextVerticalScroller;
+        verticalScroller?.addEventListener("scroll", syncFromVertical, { passive: true });
+      }
+      if (timeline !== null) {
+        setTimelineMaximum(Math.max(0, timeline.scrollWidth - timeline.clientWidth));
+        syncFromTimeline();
+      }
+      if (verticalScroller !== null) {
+        setVerticalMaximum(Math.max(
+          verticalScroller.scrollHeight - verticalScroller.clientHeight,
+          calculateVerticalMaximum(ganttApi, projection.tasks.length, verticalScroller.clientHeight),
+        ));
+        syncFromVertical();
+      }
+    };
+    measureTimeline();
+    const mutationObserver = new MutationObserver(measureTimeline);
+    mutationObserver.observe(shell, { childList: true, subtree: true });
+    const resizeObserver = typeof ResizeObserver === "undefined"
+      ? null
+      : new ResizeObserver(measureTimeline);
+    resizeObserver?.observe(shell);
+    return () => {
+      mutationObserver.disconnect();
+      resizeObserver?.disconnect();
+      timeline?.removeEventListener("scroll", syncFromTimeline);
+      verticalScroller?.removeEventListener("scroll", syncFromVertical);
+    };
+  }, [ganttApi, ganttRevision, projection.tasks, scale]);
+
   const dependencyLabel = useCallback((dependency: TaskDependency): string => {
     const predecessor = tasksById.get(dependency.predecessorId);
     const successor = tasksById.get(dependency.successorId);
@@ -234,6 +369,44 @@ export function TaskGantt({
       dependencyId: linkId,
       addPredecessor: false,
     });
+  };
+
+  useEffect(() => {
+    const shell = chartShellRef.current;
+    if (shell === null || ganttApi === null) return;
+    const handleWheel = (event: globalThis.WheelEvent): void => {
+      if (event.ctrlKey || event.deltaY === 0) return;
+      const verticalScroller = shell.querySelector<HTMLElement>(".wx-gantt");
+      const viewportHeight = verticalScroller?.clientHeight ?? shell.clientHeight;
+      const maximumScroll = Math.max(
+        verticalMaximum,
+        calculateVerticalMaximum(ganttApi, projection.tasks.length, viewportHeight),
+      );
+      if (maximumScroll <= 0) return;
+      const apiPosition = ganttApi.getState().scrollTop;
+      const currentPosition = typeof apiPosition === "number" ? apiPosition : verticalOffsetRef.current;
+      const nextScroll = Math.min(maximumScroll, Math.max(0, currentPosition + event.deltaY));
+      if (nextScroll === currentPosition) return;
+      event.preventDefault();
+      event.stopPropagation();
+      applyVerticalScroll(nextScroll);
+    };
+    shell.addEventListener("wheel", handleWheel, { capture: true, passive: false });
+    return () => { shell.removeEventListener("wheel", handleWheel, { capture: true }); };
+  }, [applyVerticalScroll, ganttApi, projection.tasks.length, verticalMaximum]);
+
+  const scrollTimeline = (event: SyntheticEvent<HTMLInputElement>): void => {
+    const offset = Number(event.currentTarget.value);
+    const timeline = chartShellRef.current?.querySelector<HTMLElement>(".wx-chart");
+    if (timeline !== null && timeline !== undefined) {
+      setTimelineOffset(offset);
+      timeline.scrollLeft = offset;
+      void ganttApi?.exec("scroll-chart", { left: offset });
+    }
+  };
+
+  const scrollTaskRowsFromBar = (event: SyntheticEvent<HTMLInputElement>): void => {
+    applyVerticalScroll(Number(event.currentTarget.value));
   };
 
   useEffect(() => {
@@ -589,6 +762,9 @@ export function TaskGantt({
         <span><i className="legend-holiday" /> Feriado</span>
         <span><i className="legend-link" /> Dependência FS</span>
       </div>
+      <p className="gantt-scroll-hint">
+        Use a roda do mouse para percorrer as atividades e a barra inferior para navegar pelas datas.
+      </p>
 
       {projection.links.length === 0 ? null : (
         <div className="gantt-dependency-focus">
@@ -626,13 +802,15 @@ export function TaskGantt({
       ) : (
         <div className="gantt-layout">
           <div
+            ref={chartShellRef}
             className={`gantt-chart-shell${focusedLink === null ? "" : " dependency-focus-active"}`}
             data-testid="projectflow-gantt"
             onClick={focusDependencyFromChart}
             onContextMenu={openContextMenu}
           >
-            <Willow fonts={false}>
-              <Gantt
+            <div className="gantt-renderer">
+              <Willow fonts={false}>
+                <Gantt
                 key={ganttRevision}
                 tasks={[...projection.tasks]}
                 links={[...projection.links]}
@@ -640,9 +818,10 @@ export function TaskGantt({
                 scales={scaleConfig.scales}
                 cellWidth={scaleConfig.cellWidth}
                 cellHeight={42}
-                gridWidth={430}
+                gridWidth={454}
                 readonly={disabled || savingVisualEdit}
                 zoom
+                baselines={baselineTasks.length > 0}
                 init={setGanttApi}
                 selected={selectedGanttTaskIds}
                 highlightTime={(date, unit) =>
@@ -650,9 +829,43 @@ export function TaskGantt({
                     ? ganttCalendarClass(projectCalendar, date)
                     : ""
                 }
-              />
-            </Willow>
+                />
+              </Willow>
+            </div>
           </div>
+
+          <div className="gantt-vertical-scroll">
+            <input
+              className="gantt-vertical-scroll-input"
+              type="range"
+              aria-label="Percorrer atividades do Gantt"
+              min={0}
+              max={Math.max(1, Math.round(verticalMaximum))}
+              step={1}
+              value={Math.min(verticalOffset, Math.max(1, verticalMaximum))}
+              onInput={scrollTaskRowsFromBar}
+            />
+            <span
+              className="gantt-vertical-scroll-thumb"
+              style={{
+                top: verticalMaximum <= 0
+                  ? 0
+                  : `calc(${String((verticalOffset / verticalMaximum) * 100)}% - ${String((verticalOffset / verticalMaximum) * 28)}px)`,
+              }}
+            />
+          </div>
+
+          <input
+            className="gantt-horizontal-scroll"
+            type="range"
+            aria-label="Navegar pelas datas do Gantt"
+            min={0}
+            max={Math.max(1, timelineMaximum)}
+            step={Math.max(1, Math.round(scaleConfig.cellWidth / 2))}
+            value={Math.min(timelineOffset, Math.max(1, timelineMaximum))}
+            disabled={timelineMaximum <= 0}
+            onInput={scrollTimeline}
+          />
 
           {contextMenu === null ? null : (
             <div

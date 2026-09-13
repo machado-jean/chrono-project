@@ -33,6 +33,8 @@ pub fn run() {
             commands::reorder_projects,
             commands::delete_project,
             commands::save_task,
+            commands::save_baseline,
+            commands::delete_project_baselines,
             commands::reorder_tasks,
             commands::apply_schedule_changes,
             commands::delete_task_tree,

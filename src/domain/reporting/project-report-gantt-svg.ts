@@ -26,6 +26,16 @@ function barRange(row: ProjectReportRow, start: string, end: string, dayWidth: n
   };
 }
 
+function baselineRange(row: ProjectReportRow, start: string, end: string, dayWidth: number): { x: number; width: number } | null {
+  if (row.baselineStartDate === null || row.baselineEndDate === null || row.baselineEndDate < start || row.baselineStartDate > end) return null;
+  const visibleStart = row.baselineStartDate < start ? start : row.baselineStartDate;
+  const visibleEnd = row.baselineEndDate > end ? end : row.baselineEndDate;
+  return {
+    x: LABEL_WIDTH + calendarDaysBetween(start, visibleStart) * dayWidth,
+    width: Math.max(2, (calendarDaysBetween(visibleStart, visibleEnd) + 1) * dayWidth),
+  };
+}
+
 function pageSvg(rows: readonly ProjectReportRow[], allRows: readonly ProjectReportRow[], start: string, end: string): string {
   const days = Math.max(1, calendarDaysBetween(start, end) + 1);
   const dayWidth = TIMELINE_WIDTH / days;
@@ -83,6 +93,10 @@ function pageSvg(rows: readonly ProjectReportRow[], allRows: readonly ProjectRep
     const bar = barRange(row, start, end, dayWidth);
     if (bar === null) return;
     const y = HEADER_HEIGHT + index * ROW_HEIGHT + 5;
+    const baseline = baselineRange(row, start, end, dayWidth);
+    if (baseline !== null) {
+      parts.push(`<rect x="${baseline.x}" y="${y + 11}" width="${baseline.width}" height="3" rx="1" fill="#667085"/>`);
+    }
     const color = row.isSummary ? "#0F9F83" : "#2563EB";
     const progress = row.isSummary ? "#087565" : "#1E40AF";
     parts.push(`<rect x="${bar.x}" y="${y}" width="${bar.width}" height="10" rx="1.5" fill="${color}"/>`);

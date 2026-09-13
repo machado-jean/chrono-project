@@ -4,6 +4,7 @@ import { check } from "@tauri-apps/plugin-updater";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { version as appVersion } from "../../../package.json";
 import { WorkspaceHelpMenu } from "../../../src/components/WorkspaceHelpMenu";
 vi.mock("@tauri-apps/plugin-opener", () => ({ openUrl: vi.fn() }));
 vi.mock("@tauri-apps/plugin-process", () => ({ relaunch: vi.fn() }));
@@ -62,7 +63,7 @@ describe("verificação de atualização no menu Ajuda", () => {
     fireEvent.click(screen.getByText("Ajuda"));
     fireEvent.click(screen.getByRole("button", { name: "Verificar atualizações" }));
 
-    expect(await screen.findByText("Você já está na versão mais recente (0.1.7)."))
+    expect(await screen.findByText(`Você já está na versão mais recente (${appVersion}).`))
       .toBeVisible();
   });
 

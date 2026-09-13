@@ -24,6 +24,13 @@ um projeto e selecione **Gerar PDF**, ao lado das visualizações.
 - papel A4 ou A3, sempre em paisagem;
 - início e fim da janela do cronograma;
 - detalhes textuais opcionais.
+- comparação opcional com a linha de base ativa, exibindo datas planejadas,
+  datas atuais e desvio em dias úteis; prazo-limite e saúde também aparecem na
+  lista.
+
+Quando a comparação está marcada, o Gantt desenha uma barra cinza fina para o
+plano aprovado atrás da barra corrente. A opção só aparece quando o projeto
+possui uma linha de base ativa.
 
 O intervalo temporal enquadra o gráfico, mas não remove atividades. Itens sem
 cronograma ou fora da janela recebem indicação textual. O seletor nativo permite

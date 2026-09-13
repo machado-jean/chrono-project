@@ -3,6 +3,10 @@ import Database from "@tauri-apps/plugin-sql";
 
 import { validateCalendar } from "../domain/calendars/calendar";
 import { validateProject } from "../domain/projects/project";
+import {
+  validateBaselineTask,
+  validateProjectBaseline,
+} from "../domain/planning/baseline";
 import { validateTaskDependency } from "../domain/scheduling/dependency";
 import { validateTask } from "../domain/tasks/task";
 import {
@@ -59,6 +63,8 @@ export class TauriWorkspaceRepository implements WorkspaceRepository {
       dependencies: snapshot.dependencies.map((dependency) =>
         validateTaskDependency(dependency, tasks),
       ),
+      baselines: snapshot.baselines.map(validateProjectBaseline),
+      baselineTasks: snapshot.baselineTasks.map(validateBaselineTask),
       templates,
       templateItems,
       templateDependencies,
@@ -83,6 +89,19 @@ export class TauriWorkspaceRepository implements WorkspaceRepository {
 
   async saveTask(task: Parameters<WorkspaceRepository["saveTask"]>[0]): Promise<void> {
     await invoke("save_task", { task: validateTask(task) });
+  }
+
+  async saveBaseline(bundle: Parameters<WorkspaceRepository["saveBaseline"]>[0]): Promise<void> {
+    await invoke("save_baseline", {
+      bundle: {
+        baseline: validateProjectBaseline(bundle.baseline),
+        tasks: bundle.tasks.map(validateBaselineTask),
+      },
+    });
+  }
+
+  async deleteProjectBaselines(projectId: string): Promise<void> {
+    await invoke("delete_project_baselines", { projectId });
   }
 
   async reorderTasks(taskIds: readonly string[]): Promise<void> {

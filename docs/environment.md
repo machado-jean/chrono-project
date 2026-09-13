@@ -418,3 +418,42 @@ Artefatos locais em `.local/distribution/v0.1.7/`:
 Os dois instaladores e o manifesto do updater foram validados contra a chave
 pública incorporada. O script de publicação verifica hashes, assinaturas, CI de
 `main` e, após criar a release, aguarda obrigatoriamente o CI da tag `v0.1.7`.
+
+## Artefatos da v0.1.8
+
+Nenhuma ferramenta global ou dependência externa foi adicionada. Os manifests
+do frontend, Rust e Tauri estão alinhados em `0.1.8`; a migration
+`0005_plan_control.sql` elevou o schema SQLite para 5.
+
+Os instaladores NSIS de produção foram gerados em
+`.local/distribution/v0.1.8/`:
+
+| Arquivo | Tamanho | SHA-256 |
+| --- | ---: | --- |
+| `ProjectFlow-Windows-x64-Setup.exe` | 5.683.264 bytes | `151535872C85A8487978E587C3F2FF25602DDFF9A7561B6F801E3776E9155B22` |
+| `ProjectFlow-Windows-x64-Offline-Setup.exe` | 221.190.643 bytes | `899E15B636F7BCC05A4557AE8764C8351295C8BAA05DCE1B94607DBF4D83DB56` |
+
+O pacote padrão usa o WebView2 disponível no Windows. O pacote offline inclui
+o bootstrapper oficial necessário para uma instalação sem rede. Ambos foram
+gerados com `--no-sign`; a chave privada permanente do updater não estava
+disponível no ambiente e deve ser fornecida externamente ao repositório para
+gerar os arquivos `.sig` e o `latest.json`.
+
+Antes da abertura foi preservada uma cópia em
+`.local/backups/projectflow-before-phase8-audit-20260910.sqlite`. O processo
+iniciou responsivo e o log confirmou explicitamente a feature de dados
+compartilhados; nenhum banco do perfil Windows foi substituído.
+
+Antes de popular o projeto inicial de auditoria de UX, o banco foi preservado em
+`.local/backups/projectflow-before-phase8-ux-seed-20260911.sqlite`. O projeto
+foi escrito atomicamente pelas rotinas de persistência do aplicativo, sem SQL
+manual. A auditoria final usou uma estrutura completa de 205 tarefas, quatro
+níveis, datas e predecessoras. No Gantt real, uma janela de 590 px percorreu o
+conteúdo de 8.682 px até `scrollTop` 8.092 e a tarefa `5.4.3.2`.
+
+Validações: 136 testes TypeScript/React, 37 testes Rust/SQLite, 1 jornada E2E em
+camadas e 2 testes de desempenho aprovados; lint, typecheck, build web, Cargo
+fmt/check/Clippy e auditoria npm aprovados. O harness diagnóstico não obteve a
+porta CDP do WebView2 em cinco cenários. Conforme o ADR 019, esse teste continua
+não bloqueante; a janela real e sua rolagem integral foram verificadas
+separadamente.

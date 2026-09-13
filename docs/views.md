@@ -28,6 +28,7 @@ Tabela, Kanban e Gantt exibem uma numeração derivada da posição na árvore:
 1. Tarefa-pai
 1.1. Subtarefa
 1.1.1. Subtarefa de terceiro nível
+1.1.1.1. Subtarefa de quarto nível
 2. Próxima tarefa-pai
 ```
 
@@ -35,6 +36,15 @@ Essa numeração não é gravada no título, no código visual nem no SQLite. El
 recalculada automaticamente ao reordenar ou mover uma tarefa na hierarquia. Se
 um título antigo já começa com o mesmo número, a interface o exibe apenas uma
 vez; o conteúdo persistido não é alterado silenciosamente.
+
+A V1 permite no máximo quatro níveis, contando a tarefa-raiz. A interface deixa
+de oferecer uma tarefa do quarto nível como pai, e domínio, templates e
+importação repetem a validação para que o limite não possa ser contornado.
+Ao criar a primeira subtarefa de uma tarefa que participa de uma dependência FS,
+a interface solicita uma decisão explícita: transferir as relações para a nova
+folha ou removê-las. A opção recomendada preserva os UUIDs e o lag e grava a
+conversão inteira em uma transação.
+
 
 ## Kanban
 
@@ -50,6 +60,14 @@ identificadas, mas continuam sendo a mesma `Task` derivada pelo scheduler.
 ## Gantt
 
 O Gantt usa SVAR React Gantt 2.7.1 conforme o [ADR 013](decisions/013-svar-react-gantt.md).
+A roda do mouse sobre qualquer área do gráfico percorre verticalmente as
+atividades. A barra horizontal, mantida visível na base da linha do tempo,
+permite navegar entre datas sem deslocar o painel de inspeção.
+Uma barra vertical fina ocupa uma coluna própria entre o gráfico e o painel
+**Inspecionar tarefa**. Seu trilho não cobre tarefas ou dependências, possui uma
+área de interação ampliada e mantém zero no topo e o fim da lista embaixo. A
+altura rolável é derivada de todas as tarefas projetadas, inclusive em árvores
+maiores do que a janela visível.
 A projeção transitória contém:
 
 - hierarquia e tarefas-resumo abertas quando há filhos visíveis;
@@ -59,12 +77,19 @@ A projeção transitória contém:
 - realce de finais de semana e feriados do calendário do projeto;
 - seleção no gráfico e por seletor acessível;
 - foco de dependência por clique na linha ou por seletor acessível.
+- linha de base ativa desenhada atrás das barras correntes, quando existente.
 
 As datas do ProjectFlow são inclusivas. Na projeção, o fim é convertido para o
 dia civil seguinte porque o renderer usa fim exclusivo. Assim, uma tarefa de
 sexta a segunda ocupa corretamente sexta, sábado, domingo e segunda no eixo,
-enquanto a coluna **Dias úteis** continua mostrando a duração calculada pelo
+enquanto a coluna **Duração** continua mostrando a quantidade de dias úteis
+calculada pelo
 calendário do domínio.
+
+Títulos que não cabem na primeira coluna são abreviados visualmente; manter o
+ponteiro sobre o texto revela o nome completo sem alterar a largura do gráfico.
+As barras usam uma cor própria para cada um dos quatro níveis, mantendo texto e
+progresso com contraste e preservando a forma distinta das tarefas-resumo.
 
 Por padrão todas as relações aparecem. Ao clicar em uma linha, ou escolher uma
 relação em **Dependência em foco**, aquela relação recebe destaque,
@@ -81,6 +106,44 @@ O painel **Inspecionar tarefa** permite
 alterar início e duração apenas quando isso é seguro; tarefas-resumo exibem a
 explicação de que suas datas são derivadas. O salvamento usa o scheduler do
 ProjectFlow e nunca o mecanismo de agendamento da biblioteca.
+
+## Controle do plano de referência
+
+Acima das views, **Criar plano de referência** registra uma fotografia nomeada
+do planejamento aprovado. Ela serve apenas para comparar mudanças futuras e
+não altera as tarefas atuais. Depois da primeira fotografia, **Atualizar plano
+de referência** exige confirmação e mantém as anteriores no histórico. O painel
+de histórico permite excluir o plano e todas as revisões, com confirmação; as
+tarefas atuais permanecem intactas. Na Tabela, as colunas **Início planejado**,
+**Fim planejado** e **Desvio** comparam a fotografia ativa ao cronograma atual em dias
+úteis do calendário efetivo da tarefa.
+Essas três colunas só aparecem enquanto existir um plano de referência ativo;
+projetos que não utilizam o recurso mantêm a Tabela mais compacta.
+
+**Prazo-limite** é editável separadamente da data final. **Saúde** informa
+**Dentro do prazo**, **Em risco** ou **Atrasada**, além de **Sem prazo**; esses
+indicadores são informativos e nunca movimentam tarefas.
+
+### Auditoria manual da Fase 8
+
+1. Crie um plano de referência e confirme as barras cinzas no Gantt.
+2. Mude a data de uma tarefa e confira o desvio em dias úteis na Tabela.
+3. Defina um prazo anterior ao fim atual e confira **Em risco**; use um prazo
+   passado em tarefa aberta e confira **Atrasada**.
+4. Atualize o plano, confirme a mensagem de substituição e abra o histórico.
+5. Exclua o plano, confirme que as tarefas atuais permanecem e crie-o novamente.
+6. Feche e reabra o `.exe`; plano, histórico e prazos devem permanecer.
+7. Gere um PDF com a comparação marcada e confira plano, atual e desvio.
+
+## Espaço de trabalho e ajuda contextual
+
+A barra lateral de projetos pode ser recolhida pelo botão **Recolher projetos**.
+No modo compacto, o botão **Mostrar projetos** restaura a navegação sem sair do
+projeto atual. Os cabeçalhos editáveis da Tabela possuem um botão de informação
+acessível por mouse e teclado; seu balão é elevado acima das colunas vizinhas.
+O clique direito em um projeto abre ações rápidas para arquivar, restaurar ou
+excluir. As mesmas ações continuam disponíveis no menu superior **Projeto** como
+alternativa acessível por teclado.
 
 ## Auditoria manual da Fase 4
 
@@ -115,5 +178,5 @@ candidatos para uma iteração futura de UX, depois do Checkpoint Git 5:
 - ação **Hoje** e enquadramento automático do projeto no Gantt;
 - navegação direta entre as duas pontas de uma dependência em foco;
 - densidade compacta opcional no Kanban;
-- marcos, baseline e caminho crítico somente após decisões próprias de domínio
+- marcos e caminho crítico somente após decisões próprias de domínio
   e scheduler — não como comportamento implícito da biblioteca de Gantt.

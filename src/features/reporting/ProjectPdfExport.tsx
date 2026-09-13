@@ -2,6 +2,8 @@ import { useMemo, useState } from "react";
 
 import { ModalDialog } from "../../components/ModalDialog";
 import type { Project } from "../../domain/projects/project";
+import type { Calendar } from "../../domain/calendars/calendar";
+import type { BaselineTask } from "../../domain/planning/baseline";
 import {
   buildProjectReport,
   type ProjectPdfFormat,
@@ -16,6 +18,8 @@ interface ProjectPdfExportProps {
   readonly project: Project;
   readonly tasks: readonly Task[];
   readonly dependencies: readonly TaskDependency[];
+  readonly calendars: readonly Calendar[];
+  readonly baselineTasks: readonly BaselineTask[];
   readonly visibleTaskIds: ReadonlySet<string>;
   readonly filtersActive: boolean;
   readonly disabled: boolean;
@@ -41,6 +45,8 @@ export function ProjectPdfExport({
   project,
   tasks,
   dependencies,
+  calendars,
+  baselineTasks,
   visibleTaskIds,
   filtersActive,
   disabled,
@@ -52,6 +58,7 @@ export function ProjectPdfExport({
   const [scope, setScope] = useState<ProjectPdfScope>("ALL");
   const [pageSize, setPageSize] = useState<ProjectPdfPageSize>("A4");
   const [includeDetails, setIncludeDetails] = useState(false);
+  const [includeBaseline, setIncludeBaseline] = useState(true);
   const [timelineStart, setTimelineStart] = useState("");
   const [timelineEnd, setTimelineEnd] = useState("");
   const [message, setMessage] = useState<string | null>(null);
@@ -78,12 +85,15 @@ export function ProjectPdfExport({
         project,
         tasks,
         dependencies,
+        calendars,
+        baselineTasks,
         visibleTaskIds,
         options: {
           format,
           scope,
           pageSize,
           includeDetails,
+          includeBaseline,
           timelineStart: timelineStart.length === 0 ? null : timelineStart,
           timelineEnd: timelineEnd.length === 0 ? null : timelineEnd,
         },
@@ -164,6 +174,12 @@ export function ProjectPdfExport({
             <label className="pdf-detail-option">
               <input type="checkbox" checked={includeDetails} onChange={(event) => { setIncludeDetails(event.target.checked); }} />
               Incluir descrições, responsáveis, tags e observações
+            </label>
+          ) : null}
+          {baselineTasks.length > 0 ? (
+            <label className="pdf-detail-option">
+              <input type="checkbox" checked={includeBaseline} onChange={(event) => { setIncludeBaseline(event.target.checked); }} />
+              Incluir plano de referência e desvios
             </label>
           ) : null}
           <p className="pdf-export-note">O PDF é gerado localmente. Nenhum dado é enviado para a internet.</p>

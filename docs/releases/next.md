@@ -1,55 +1,59 @@
-# ProjectFlow v0.1.7 - pronta para auditoria e publicação
+# ProjectFlow v0.1.8 — pacote de lançamento preparado
 
-Iniciado em 08/09/2026. A última release preparada e informada pelo usuário é
-`v0.1.6`. Os manifests locais avançaram juntos para `0.1.7`; o schema SQLite
-permanece 4.
+A versão `0.1.8` conclui a Fase 8 de controle do plano. Os manifests da
+aplicação estão alinhados em `0.1.8` e a migration `0005_plan_control.sql`
+eleva o schema SQLite de 4 para 5.
 
-## Escopo atual
+## Entregas
 
-- Gerar relatório PDF completo com indicadores, distribuições, atividades e
-  cronograma Gantt.
-- Permitir saídas somente de atividades ou somente do Gantt.
-- Respeitar hierarquia e oferecer todas as atividades ou a projeção filtrada.
-- Identificar cada coluna do Gantt com dia da semana sobre o número da data e
-  linhas verticais diárias, destacando finais de semana.
-- Alternar suavemente a cor das colunas e desenhar dependências FS com setas,
-  incluindo indicação de origem fora do período ou da página atual.
-- Configurar A4/A3, intervalo do cronograma e detalhes textuais.
-- Salvar pelo seletor nativo do Windows, totalmente offline.
-- Tornar a publicação de backups resiliente quando o Windows mantém o SQLite
-  validado aberto além da janela normal de tentativas.
-- Exigir a verificação do workflow `CI` pertencente à tag depois de cada release.
+- plano de referência nomeado, fotografia ativa e histórico de revisões;
+- datas planejadas versus atuais e desvio em dias úteis na Tabela;
+- prazo-limite independente e saúde explicável;
+- linha de base no Gantt e comparação opcional no relatório PDF;
+- round-trip dos novos dados em projeto, workspace, importação seletiva,
+  duplicação, backup e restauração;
+- leitura compatível de pacotes e backups do schema 4 sem alterar o original;
+- hierarquia validada em no máximo quatro níveis;
+- conversão assistida de tarefa relacionada em tarefa-resumo;
+- barra de projetos recolhível, ajuda contextual e menu de contexto;
+- Gantt legível por nível, com títulos completos sob o ponteiro;
+- navegação vertical integral por roda ou barra dedicada e navegação horizontal
+  por barra persistente na base.
 
-## Evidências locais
+## Validação concluída
 
-- 127 testes regulares aprovados, incluindo modelo, renderer PDF e diálogo.
-- 33 testes Rust/SQLite aprovados, incluindo validação do envelope PDF e da
-  publicação intermediária de backup.
-- 1 jornada E2E em camadas e 5 cenários na janela Tauri real aprovados.
-- O E2E desktop gerou e gravou um PDF real pelo comando nativo.
-- 2 testes de desempenho aprovados.
-- lint, TypeScript, build web, Cargo check/fmt/Clippy aprovados.
-- Amostra de duas páginas renderizada e inspecionada sem cortes ou sobreposições.
-- A falha da tag `v0.1.6` foi diagnosticada como `os error 32`: o runner Windows
-  reteve o arquivo SQLite validado durante a troca final. O CI de `main` do mesmo
-  commit havia terminado com sucesso.
+- 136 testes TypeScript/React aprovados;
+- 37 testes Rust/SQLite aprovados;
+- uma jornada E2E em camadas e dois cenários de desempenho aprovados;
+- ESLint, TypeScript, build web, Cargo fmt/check/Clippy aprovados;
+- `npm audit --audit-level=high` sem vulnerabilidades conhecidas;
+- Gantt exercitado na janela real com 205 tarefas: conteúdo de 8.682 px em uma
+  janela de 590 px, alcançando `scrollTop` 8.092 e a tarefa final `5.4.3.2`.
 
-## Limites mantidos visíveis
+O E2E desktop por CDP não obteve as portas do WebView2 nos cinco cenários. Essa
+limitação permanece diagnóstica e não bloqueante conforme o ADR 019; a janela
+real e a rolagem completa foram verificadas separadamente.
 
-- Dependências são listadas por nome e desenhadas no Gantt; entre páginas, a
-  origem é indicada na borda em vez de atravessar a quebra física.
-- O módulo PDF é carregado sob demanda e acrescenta aproximadamente 815 KB
-  compactados aos chunks opcionais de código e fontes.
-- Os instaladores padrão e offline, assinaturas, hashes, manifesto do updater,
-  notas e script de publicação foram gerados em `.local/distribution/v0.1.7/`.
+## Artefatos locais
 
-## Fora deste incremento
+Diretório: `.local/distribution/v0.1.8/`.
 
-- setas de dependência atravessando páginas;
-- editor de template visual de relatórios;
-- logotipo personalizado;
-- envio por e-mail ou qualquer serviço remoto.
+| Arquivo | Tamanho | SHA-256 |
+| --- | ---: | --- |
+| `ProjectFlow-Windows-x64-Setup.exe` | 5.683.264 bytes | `151535872C85A8487978E587C3F2FF25602DDFF9A7561B6F801E3776E9155B22` |
+| `ProjectFlow-Windows-x64-Offline-Setup.exe` | 221.190.643 bytes | `899E15B636F7BCC05A4557AE8764C8351295C8BAA05DCE1B94607DBF4D83DB56` |
 
-Nenhum commit, push, tag ou release da `v0.1.7` foi executado pelo agente. Os
-artefatos locais estão prontos; a publicação depende do commit do usuário e dos
-gates de CI de `main` e da tag.
+Os instaladores foram gerados sem a assinatura do updater porque
+`TAURI_SIGNING_PRIVATE_KEY` não está presente no ambiente. Execute
+`SIGN_AND_FINALIZE.ps1` com a chave permanente para produzir os arquivos
+`.sig`, o `latest.json` e validar todo o pacote. Os executáveis continuam sem
+Authenticode, portanto o Windows pode exibir editor desconhecido.
+
+## Publicação
+
+Depois de assinar e validar, faça o commit e o push da versão. Em seguida,
+`PUBLISH_RELEASE.ps1` exige a árvore limpa, confirma que `HEAD` corresponde ao
+`main` remoto, aguarda o CI de `main`, cria a release `v0.1.8` e aguarda também
+o CI disparado pela própria tag.
+
+Nenhum commit, push, tag ou release foi executado pelo agente.

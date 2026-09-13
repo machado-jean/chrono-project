@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import { ProjectHeader } from "../features/projects/ProjectHeader";
 import { ProjectActionsMenu } from "../features/projects/ProjectActionsMenu";
@@ -21,6 +21,7 @@ interface AppProps {
 
 function App({ repository }: AppProps) {
   const activeRepository = useMemo(() => repository ?? new TauriWorkspaceRepository(), [repository]);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const workspace = useWorkspace(activeRepository);
   const projectPeers = workspace.selectedProject === null
     ? []
@@ -38,14 +39,18 @@ function App({ repository }: AppProps) {
   );
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell${sidebarCollapsed ? " sidebar-collapsed" : ""}`}>
       <a className="skip-link" href="#workspace-content">Ir para o conteúdo principal</a>
       <ProjectSidebar
+        collapsed={sidebarCollapsed}
         projects={workspace.projects}
         selectedProjectId={workspace.selectedProjectId}
         disabled={workspace.isLoading || workspace.isSaving}
         onSelect={workspace.selectProject}
         onCreate={workspace.createProject}
+        onArchive={workspace.saveProject}
+        onDelete={workspace.removeProject}
+        onToggle={() => { setSidebarCollapsed((current) => !current); }}
       />
 
       <main className="workspace-main" id="workspace-content" tabIndex={-1}>
@@ -133,6 +138,9 @@ function App({ repository }: AppProps) {
               conflicts={workspace.schedulingConflicts.filter((conflict) =>
                 workspace.selectedProjectTasks.some((task) => task.id === conflict.taskId),
               )}
+              baselines={workspace.selectedProjectBaselines}
+              activeBaseline={workspace.activeBaseline}
+              activeBaselineTasks={workspace.activeBaselineTasks}
               disabled={workspace.isSaving || workspace.selectedProject.isArchived}
               onCreate={workspace.createTask}
               onSave={workspace.saveTask}
@@ -142,6 +150,8 @@ function App({ repository }: AppProps) {
               onDeleteDependency={workspace.removeDependency}
               onDuplicateTask={workspace.duplicateTask}
               onCreateTemplate={workspace.createTemplate}
+              onCreateBaseline={workspace.createBaseline}
+              onDeleteBaselines={workspace.removeProjectBaselines}
               onSavePdf={async (suggestedName, bytes) => {
                 const result = await activeRepository.savePdfReport(suggestedName, bytes);
                 return result?.path ?? null;

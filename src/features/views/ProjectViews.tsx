@@ -2,11 +2,13 @@ import { lazy, Suspense, useMemo, useState, type KeyboardEvent } from "react";
 
 import type { Calendar } from "../../domain/calendars/calendar";
 import type { Project } from "../../domain/projects/project";
+import type { BaselineTask, ProjectBaseline } from "../../domain/planning/baseline";
 import type { TaskDependency } from "../../domain/scheduling/dependency";
 import type { SchedulingConflict } from "../../domain/scheduling/scheduler";
 import type { Task } from "../../domain/tasks/task";
 import { TaskKanban } from "../kanban/TaskKanban";
 import { ProjectPdfExport } from "../reporting/ProjectPdfExport";
+import { ProjectBaselineControl } from "../planning/ProjectBaselineControl";
 import { TaskTable } from "../table/TaskTable";
 import { TaskFilterBar } from "./TaskFilterBar";
 import { ViewErrorBoundary } from "./ViewErrorBoundary";
@@ -32,8 +34,11 @@ interface ProjectViewsProps {
   readonly projectCalendarId: string;
   readonly dependencies: readonly TaskDependency[];
   readonly conflicts: readonly SchedulingConflict[];
+  readonly baselines: readonly ProjectBaseline[];
+  readonly activeBaseline: ProjectBaseline | null;
+  readonly activeBaselineTasks: readonly BaselineTask[];
   readonly disabled: boolean;
-  readonly onCreate: (input: { readonly title: string; readonly parentId: string | null }) => Promise<Task | null>;
+  readonly onCreate: (input: { readonly title: string; readonly parentId: string | null; readonly parentDependencyPolicy?: "TRANSFER" | "REMOVE" }) => Promise<Task | null>;
   readonly onSave: (
     task: Task,
     dependencyUpdates?: readonly TaskDependency[],
@@ -53,6 +58,8 @@ interface ProjectViewsProps {
     readonly description: string | null;
   }) => Promise<unknown>;
   readonly onSavePdf: (suggestedName: string, bytes: readonly number[]) => Promise<string | null>;
+  readonly onCreateBaseline: (name: string) => Promise<ProjectBaseline | null>;
+  readonly onDeleteBaselines: () => Promise<boolean>;
 }
 
 const VIEW_LABELS: Readonly<Record<ProjectView, string>> = {
@@ -68,6 +75,9 @@ export function ProjectViews({
   projectCalendarId,
   dependencies,
   conflicts,
+  baselines,
+  activeBaseline,
+  activeBaselineTasks,
   disabled,
   onCreate,
   onSave,
@@ -78,6 +88,8 @@ export function ProjectViews({
   onDuplicateTask,
   onCreateTemplate,
   onSavePdf,
+  onCreateBaseline,
+  onDeleteBaselines,
 }: ProjectViewsProps) {
   const [activeView, setActiveView] = useState<ProjectView>("TABLE");
   const [filters, setFilters] = useState<TaskFilters>(EMPTY_TASK_FILTERS);
@@ -112,30 +124,46 @@ export function ProjectViews({
   return (
     <div className="project-views">
       <div className="view-command-bar">
-        <nav className="view-tabs" aria-label="Visualização do projeto" role="tablist">
-          {(Object.keys(VIEW_LABELS) as ProjectView[]).map((view) => (
-            <button
-              key={view}
-              type="button"
-              role="tab"
-              id={`view-tab-${view.toLocaleLowerCase()}`}
-              aria-selected={activeView === view}
-              aria-controls={`view-panel-${view.toLocaleLowerCase()}`}
-              tabIndex={activeView === view ? 0 : -1}
-              className={activeView === view ? "active" : ""}
-              onClick={() => { setActiveView(view); }}
-              onKeyDown={(event) => { moveTabFocus(event, view); }}
-            >
-              {VIEW_LABELS[view]}
-            </button>
-          ))}
-        </nav>
+        <div className="view-navigation">
+          <div className="view-heading">
+            <strong>Visualizações do projeto</strong>
+            <span>As alterações são compartilhadas entre Tabela, Kanban e Gantt.</span>
+          </div>
+          <nav className="view-tabs" aria-label="Visualização do projeto" role="tablist">
+            {(Object.keys(VIEW_LABELS) as ProjectView[]).map((view) => (
+              <button
+                key={view}
+                type="button"
+                role="tab"
+                id={`view-tab-${view.toLocaleLowerCase()}`}
+                aria-selected={activeView === view}
+                aria-controls={`view-panel-${view.toLocaleLowerCase()}`}
+                tabIndex={activeView === view ? 0 : -1}
+                className={activeView === view ? "active" : ""}
+                onClick={() => { setActiveView(view); }}
+                onKeyDown={(event) => { moveTabFocus(event, view); }}
+              >
+                {VIEW_LABELS[view]}
+              </button>
+            ))}
+          </nav>
+        </div>
         <div className="view-command-actions">
-          <span className="shared-source-note">Uma tarefa, três visualizações</span>
+          <ProjectBaselineControl
+            tasks={tasks}
+            baselines={baselines}
+            activeBaseline={activeBaseline}
+            activeBaselineTasks={activeBaselineTasks}
+            disabled={disabled}
+            onCreate={onCreateBaseline}
+            onDelete={onDeleteBaselines}
+          />
           <ProjectPdfExport
             project={project}
             tasks={tasks}
             dependencies={dependencies}
+            calendars={calendars}
+            baselineTasks={activeBaselineTasks}
             visibleTaskIds={visibleTaskIds}
             filtersActive={filtersActive}
             disabled={disabled || tasks.length === 0}
@@ -164,6 +192,7 @@ export function ProjectViews({
             projectCalendarId={projectCalendarId}
             dependencies={dependencies}
             conflicts={conflicts}
+            baselineTasks={activeBaselineTasks}
             disabled={disabled}
             onCreate={onCreate}
             onSave={(task, updates) => onSave(task, updates)}
@@ -193,6 +222,7 @@ export function ProjectViews({
                 calendars={calendars}
                 projectCalendarId={projectCalendarId}
                 dependencies={dependencies}
+                baselineTasks={activeBaselineTasks}
                 disabled={disabled}
                 onSave={onSave}
                 onCreateDependency={onCreateDependency}

@@ -17,10 +17,10 @@ use uuid::Uuid;
 use zip::{write::SimpleFileOptions, CompressionMethod, ZipArchive, ZipWriter};
 
 use crate::{
-    database::DATABASE_SCHEMA_VERSION,
+    database::{DATABASE_SCHEMA_VERSION, PLAN_CONTROL_SCHEMA},
     persistence::{
-        self, CalendarRecord, DependencyRecord, ProjectRecord, TaskRecord,
-        TaskTemplateBundleRecord, WorkspaceData,
+        self, BaselineBundleRecord, BaselineTaskRecord, CalendarRecord, DependencyRecord,
+        ProjectBaselineRecord, ProjectRecord, TaskRecord, TaskTemplateBundleRecord, WorkspaceData,
     },
 };
 
@@ -412,6 +412,13 @@ pub async fn import_package(
             .filter(|dependency| dependency.project_id == project.id)
             .cloned()
             .collect();
+        let source_baselines: Vec<_> = package
+            .workspace
+            .baselines
+            .iter()
+            .filter(|baseline| baseline.project_id == project.id)
+            .cloned()
+            .collect();
 
         let (mut target_project, mut target_tasks, mut target_dependencies) = match selected.mode {
             ProjectImportMode::Replace => {
@@ -432,7 +439,7 @@ pub async fn import_package(
                     position
                 });
                 imported += 1;
-                (target, source_tasks, source_dependencies)
+                (target, source_tasks.clone(), source_dependencies)
             }
             ProjectImportMode::Copy => {
                 copied += 1;
@@ -444,6 +451,19 @@ pub async fn import_package(
                     &now,
                 )
             }
+        };
+        let target_baselines = if selected.mode == ProjectImportMode::Replace {
+            baseline_bundles(&source_baselines, &package.workspace.baseline_tasks)
+        } else {
+            remap_baselines(
+                &source_baselines,
+                &package.workspace.baseline_tasks,
+                project,
+                &source_tasks,
+                &target_project,
+                &target_tasks,
+                &now,
+            )
         };
 
         import_required_calendars(
@@ -476,6 +496,11 @@ pub async fn import_package(
             persistence::save_dependency_record(&mut transaction, dependency)
                 .await
                 .map_err(|error| format!("Falha ao importar dependência: {error}"))?;
+        }
+        for baseline in &target_baselines {
+            persistence::save_baseline_bundle_record(&mut transaction, baseline)
+                .await
+                .map_err(|error| format!("Falha ao importar baseline: {error}"))?;
         }
         if selected.mode == ProjectImportMode::Copy {
             next_position += 1;
@@ -654,6 +679,11 @@ pub async fn restore_backup(
         persistence::save_dependency_record(&mut transaction, dependency)
             .await
             .map_err(|error| format!("Falha ao restaurar dependência: {error}"))?;
+    }
+    for bundle in baseline_bundles(&source.baselines, &source.baseline_tasks) {
+        persistence::save_baseline_bundle_record(&mut transaction, &bundle)
+            .await
+            .map_err(|error| format!("Falha ao restaurar baseline: {error}"))?;
     }
     for template in &source.templates {
         let bundle = template_bundle(&source, &template.id)?;
@@ -939,7 +969,7 @@ async fn validate_package(
 fn validate_manifest(manifest: &PackageManifest, database_path: &Path) -> PortabilityResult<()> {
     if manifest.format != FORMAT_NAME
         || manifest.format_version != FORMAT_VERSION
-        || manifest.schema_version != DATABASE_SCHEMA_VERSION
+        || !(4..=DATABASE_SCHEMA_VERSION).contains(&manifest.schema_version)
     {
         return Err(
             "Formato ou versão do pacote incompatível com esta versão do ProjectFlow.".into(),
@@ -977,7 +1007,7 @@ async fn load_validated_database(path: &Path) -> PortabilityResult<WorkspaceData
             .fetch_one(&mut connection)
             .await
             .map_err(|error| format!("Banco sem schema reconhecido: {error}"))?;
-    if version != DATABASE_SCHEMA_VERSION.to_string() {
+    if version != "4" && version != DATABASE_SCHEMA_VERSION.to_string() {
         return Err(format!(
             "Schema {version} não é compatível com schema {DATABASE_SCHEMA_VERSION}."
         ));
@@ -986,6 +1016,43 @@ async fn load_validated_database(path: &Path) -> PortabilityResult<WorkspaceData
         .close()
         .await
         .map_err(|error| error.to_string())?;
+    if version == "4" {
+        return load_upgraded_schema_four_copy(path).await;
+    }
+    load_workspace_read_only(path).await
+}
+
+async fn load_upgraded_schema_four_copy(path: &Path) -> PortabilityResult<WorkspaceData> {
+    let upgraded_path = std::env::temp_dir().join(format!(
+        "projectflow-schema4-upgrade-{}.sqlite",
+        Uuid::new_v4()
+    ));
+    fs::copy(path, &upgraded_path)
+        .map_err(|error| format!("Falha ao preparar cópia temporária do pacote antigo: {error}"))?;
+    let result = async {
+        let options = SqliteConnectOptions::from_str(&format!(
+            "sqlite:{}",
+            upgraded_path.to_string_lossy().replace('\\', "/")
+        ))
+        .map_err(|error| error.to_string())?;
+        let writable = SqlitePool::connect_with(options)
+            .await
+            .map_err(|error| format!("Falha ao abrir pacote antigo para upgrade: {error}"))?;
+        sqlx::raw_sql(PLAN_CONTROL_SCHEMA)
+            .execute(&writable)
+            .await
+            .map_err(|error| {
+                format!("Falha ao atualizar pacote antigo para o schema 5: {error}")
+            })?;
+        writable.close().await;
+        load_workspace_read_only(&upgraded_path).await
+    }
+    .await;
+    let _ = fs::remove_file(&upgraded_path);
+    result
+}
+
+async fn load_workspace_read_only(path: &Path) -> PortabilityResult<WorkspaceData> {
     let options = SqliteConnectOptions::from_str(&format!(
         "sqlite:{}",
         path.to_string_lossy().replace('\\', "/")
@@ -1141,6 +1208,9 @@ fn validate_template_hierarchy<'a>(
                 .find(|(candidate, _)| *candidate == parent)
                 .and_then(|(_, next)| *next);
         }
+        if visited.len() > 4 {
+            return Err("A hierarquia do template pode ter no máximo 4 níveis.".into());
+        }
     }
     Ok(())
 }
@@ -1185,6 +1255,7 @@ fn parent_first_tasks(tasks: &[TaskRecord]) -> PortabilityResult<Vec<&TaskRecord
     let mut inserted = HashSet::<&str>::new();
     let mut remaining: Vec<_> = tasks.iter().collect();
     let mut ordered = Vec::with_capacity(tasks.len());
+    let mut depths = HashMap::<&str, usize>::new();
     while !remaining.is_empty() {
         let previous = remaining.len();
         let mut pending = Vec::new();
@@ -1197,6 +1268,13 @@ fn parent_first_tasks(tasks: &[TaskRecord]) -> PortabilityResult<Vec<&TaskRecord
                     pending.push(task);
                     continue;
                 }
+                let depth = depths.get(parent_id).copied().unwrap_or_default() + 1;
+                if depth >= 4 {
+                    return Err("A hierarquia de tarefas pode ter no máximo 4 níveis.".into());
+                }
+                depths.insert(task.id.as_str(), depth);
+            } else {
+                depths.insert(task.id.as_str(), 0);
             }
             inserted.insert(task.id.as_str());
             ordered.push(task);
@@ -1242,6 +1320,64 @@ fn validate_selection(
         return Err("A seleção não corresponde ao conteúdo validado do pacote.".into());
     }
     Ok(())
+}
+
+fn baseline_bundles(
+    baselines: &[ProjectBaselineRecord],
+    tasks: &[BaselineTaskRecord],
+) -> Vec<BaselineBundleRecord> {
+    baselines
+        .iter()
+        .map(|baseline| BaselineBundleRecord {
+            baseline: baseline.clone(),
+            tasks: tasks
+                .iter()
+                .filter(|task| task.baseline_id == baseline.id)
+                .cloned()
+                .collect(),
+        })
+        .collect()
+}
+
+fn remap_baselines(
+    baselines: &[ProjectBaselineRecord],
+    baseline_tasks: &[BaselineTaskRecord],
+    _source_project: &ProjectRecord,
+    source_tasks: &[TaskRecord],
+    target_project: &ProjectRecord,
+    target_tasks: &[TaskRecord],
+    _now: &str,
+) -> Vec<BaselineBundleRecord> {
+    let task_ids: HashMap<_, _> = source_tasks
+        .iter()
+        .zip(target_tasks)
+        .map(|(source, target)| (source.id.clone(), target.id.clone()))
+        .collect();
+    baselines
+        .iter()
+        .map(|baseline| {
+            let baseline_id = Uuid::new_v4().to_string();
+            let mut baseline_copy = baseline.clone();
+            baseline_copy.id = baseline_id.clone();
+            baseline_copy.project_id = target_project.id.clone();
+            let tasks = baseline_tasks
+                .iter()
+                .filter(|task| task.baseline_id == baseline.id)
+                .filter_map(|task| {
+                    task_ids.get(&task.task_id).map(|task_id| {
+                        let mut copy = task.clone();
+                        copy.baseline_id = baseline_id.clone();
+                        copy.task_id = task_id.clone();
+                        copy
+                    })
+                })
+                .collect();
+            BaselineBundleRecord {
+                baseline: baseline_copy,
+                tasks,
+            }
+        })
+        .collect()
 }
 
 fn remap_project(
@@ -1459,9 +1595,12 @@ mod tests {
         restore_backup, ImportSelection, ProjectImportMode, ProjectImportSelection,
     };
     use crate::{
-        database::{CORE_SCHEMA, INITIAL_SCHEMA, REUSE_SCHEMA, SCHEDULING_SCHEMA},
+        database::{
+            CORE_SCHEMA, INITIAL_SCHEMA, PLAN_CONTROL_SCHEMA, REUSE_SCHEMA, SCHEDULING_SCHEMA,
+        },
         persistence::{
-            self, DependencyRecord, DuplicationBundleRecord, ProjectRecord, TaskRecord,
+            self, BaselineBundleRecord, BaselineTaskRecord, DependencyRecord,
+            DuplicationBundleRecord, ProjectBaselineRecord, ProjectRecord, TaskRecord,
             TaskTemplateBundleRecord, TaskTemplateDependencyRecord, TaskTemplateItemRecord,
             TaskTemplateRecord,
         },
@@ -1518,11 +1657,34 @@ mod tests {
         let pool = SqlitePool::connect_with(options)
             .await
             .expect("test database should open");
-        for migration in [INITIAL_SCHEMA, CORE_SCHEMA, SCHEDULING_SCHEMA, REUSE_SCHEMA] {
+        for migration in [
+            INITIAL_SCHEMA,
+            CORE_SCHEMA,
+            SCHEDULING_SCHEMA,
+            REUSE_SCHEMA,
+            PLAN_CONTROL_SCHEMA,
+        ] {
             sqlx::raw_sql(migration)
                 .execute(&pool)
                 .await
                 .expect("migration should apply");
+        }
+        pool
+    }
+
+    async fn schema_four_database(path: &Path) -> SqlitePool {
+        let options = SqliteConnectOptions::new()
+            .filename(path)
+            .create_if_missing(true)
+            .foreign_keys(true);
+        let pool = SqlitePool::connect_with(options)
+            .await
+            .expect("schema 4 database should open");
+        for migration in [INITIAL_SCHEMA, CORE_SCHEMA, SCHEDULING_SCHEMA, REUSE_SCHEMA] {
+            sqlx::raw_sql(migration)
+                .execute(&pool)
+                .await
+                .expect("schema 4 migration should apply");
         }
         pool
     }
@@ -1556,6 +1718,7 @@ mod tests {
             start_date: Some("2026-08-31".into()),
             end_date: Some("2026-08-31".into()),
             duration_days: Some(1),
+            deadline_date: Some("2026-09-05".into()),
             scheduling_mode: "AUTO".into(),
             position: 0,
             assignee: None,
@@ -1580,8 +1743,8 @@ mod tests {
                 dependencies: vec![DependencyRecord {
                     id: format!("{project_id}-dependency"),
                     project_id: project_id.into(),
-                    predecessor_id: first_id,
-                    successor_id: second_id,
+                    predecessor_id: first_id.clone(),
+                    successor_id: second_id.clone(),
                     dependency_type: "FS".into(),
                     lag_days: 1,
                     created_at: "2026-08-01T10:00:00Z".into(),
@@ -1591,6 +1754,71 @@ mod tests {
         )
         .await
         .expect("project should be seeded");
+        persistence::save_baseline(
+            pool,
+            &BaselineBundleRecord {
+                baseline: ProjectBaselineRecord {
+                    id: format!("{project_id}-baseline"),
+                    project_id: project_id.into(),
+                    name: "Linha de base inicial".into(),
+                    is_active: true,
+                    created_at: "2026-08-01T10:00:00Z".into(),
+                    replaced_at: None,
+                },
+                tasks: vec![
+                    BaselineTaskRecord {
+                        baseline_id: format!("{project_id}-baseline"),
+                        task_id: first_id.clone(),
+                        title: "Preparar".into(),
+                        outline: "1".into(),
+                        start_date: Some("2026-08-31".into()),
+                        end_date: Some("2026-08-31".into()),
+                        duration_days: Some(1),
+                        progress: 0,
+                    },
+                    BaselineTaskRecord {
+                        baseline_id: format!("{project_id}-baseline"),
+                        task_id: second_id.clone(),
+                        title: "Executar".into(),
+                        outline: "2".into(),
+                        start_date: Some("2026-08-31".into()),
+                        end_date: Some("2026-08-31".into()),
+                        duration_days: Some(1),
+                        progress: 0,
+                    },
+                ],
+            },
+        )
+        .await
+        .expect("baseline should be seeded");
+    }
+
+    async fn seed_project_without_baseline(
+        pool: &SqlitePool,
+        project_id: &str,
+        name: &str,
+        updated_at: &str,
+    ) {
+        persistence::save_project(pool, &project(project_id, name, updated_at))
+            .await
+            .expect("legacy project should be seeded");
+        sqlx::query(
+            "INSERT INTO tasks (
+                id, project_id, title, status, priority, progress,
+                start_date, end_date, duration_days, scheduling_mode,
+                position, created_at, updated_at
+             ) VALUES (?, ?, ?, 'NOT_STARTED', 'NORMAL', 0, ?, ?, 1, 'AUTO', 0, ?, ?)",
+        )
+        .bind(format!("{project_id}-task"))
+        .bind(project_id)
+        .bind("Tarefa preservada")
+        .bind("2026-08-31")
+        .bind("2026-08-31")
+        .bind("2026-08-01T10:00:00Z")
+        .bind("2026-08-01T10:00:00Z")
+        .execute(pool)
+        .await
+        .expect("legacy task should be seeded");
     }
 
     async fn seed_template(pool: &SqlitePool, template_id: &str) {
@@ -1701,6 +1929,8 @@ mod tests {
                 &actual.projects,
                 &actual.tasks,
                 &actual.dependencies,
+                &actual.baselines,
+                &actual.baseline_tasks,
                 &actual.templates,
                 &actual.template_items,
                 &actual.template_dependencies,
@@ -1710,6 +1940,8 @@ mod tests {
                 &expected.projects,
                 &expected.tasks,
                 &expected.dependencies,
+                &expected.baselines,
+                &expected.baseline_tasks,
                 &expected.templates,
                 &expected.template_items,
                 &expected.template_dependencies,
@@ -1728,6 +1960,34 @@ mod tests {
                 expected_calendar
             ));
         }
+    }
+
+    #[tokio::test]
+    async fn reading_schema_four_uses_a_temporary_upgrade_without_mutating_source() {
+        let directory = TestDirectory::new();
+        let path = directory.path().join("legacy.sqlite");
+        let source = schema_four_database(&path).await;
+        seed_project_without_baseline(
+            &source,
+            "legacy-project",
+            "Projeto legado",
+            "2026-08-20T10:00:00Z",
+        )
+        .await;
+        source.close().await;
+        let hash_before = super::sha256_file(&path).expect("legacy hash should be readable");
+
+        let workspace = super::load_validated_database(&path)
+            .await
+            .expect("schema 4 should load through a temporary upgrade");
+
+        assert_eq!(workspace.projects.len(), 1);
+        assert!(workspace.baselines.is_empty());
+        assert_eq!(
+            super::sha256_file(&path).expect("legacy hash should remain readable"),
+            hash_before,
+            "reading a legacy backup must not modify the selected file"
+        );
     }
 
     #[tokio::test]
@@ -1862,6 +2122,26 @@ mod tests {
         assert!(copy_tasks
             .iter()
             .any(|task| task.id == copy_dependency.successor_id));
+        let copy_baseline = actual
+            .baselines
+            .iter()
+            .find(|baseline| baseline.project_id == copy.id)
+            .expect("baseline should be copied");
+        let copy_task_ids: std::collections::HashSet<_> =
+            copy_tasks.iter().map(|task| task.id.as_str()).collect();
+        assert_eq!(
+            actual
+                .baseline_tasks
+                .iter()
+                .filter(|task| task.baseline_id == copy_baseline.id)
+                .count(),
+            2
+        );
+        assert!(actual
+            .baseline_tasks
+            .iter()
+            .filter(|task| task.baseline_id == copy_baseline.id)
+            .all(|task| copy_task_ids.contains(task.task_id.as_str())));
         assert!(copy.name.ends_with("— importado"));
     }
 

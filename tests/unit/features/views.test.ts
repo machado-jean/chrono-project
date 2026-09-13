@@ -41,6 +41,7 @@ function task(id: string, title: string, changes: Partial<Task> = {}): Task {
     startDate: "2026-08-28",
     endDate: "2026-08-28",
     durationDays: 1,
+    deadlineDate: null,
     schedulingMode: "AUTO",
     position: 0,
     assignee: null,
@@ -151,6 +152,8 @@ describe("adaptador do Gantt", () => {
     expect(projection.tasks.find(({ id }) => id === PARENT_ID)?.open).toBe(true);
     expect(projection.tasks.find(({ id }) => id === CHILD_ID)?.open).toBe(false);
     expect(projection.tasks.find(({ id }) => id === CHILD_ID)?.parent).toBe(PARENT_ID);
+    expect(projection.tasks.find(({ id }) => id === PARENT_ID)?.hierarchyLevel).toBe(0);
+    expect(projection.tasks.find(({ id }) => id === CHILD_ID)?.hierarchyLevel).toBe(1);
     expect(projection.tasks.find(({ id }) => id === CHILD_ID)?.progress).toBe(40);
     expect(projection.links).toEqual([
       expect.objectContaining({ source: CHILD_ID, target: SUCCESSOR_ID, type: "e2s" }),

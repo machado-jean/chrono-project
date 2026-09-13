@@ -55,6 +55,7 @@ function task(id: string, title: string, parentId: string | null, position: numb
     startDate: "2026-08-31",
     endDate: "2026-08-31",
     durationDays: 1,
+    deadlineDate: null,
     schedulingMode: "AUTO",
     position,
     assignee: "Jean",

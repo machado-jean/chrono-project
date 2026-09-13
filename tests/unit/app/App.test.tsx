@@ -9,6 +9,11 @@ import {
   type Calendar,
 } from "../../../src/domain/calendars/calendar";
 import type { Project } from "../../../src/domain/projects/project";
+import type {
+  BaselineBundle,
+  BaselineTask,
+  ProjectBaseline,
+} from "../../../src/domain/planning/baseline";
 import type { Task } from "../../../src/domain/tasks/task";
 import type { TaskDependency } from "../../../src/domain/scheduling/dependency";
 import type {
@@ -33,9 +38,20 @@ import type {
 const ganttHarness = vi.hoisted(() => {
   let selectionListener: ((event: { readonly id: string }) => void) | null = null;
   let selectionTag: symbol | null = null;
+  let scrollTop = 0;
   const interceptors = new Map<string, { listener: (event: unknown) => unknown; tag: symbol | null }>();
+  const setScrollState = vi.fn((state: { readonly scrollTop?: number }) => {
+    if (state.scrollTop !== undefined) scrollTop = state.scrollTop;
+  });
   return {
+    setScrollState,
     api: {
+      exec: vi.fn((action: string, event?: { readonly top?: number }) => {
+        if (action === "scroll-chart" && event?.top !== undefined) scrollTop = event.top;
+        return Promise.resolve();
+      }),
+      getState: vi.fn(() => ({ scrollTop })),
+      getStores: vi.fn(() => ({ data: { setState: setScrollState } })),
       on: vi.fn((action: string, listener: (event: { readonly id: string }) => void, config?: { readonly tag?: symbol }) => {
         if (action === "select-task") {
           selectionListener = listener;
@@ -70,7 +86,9 @@ vi.mock("@svar-ui/react-gantt", () => ({
   }) => {
     useEffect(() => { init?.(ganttHarness.api); }, [init]);
     return (
-      <div data-testid="svar-gantt">
+      <div className="wx-gantt" data-testid="svar-gantt">
+        <div className="wx-pseudo-rows" data-testid="svar-gantt-rows" />
+        <div className="wx-chart" data-testid="svar-gantt-timeline" />
         {tasks?.map((task) => (
           <button key={task.id} type="button" data-task-id={`:${String(task.id)}`} onClick={() => { if (task.id !== undefined) ganttHarness.select(task.id); }}>
             {task.text}
@@ -142,6 +160,7 @@ function task(): Task {
     startDate: null,
     endDate: null,
     durationDays: null,
+    deadlineDate: null,
     schedulingMode: "AUTO",
     position: 0,
     assignee: null,
@@ -187,6 +206,8 @@ class MemoryWorkspaceRepository implements WorkspaceRepository {
   readonly projects: Project[];
   readonly tasks: Task[];
   readonly dependencies: TaskDependency[];
+  readonly baselines: ProjectBaseline[];
+  readonly baselineTasks: BaselineTask[];
   readonly templates: TaskTemplate[];
   readonly templateItems: TaskTemplateItem[];
   readonly templateDependencies: TaskTemplateDependency[];
@@ -200,6 +221,8 @@ class MemoryWorkspaceRepository implements WorkspaceRepository {
     this.projects = [...(snapshot.projects ?? [])];
     this.tasks = [...(snapshot.tasks ?? [])];
     this.dependencies = [...(snapshot.dependencies ?? [])];
+    this.baselines = [...(snapshot.baselines ?? [])];
+    this.baselineTasks = [...(snapshot.baselineTasks ?? [])];
     this.templates = [...(snapshot.templates ?? [])];
     this.templateItems = [...(snapshot.templateItems ?? [])];
     this.templateDependencies = [...(snapshot.templateDependencies ?? [])];
@@ -211,6 +234,8 @@ class MemoryWorkspaceRepository implements WorkspaceRepository {
       projects: [...this.projects],
       tasks: [...this.tasks],
       dependencies: [...this.dependencies],
+      baselines: [...this.baselines],
+      baselineTasks: [...this.baselineTasks],
       templates: [...this.templates],
       templateItems: [...this.templateItems],
       templateDependencies: [...this.templateDependencies],
@@ -221,6 +246,33 @@ class MemoryWorkspaceRepository implements WorkspaceRepository {
     const index = this.calendars.findIndex((candidate) => candidate.id === savedCalendar.id);
     if (index === -1) this.calendars.push(savedCalendar);
     else this.calendars[index] = savedCalendar;
+    return Promise.resolve();
+  }
+
+  saveBaseline(bundle: BaselineBundle): Promise<void> {
+    this.baselines.forEach((baseline, index) => {
+      if (baseline.projectId === bundle.baseline.projectId && baseline.isActive) {
+        this.baselines[index] = {
+          ...baseline,
+          isActive: false,
+          replacedAt: bundle.baseline.createdAt,
+        };
+      }
+    });
+    this.baselines.push(bundle.baseline);
+    this.baselineTasks.push(...bundle.tasks);
+    return Promise.resolve();
+  }
+
+  deleteProjectBaselines(projectId: string): Promise<void> {
+    const removedIds = new Set(this.baselines.filter((item) => item.projectId === projectId).map((item) => item.id));
+    for (let index = this.baselines.length - 1; index >= 0; index -= 1) {
+      if (this.baselines[index]?.projectId === projectId) this.baselines.splice(index, 1);
+    }
+    for (let index = this.baselineTasks.length - 1; index >= 0; index -= 1) {
+      const task = this.baselineTasks[index];
+      if (task !== undefined && removedIds.has(task.baselineId)) this.baselineTasks.splice(index, 1);
+    }
     return Promise.resolve();
   }
 
@@ -386,6 +438,33 @@ class MemoryWorkspaceRepository implements WorkspaceRepository {
 }
 
 describe("aplicação ProjectFlow", () => {
+  it("recolhe e restaura a lista de projetos", async () => {
+    render(<App repository={new MemoryWorkspaceRepository({ projects: [project()] })} />);
+    await screen.findByRole("heading", { name: "Tabela de tarefas" });
+
+    fireEvent.click(screen.getByRole("button", { name: "Recolher projetos" }));
+    expect(screen.queryByRole("navigation", { name: "Lista de projetos" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Mostrar projetos" }));
+    expect(screen.getByRole("navigation", { name: "Lista de projetos" })).toBeVisible();
+  });
+
+  it("arquiva e exclui projetos pelo menu de contexto da barra lateral", async () => {
+    const repository = new MemoryWorkspaceRepository({ projects: [project()] });
+    render(<App repository={repository} />);
+    await screen.findByRole("heading", { name: "Tabela de tarefas" });
+
+    fireEvent.contextMenu(screen.getByRole("button", { name: /Projeto Alfa/ }));
+    const menu = screen.getByRole("menu", { name: "Ações de Projeto Alfa" });
+    fireEvent.click(within(menu).getByRole("menuitem", { name: "Arquivar projeto" }));
+    await waitFor(() => { expect(repository.projects[0]?.isArchived).toBe(true); });
+
+    fireEvent.click(screen.getByLabelText("Mostrar arquivados"));
+    fireEvent.contextMenu(screen.getByRole("button", { name: /Projeto Alfa/ }));
+    vi.spyOn(window, "confirm").mockReturnValueOnce(true);
+    fireEvent.click(screen.getByRole("menuitem", { name: "Excluir projeto…" }));
+    await waitFor(() => { expect(repository.projects).toHaveLength(0); });
+  });
+
   it("oferece relatório, atividades e Gantt no diálogo de PDF", async () => {
     const repository = new MemoryWorkspaceRepository({
       projects: [project()],
@@ -510,7 +589,7 @@ describe("aplicação ProjectFlow", () => {
     const code = screen.getByLabelText("Código visual da tarefa");
     const detailsRow = code.closest("tr");
     expect(detailsRow).toHaveClass("task-details-row");
-    expect(code.closest("td")).toHaveAttribute("colspan", "11");
+    expect(code.closest("td")).toHaveAttribute("colspan", "16");
     expect(screen.getByLabelText("Ajuda sobre o código visual")).toHaveAttribute(
       "title",
       expect.stringContaining("DEV-01"),
@@ -1035,6 +1114,53 @@ describe("aplicação ProjectFlow", () => {
     });
   });
 
+  it("percorre as atividades do Gantt com a roda do mouse", async () => {
+    const scheduled = Array.from({ length: 30 }, (_, index) => scheduledTask(
+      `20000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
+      `Atividade ${String(index + 1)}`,
+      "2026-08-28",
+      { position: index },
+    ));
+    const repository = new MemoryWorkspaceRepository({ projects: [project()], tasks: scheduled });
+    render(<App repository={repository} />);
+
+    fireEvent.click(await screen.findByRole("tab", { name: "Gantt" }));
+    const verticalScroller = await screen.findByTestId("svar-gantt");
+    Object.defineProperties(verticalScroller, {
+      clientHeight: { configurable: true, value: 590 },
+      scrollHeight: { configurable: true, value: 590 },
+    });
+    const timeline = screen.getByTestId("svar-gantt-timeline");
+    Object.defineProperties(timeline, {
+      clientWidth: { configurable: true, value: 500 },
+      scrollWidth: { configurable: true, value: 1800 },
+    });
+    timeline.append(document.createElement("span"));
+    await waitFor(() => {
+      expect(screen.getByLabelText("Percorrer atividades do Gantt")).toHaveAttribute("max", "670");
+      expect(screen.getByTestId("svar-gantt-rows")).toHaveStyle({ minHeight: "1260px" });
+    });
+
+    fireEvent.wheel(screen.getByTestId("projectflow-gantt"), { deltaY: 140 });
+
+    expect(verticalScroller.scrollTop).toBe(140);
+    expect(ganttHarness.setScrollState).toHaveBeenCalledWith({ scrollTop: 140 });
+    fireEvent.wheel(screen.getByTestId("projectflow-gantt"), { deltaY: 140 });
+    expect(verticalScroller.scrollTop).toBe(280);
+    expect(ganttHarness.setScrollState).toHaveBeenCalledWith({ scrollTop: 280 });
+    const verticalBar = screen.getByLabelText("Percorrer atividades do Gantt");
+    expect(screen.getByTestId("projectflow-gantt")).not.toContainElement(verticalBar);
+    fireEvent.input(verticalBar, { target: { value: "305" } });
+    expect(ganttHarness.setScrollState).toHaveBeenCalledWith({ scrollTop: 305 });
+    expect(screen.getByText(/barra inferior para navegar pelas datas/i)).toBeVisible();
+    const horizontalScroll = screen.getByLabelText("Navegar pelas datas do Gantt");
+    expect(screen.getByTestId("projectflow-gantt")).not.toContainElement(horizontalScroll);
+    await waitFor(() => { expect(horizontalScroll).not.toBeDisabled(); });
+    fireEvent.input(horizontalScroll, { target: { value: "320" } });
+    expect(timeline.scrollLeft).toBe(320);
+    expect(ganttHarness.api.exec).toHaveBeenCalledWith("scroll-chart", { left: 320 });
+  });
+
   it("move uma tarefa livre pelo evento visual do Gantt", async () => {
     const scheduled = scheduledTask(TASK_ID, "Planejar entrega", "2026-08-28");
     const repository = new MemoryWorkspaceRepository({ projects: [project()], tasks: [scheduled] });
@@ -1415,5 +1541,85 @@ describe("aplicação ProjectFlow", () => {
     fireEvent.click(within(templateCard as HTMLElement).getByRole("button", { name: "Excluir" }));
     await waitFor(() => { expect(repository.templates).toHaveLength(0); });
     expect(repository.tasks).toHaveLength(6);
+  });
+
+  it("transfere dependências ao transformar uma tarefa em resumo", async () => {
+    const predecessor = scheduledTask(TASK_ID, "Planejamento", "2026-09-10");
+    const successor = scheduledTask(SECOND_TASK_ID, "Execução", "2026-09-11", { position: 1 });
+    const relation = dependency(predecessor.id, successor.id);
+    const repository = new MemoryWorkspaceRepository({
+      projects: [project()],
+      tasks: [predecessor, successor],
+      dependencies: [relation],
+    });
+    render(<App repository={repository} />);
+
+    await screen.findByRole("heading", { name: "Tabela de tarefas" });
+    const predecessorRow = screen.getByDisplayValue("Planejamento").closest("tr");
+    expect(predecessorRow).not.toBeNull();
+    fireEvent.click(within(predecessorRow as HTMLElement).getByRole("button", { name: "+ Subtarefa" }));
+    fireEvent.change(screen.getByPlaceholderText("Nova subtarefa"), { target: { value: "Detalhar plano" } });
+    fireEvent.click(screen.getByRole("button", { name: "Adicionar" }));
+    const dialog = screen.getByRole("dialog", { name: "Transformar em tarefa-resumo?" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Transferir para a nova subtarefa" }));
+
+    await waitFor(() => { expect(repository.tasks).toHaveLength(3); });
+    const child = repository.tasks.find((task) => task.parentId === predecessor.id);
+    expect(child).toBeDefined();
+    expect(repository.dependencies[0]?.predecessorId).toBe(child?.id);
+    expect(repository.dependencies[0]?.successorId).toBe(successor.id);
+  });
+
+  it("registra plano de referência, mantém histórico e salva prazo-limite na mesma tarefa", async () => {
+    const repository = new MemoryWorkspaceRepository({
+      projects: [project()],
+      tasks: [scheduledTask(TASK_ID, "Entrega controlada", "2026-09-10")],
+    });
+    render(<App repository={repository} />);
+
+    await screen.findByRole("heading", { name: "Tabela de tarefas" });
+    expect(screen.queryByLabelText("Informação sobre Início planejado")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Criar plano de referência" }));
+    const dialog = screen.getByRole("dialog", { name: "Criar plano de referência" });
+    fireEvent.change(within(dialog).getByLabelText("Nome do plano de referência"), {
+      target: { value: "Plano aprovado" },
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Registrar plano" }));
+
+    await waitFor(() => {
+      expect(repository.baselines).toHaveLength(1);
+      expect(screen.getByRole("button", { name: "Plano de referência: Plano aprovado" })).toBeVisible();
+    });
+    const plannedStartHelp = screen.getByLabelText("Informação sobre Início planejado");
+    expect(plannedStartHelp).toHaveAttribute("aria-describedby");
+    const deadline = screen.getByLabelText("Prazo-limite da tarefa");
+    fireEvent.change(deadline, { target: { value: "2026-09-09" } });
+    const row = deadline.closest("tr");
+    expect(row).not.toBeNull();
+    fireEvent.click(within(row as HTMLElement).getByRole("button", { name: "Salvar" }));
+
+    await waitFor(() => {
+      expect(repository.tasks[0]?.deadlineDate).toBe("2026-09-09");
+    });
+    expect(screen.getByText("Atrasada")).toBeVisible();
+
+    fireEvent.click(screen.getByRole("button", { name: "Atualizar plano de referência" }));
+    fireEvent.click(screen.getByRole("button", { name: "Registrar plano" }));
+    await waitFor(() => {
+      expect(repository.baselines).toHaveLength(2);
+      expect(repository.baselines.filter((baseline) => baseline.isActive)).toHaveLength(1);
+      expect(repository.baselines.filter((baseline) => !baseline.isActive)[0]?.replacedAt).not.toBeNull();
+    });
+
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    fireEvent.click(screen.getByRole("button", { name: /Plano de referência:/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Excluir plano e histórico" }));
+    await waitFor(() => {
+      expect(repository.baselines).toHaveLength(0);
+      expect(repository.baselineTasks).toHaveLength(0);
+      expect(repository.tasks).toHaveLength(1);
+    });
+    expect(screen.queryByLabelText("Informação sobre Início planejado")).not.toBeInTheDocument();
   });
 });

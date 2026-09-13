@@ -56,6 +56,7 @@ export interface Task {
   readonly startDate: string | null;
   readonly endDate: string | null;
   readonly durationDays: number | null;
+  readonly deadlineDate: string | null;
   readonly schedulingMode: SchedulingMode;
   readonly position: number;
   readonly assignee: string | null;
@@ -180,6 +181,10 @@ export function validateTask(task: Task): Task {
     title: requireText(task.title, "title", "O título da tarefa"),
     description: optionalText(task.description),
     ...schedule,
+    deadlineDate:
+      task.deadlineDate === null
+        ? null
+        : requireDateOnly(task.deadlineDate, "deadlineDate", "O prazo-limite"),
     position: requireNonNegativeInteger(task.position, "position", "A posição da tarefa"),
     assignee: optionalText(task.assignee),
     tags: normalizeTags(task.tags),

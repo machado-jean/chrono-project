@@ -58,6 +58,7 @@ function task(overrides: Partial<Task> = {}): Task {
     startDate: null,
     endDate: null,
     durationDays: null,
+    deadlineDate: null,
     schedulingMode: "AUTO",
     position: 0,
     assignee: null,
@@ -158,5 +159,21 @@ describe("hierarquia de tarefas", () => {
       ["Filha", 1],
       ["Neta", 2],
     ]);
+  });
+
+  it("limita a hierarquia a quatro níveis", () => {
+    const fourthId = "20000000-0000-4000-8000-000000000004";
+    const fifthId = "20000000-0000-4000-8000-000000000005";
+    const fourLevels = [
+      ...tasks,
+      task({ id: fourthId, parentId: TASK_C_ID, title: "Quarto nível" }),
+    ];
+
+    expect(() => {
+      assertValidParentAssignment(fourLevels, fifthId, PROJECT_ID, fourthId);
+    }).toThrow("no máximo 4 níveis");
+    expect(() => {
+      assertValidParentAssignment(tasks, fourthId, PROJECT_ID, TASK_C_ID);
+    }).not.toThrow();
   });
 });

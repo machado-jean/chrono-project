@@ -143,8 +143,22 @@ function summarySection(report: ProjectReport): PdfNode[] {
 }
 
 function taskTable(report: ProjectReport): PdfNode {
+  const includeBaseline = report.options.includeBaseline !== false && report.rows.some(
+    (row) => row.baselineStartDate !== null || row.baselineEndDate !== null,
+  );
+  const healthLabel = (health: ProjectReport["rows"][number]["health"]): string => ({
+    NO_DEADLINE: "Sem prazo",
+    ON_TRACK: "No prazo",
+    AT_RISK: "Em risco",
+    OVERDUE: "Atrasada",
+  })[health];
+  const headers = [
+    "Atividade", "Status", "Início", "Fim",
+    ...(includeBaseline ? ["Início planejado", "Fim planejado", "Desvio"] : []),
+    "Prazo", "Saúde", "%", "Predecessoras",
+  ];
   const body: PdfNode[][] = [
-    ["Atividade", "Status", "Prioridade", "Início", "Fim", "Duração", "%", "Predecessoras"].map(
+    headers.map(
       (text) => ({ text, style: "tableHeader", fillColor: COLORS.ink, color: COLORS.white }),
     ),
     ...report.rows.map((row) => [
@@ -154,10 +168,15 @@ function taskTable(report: ProjectReport): PdfNode {
         margin: [row.depth * 7, 0, 0, 0],
       },
       row.statusLabel,
-      row.priorityLabel,
       formatDate(row.startDate),
       formatDate(row.endDate),
-      row.durationDays === null ? "-" : `${String(row.durationDays)}d`,
+      ...(includeBaseline ? [
+        formatDate(row.baselineStartDate),
+        formatDate(row.baselineEndDate),
+        row.endVarianceDays === null ? "-" : `${row.endVarianceDays > 0 ? "+" : ""}${String(row.endVarianceDays)}d`,
+      ] : []),
+      formatDate(row.deadlineDate),
+      healthLabel(row.health),
       `${String(row.progress)}%`,
       row.predecessors.length === 0 ? "-" : row.predecessors.join(", "),
     ]),
@@ -165,7 +184,9 @@ function taskTable(report: ProjectReport): PdfNode {
   return {
     table: {
       headerRows: 1,
-      widths: [170, 65, 54, 52, 52, 38, 28, "*"],
+      widths: includeBaseline
+        ? [130, 55, 45, 45, 45, 45, 34, 45, 45, 28, "*"]
+        : [170, 65, 52, 52, 52, 48, 28, "*"],
       body,
     },
     layout: "lightHorizontalLines",

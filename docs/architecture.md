@@ -23,7 +23,7 @@ Dependências não devem apontar no sentido inverso. React não é fonte de verd
 - `src/app/`: composição da aplicação e navegação.
 - `src/components/`: componentes de apresentação reutilizáveis.
 - `src/features/`: Tabela, Kanban, Gantt e fluxos orientados a feature.
-- `src/domain/`: calendário, scheduling, duplicação e validação em TypeScript puro.
+- `src/domain/`: calendário, scheduling, planejamento, duplicação e validação em TypeScript puro.
 - `src/repositories/`: contratos e adapters de persistência.
 - `src/state/`: estado de aplicação, sem duplicar entidades por view.
 - `src-tauri/`: shell, SQLite, migrations, logs e integrações nativas.
@@ -55,10 +55,11 @@ schema; reordenar ou mudar o pai recalcula a identificação imediatamente.
 ## Persistência
 
 O plugin SQL oficial do Tauri abre o SQLite e aplica as migrations registradas.
-O schema atual é a versão 4: `0001_initial.sql` cria metadados técnicos,
+O schema atual é a versão 5: `0001_initial.sql` cria metadados técnicos,
 `0002_core.sql` introduz calendários, projetos, tarefas e tags, e
 `0003_scheduling.sql` acrescenta exceções, calendário opcional por tarefa e
-dependências FS. `0004_reuse.sql` cria as tabelas relacionais de templates.
+dependências FS. `0004_reuse.sql` cria as tabelas relacionais de templates e
+`0005_plan_control.sql` acrescenta prazo-limite e fotografias de linha de base.
 
 Migrations são registradas no processo nativo, aplicadas em transação pelo
 plugin e versionadas de forma crescente. O adapter carrega explicitamente a URL
@@ -95,6 +96,12 @@ Duplicações usam `save_duplication_bundle`; o projeto, tarefas e dependências
 geradas são confirmados juntos. Templates usam `save_template_bundle`, também
 atômico. A exclusão de um template não altera tarefas que já foram aplicadas,
 pois cada aplicação gera entidades independentes.
+
+A Fase 8 acrescenta `src/domain/planning`. Comparação em dias úteis e saúde de
+prazo são funções puras; não alteram o scheduler. `useWorkspace` cria a
+fotografia e o comando `save_baseline` substitui a linha ativa e preserva o
+histórico em uma única transação. Tabela, Gantt e PDF recebem a mesma
+fotografia como projeção, sem criar cópias das tarefas correntes.
 
 A Fase 6 acrescenta `src-tauri/src/portability.rs`. Exportação, inspeção de pacote, importação seletiva, backup e restauração ficam na camada nativa porque dependem de filesystem, ZIP, hash e snapshots SQLite. A UI recebe somente catálogos já validados e escolhas explícitas; não interpreta o arquivo nem decide como UUIDs, relações ou calendários são reconciliados. Importação e restauração reutilizam helpers transacionais da persistência, mantendo constraints e tags normalizadas.
 

@@ -5,6 +5,11 @@ import { describe, expect, it, vi } from "vitest";
 import App from "../../src/app/App";
 import { DEFAULT_CALENDAR_ID, type Calendar } from "../../src/domain/calendars/calendar";
 import type { Project } from "../../src/domain/projects/project";
+import type {
+  BaselineBundle,
+  BaselineTask,
+  ProjectBaseline,
+} from "../../src/domain/planning/baseline";
 import type { TaskDependency } from "../../src/domain/scheduling/dependency";
 import type { Task } from "../../src/domain/tasks/task";
 import type {
@@ -62,6 +67,8 @@ class JourneyRepository implements WorkspaceRepository {
   projects: Project[] = [];
   tasks: Task[] = [];
   dependencies: TaskDependency[] = [];
+  baselines: ProjectBaseline[] = [];
+  baselineTasks: BaselineTask[] = [];
   templates: TaskTemplate[] = [];
   templateItems: TaskTemplateItem[] = [];
   templateDependencies: TaskTemplateDependency[] = [];
@@ -73,6 +80,8 @@ class JourneyRepository implements WorkspaceRepository {
       projects: this.projects,
       tasks: this.tasks,
       dependencies: this.dependencies,
+      baselines: this.baselines,
+      baselineTasks: this.baselineTasks,
       templates: this.templates,
       templateItems: this.templateItems,
       templateDependencies: this.templateDependencies,
@@ -82,6 +91,25 @@ class JourneyRepository implements WorkspaceRepository {
   saveCalendar(calendar: Calendar): Promise<void> { this.upsert(this.calendars, calendar); return Promise.resolve(); }
   saveProject(project: Project): Promise<void> { this.upsert(this.projects, project); return Promise.resolve(); }
   saveTask(task: Task): Promise<void> { this.upsert(this.tasks, task); return Promise.resolve(); }
+  saveBaseline(bundle: BaselineBundle): Promise<void> {
+    this.baselines = [
+      ...this.baselines.map((baseline) =>
+        baseline.projectId === bundle.baseline.projectId && baseline.isActive
+          ? { ...baseline, isActive: false, replacedAt: bundle.baseline.createdAt }
+          : baseline,
+      ),
+      bundle.baseline,
+    ];
+    this.baselineTasks.push(...bundle.tasks);
+    return Promise.resolve();
+  }
+
+  deleteProjectBaselines(projectId: string): Promise<void> {
+    const removedIds = new Set(this.baselines.filter((item) => item.projectId === projectId).map((item) => item.id));
+    this.baselines = this.baselines.filter((item) => item.projectId !== projectId);
+    this.baselineTasks = this.baselineTasks.filter((item) => !removedIds.has(item.baselineId));
+    return Promise.resolve();
+  }
 
   reorderProjects(projectIds: readonly string[]): Promise<void> {
     projectIds.forEach((id, position) => { const item = this.projects.find((candidate) => candidate.id === id); if (item !== undefined) this.upsert(this.projects, { ...item, position }); });

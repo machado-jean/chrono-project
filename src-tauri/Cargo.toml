@@ -1,6 +1,6 @@
 [package]
 name = "project-flow"
-version = "0.1.7"
+version = "0.1.8"
 description = "Local-first desktop project planning for Windows"
 authors = ["ProjectFlow contributors"]
 edition = "2021"

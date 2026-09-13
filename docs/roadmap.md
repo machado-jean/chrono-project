@@ -4,7 +4,7 @@ Este é o registro vivo de execução do ProjectFlow. Ele traduz o roadmap defin
 
 `AGENTS.md` continua sendo a fonte de verdade para produto, arquitetura e regras operacionais. Este documento não substitui a especificação e não deve introduzir escopo incompatível com ela.
 
-Última atualização: **9 de setembro de 2026**.
+Última atualização: **12 de setembro de 2026**.
 
 ## Como manter este documento
 
@@ -31,13 +31,13 @@ Não usar percentuais subjetivos. O progresso deve ser demonstrado por entregáv
 
 | Item | Estado |
 | --- | --- |
-| Etapa do produto | Hardening e distribuição Windows em andamento |
-| Fase ativa | Fechamento da Fase 7 e auditoria da v0.1.7 |
-| Próxima fase | Fase 8 — Controle do plano: baseline, desvios e prazos-limite |
-| Versão da aplicação | `0.1.7` |
-| Versão do schema SQLite | `4` |
-| Último commit de referência | `33e47af` — `feat: add local PDF reports and release CI verification` |
-| Branch de trabalho | `main`; somente esta atualização documental pendente na consolidação |
+| Etapa do produto | Fechamento local da versão 0.1.8 |
+| Fase ativa | Nenhuma implementação; Fase 8 concluída e pronta para checkpoint |
+| Próxima fase | Fase 9 — identidade visual, somente após publicar e validar a v0.1.8 |
+| Versão da aplicação | `0.1.8` |
+| Versão do schema SQLite | `5` |
+| Último commit de referência | `427599e` — `docs: consolidate post-MVP roadmap` |
+| Branch de trabalho | `main`; fechamento da Fase 8 ainda não commitado |
 | Checkpoints obrigatórios | A, B, C e D concluídos; E reservado à distribuição |
 | Funcionalidades de negócio | Core, scheduler, views, reutilização e portabilidade implementados |
 
@@ -53,11 +53,12 @@ Não usar percentuais subjetivos. O progresso deve ser demonstrado por entregáv
 | 5 — Reutilização | Entregar duplicação e templates | Concluída | 6 | Árvores e relações internas são recriadas com novos UUIDs |
 | 6 — Portabilidade | Entregar exportação, importação e backup | Concluída | 7 | Round-trip preserva semanticamente o workspace |
 | 7 — Hardening e distribuição | Preparar o produto para uso real no Windows | Em andamento | 8 | Instalador e operação offline validados em máquina limpa |
-| 8 — Controle do plano | Baseline, desvios, prazos-limite e saúde | Planejada | 9 | O plano aprovado pode ser comparado ao cronograma corrente |
-| 9 — Análise do cronograma | Caminho crítico, folgas e explicabilidade | Planejada | 10 | O usuário identifica e entende as tarefas que controlam o término |
-| 10 — Progresso e marcos | Marcos e consolidação automática de progresso | Planejada | 11 | Progresso e eventos-chave são coerentes na hierarquia e nas views |
-| 11 — Produtividade | Visões salvas, edição em massa e histórico global | Planejada | 12 | Operações frequentes são rápidas, reversíveis e acessíveis |
-| 12 — Interoperabilidade | Importação e exportação CSV/XLSX | Planejada | 13 | Dados tabulares transitam com prévia, validação e relatório de erros |
+| 8 — Controle do plano | Baseline, desvios, prazos-limite e saúde | Concluída | 9 | O plano aprovado pode ser comparado ao cronograma corrente |
+| 9 — Identidade visual | Novo ícone profissional e aplicação consistente da marca | Planejada | 10 | Aplicativo, instaladores e artefatos exibem a identidade aprovada |
+| 10 — Análise do cronograma | Caminho crítico, folgas e explicabilidade | Planejada | 11 | O usuário identifica e entende as tarefas que controlam o término |
+| 11 — Progresso e marcos | Marcos e consolidação automática de progresso | Planejada | 12 | Progresso e eventos-chave são coerentes na hierarquia e nas views |
+| 12 — Produtividade | Visões salvas, edição em massa e histórico global | Planejada | 13 | Operações frequentes são rápidas, reversíveis e acessíveis |
+| 13 — Interoperabilidade | Importação e exportação CSV/XLSX | Planejada | 14 | Dados tabulares transitam com prévia, validação e relatório de erros |
 
 ## Fase 0 — Ambiente
 
@@ -243,21 +244,25 @@ release. Cada fase deve ser auditada e encerrada antes do início da seguinte.
 
 ## Fase 8 — Controle do plano
 
-Estado: **Planejada**. Versão-alvo sugerida: `0.1.8`.
+Estado: **Concluída**. Versão: `0.1.8`.
 
 ### Escopo
 
-- Criar uma baseline nomeada do projeto, com confirmação explícita.
-- Preservar na baseline início, fim, duração e progresso das tarefas existentes.
-- Comparar baseline e cronograma corrente sem alterar o scheduler.
+- Criar um plano de referência nomeado do projeto, com confirmação explícita.
+- Preservar no plano início, fim, duração e progresso das tarefas existentes.
+- Comparar plano de referência e cronograma corrente sem alterar o scheduler.
 - Exibir início/fim planejados, atuais e desvio em dias úteis na Tabela.
-- Desenhar as barras da baseline atrás das barras correntes no Gantt.
-- Incluir comparação de baseline nos relatórios PDF quando solicitado.
+- Desenhar as barras do plano atrás das barras correntes no Gantt.
+- Incluir a comparação nos relatórios PDF quando solicitado.
 - Adicionar prazo-limite opcional, separado da data final agendada.
 - Classificar tarefas de forma explicável como dentro do prazo, em risco ou
   atrasadas, sem deslocá-las automaticamente.
-- Permitir substituir a baseline somente com confirmação e manter ao menos a
+- Permitir atualizar o plano somente com confirmação e manter ao menos a
   data de criação da fotografia substituída no histórico do projeto.
+- Permitir excluir o plano e todas as revisões com confirmação, preservando as
+  tarefas e o cronograma atuais.
+- Limitar a árvore a quatro níveis e melhorar o aproveitamento de espaço com a
+  barra de projetos recolhível.
 
 ### Integridade e testes obrigatórios
 
@@ -265,7 +270,7 @@ Estado: **Planejada**. Versão-alvo sugerida: `0.1.8`.
 - Exportação, importação, backup, restore, duplicação de projeto e templates
   revisados quanto aos novos dados.
 - Comparação em dias úteis respeitando calendário e exceções do projeto.
-- Baseline imutável durante edições comuns; alterações correntes não podem
+- Plano de referência imutável durante edições comuns; alterações correntes não podem
   modificar silenciosamente a fotografia aprovada.
 - Testes de Tabela, Gantt, PDF e round-trip `.projectflow`.
 
@@ -274,9 +279,46 @@ Estado: **Planejada**. Versão-alvo sugerida: `0.1.8`.
 O usuário consegue congelar o plano, alterar o cronograma e entender claramente
 o que mudou, por quanto tempo e se algum prazo-limite foi comprometido.
 
-## Fase 9 — Análise e explicação do cronograma
+Critério atendido em 12/09/2026. A auditoria final também validou a hierarquia
+máxima em um projeto de 205 tarefas, datas e predecessoras relevantes, Kanban,
+Gantt e navegação completa por roda e barras independentes.
+
+## Fase 9 — Identidade visual e ícone do aplicativo
 
 Estado: **Planejada**. Versão-alvo sugerida: `0.1.9`.
+
+### Escopo
+
+- Definir uma direção visual profissional, moderna e sóbria para o ProjectFlow.
+- Criar propostas de ícone baseadas em fluxo estruturado, cronograma e marco,
+  evitando símbolos genéricos ou excessivamente abstratos.
+- Validar legibilidade em tamanhos pequenos, contraste e reconhecimento na barra
+  de tarefas, menu Iniciar, atalhos, janela e lista de aplicativos do Windows.
+- Escolher a proposta com aprovação do usuário e gerar o conjunto oficial de
+  ícones exigido pelo Tauri/Windows.
+- Substituir o marcador provisório `PF` na aplicação quando a composição visual
+  aprovada permitir, mantendo nome e acessibilidade textual.
+- Aplicar a identidade aos instaladores, executável, metadados e documentação de
+  distribuição sem alterar identidade do aplicativo ou localização dos dados.
+
+### Integridade e testes obrigatórios
+
+- Manter os arquivos-fonte editáveis e documentar cores, margens e variantes.
+- Verificar visualmente os tamanhos usados pelo Windows, inclusive 16, 24, 32,
+  48, 128 e 256 pixels e telas com escala ampliada.
+- Recompilar executável e instaladores padrão/offline e confirmar que assinatura
+  do updater, atualização e preservação de dados continuam funcionando.
+- Validar instalação limpa, atualização sobre versão anterior e ícone nos pontos
+  de integração do Windows antes de encerrar a fase.
+
+### Critério de saída
+
+O ProjectFlow possui um ícone aprovado, reconhecível e consistente na interface,
+no Windows e nos artefatos de distribuição, sem regressão funcional.
+
+## Fase 10 — Análise e explicação do cronograma
+
+Estado: **Planejada**. Versão-alvo sugerida: `0.2.0`.
 
 ### Escopo
 
@@ -302,9 +344,9 @@ Estado: **Planejada**. Versão-alvo sugerida: `0.1.9`.
 O usuário identifica quais tarefas controlam a data final, quanto cada tarefa
 pode atrasar e por que uma data foi calculada.
 
-## Fase 10 — Progresso hierárquico e marcos
+## Fase 11 — Progresso hierárquico e marcos
 
-Estado: **Planejada**. Versão-alvo sugerida: `0.2.0`.
+Estado: **Planejada**. Versão-alvo sugerida: `0.2.1`.
 
 ### Escopo
 
@@ -339,9 +381,9 @@ Estado: **Planejada**. Versão-alvo sugerida: `0.2.0`.
 Tarefas-resumo representam o avanço real dos filhos sem registro de horas, e
 marcos representam eventos-chave sem distorcer a duração do cronograma.
 
-## Fase 11 — Produtividade, configuração de views e reversibilidade
+## Fase 12 — Produtividade, configuração de views e reversibilidade
 
-Estado: **Planejada**. Versão-alvo sugerida: `0.2.1`.
+Estado: **Planejada**. Versão-alvo sugerida: `0.2.2`.
 
 ### Escopo
 
@@ -368,9 +410,9 @@ Estado: **Planejada**. Versão-alvo sugerida: `0.2.1`.
 O usuário configura o espaço de trabalho, altera conjuntos grandes com segurança
 e consegue compreender ou desfazer as mudanças relevantes.
 
-## Fase 12 — Interoperabilidade tabular
+## Fase 13 — Interoperabilidade tabular
 
-Estado: **Planejada**. Versão-alvo sugerida: `0.2.2`.
+Estado: **Planejada**. Versão-alvo sugerida: `0.2.3`.
 
 ### Escopo
 
@@ -419,20 +461,25 @@ Fechar Fase 7 / validar v0.1.7
 Fase 8 — baseline, desvios e prazos-limite
               │
               ▼
-Fase 9 — caminho crítico, folgas e explicação
+Fase 9 — identidade visual e ícone profissional
               │
               ▼
-Fase 10 — progresso consolidado e marcos
+Fase 10 — caminho crítico, folgas e explicação
               │
               ▼
-Fase 11 — visões salvas, edição em massa e histórico
+Fase 11 — progresso consolidado e marcos
               │
               ▼
-Fase 12 — CSV/XLSX
+Fase 12 — visões salvas, edição em massa e histórico
+              │
+              ▼
+Fase 13 — CSV/XLSX
 ```
 
-Baseline precede caminho crítico para que a análise mostre não apenas risco
-atual, mas também desvio em relação ao plano aprovado. Marcos e progresso vêm
+O plano de referência precede a identidade visual, permitindo consolidar a
+interface atual antes de criar os ativos definitivos. A identidade precede o
+caminho crítico para que os próximos recursos já nasçam sob o sistema visual
+aprovado. Marcos e progresso vêm
 depois porque alteram semântica e schema. A produtividade usa esses campos já
 estáveis; a interoperabilidade fica por último para não cristalizar em planilhas
 um modelo ainda em evolução.
@@ -1193,7 +1240,54 @@ matriz no host, na VM limpa e no CI Windows.
   implementação da Fase 8.
 - Commit: `não commitado`; alteração exclusivamente documental.
 
+### 10 de setembro de 2026 — Fase 8 pronta para auditoria
+
+- A migration 5 adicionou prazo-limite e linhas de base nomeadas, com uma
+  fotografia ativa e histórico preservado por projeto.
+- A Tabela compara início e fim planejados ao cronograma corrente, calcula o
+  desvio em dias úteis e classifica a saúde do prazo sem alterar o scheduler.
+- O Gantt desenha a fotografia ativa atrás das barras correntes e o PDF pode
+  incluir plano, atual, desvio, prazo e saúde.
+- Exportação, importação seletiva, cópia de projeto, backup e restauração
+  preservam os novos dados. Arquivos do schema 4 são lidos por uma cópia
+  temporária; um teste por hash comprova que o original não é modificado.
+- A versão avançou para `0.1.8` e o schema para 5. A Fase 9 não foi iniciada.
+- Commit: `não commitado`; nenhum push, tag ou release foi executado.
+
+### 11 de setembro de 2026 — Identidade visual inserida como próxima fase
+
+- A criação e aplicação de um novo ícone profissional deixou de ser uma ideia
+  avulsa e passou a constituir a Fase 9, com critérios de aprovação visual,
+  acessibilidade, integração Windows e distribuição.
+- As antigas Fases 9 a 12 foram preservadas integralmente e renumeradas como
+  Fases 10 a 13; seus checkpoints e versões-alvo sugeridas foram deslocados na
+  mesma ordem.
+- A Fase 8 permanece em auditoria e nenhuma implementação da nova Fase 9 foi
+  iniciada.
+- Commit: `não commitado`; alteração exclusivamente documental.
+
+### 12 de setembro de 2026 — Fase 8 concluída e v0.1.8 preparada
+
+- A auditoria foi ampliada para um projeto com 205 tarefas em quatro níveis,
+  com datas e predecessoras suficientes para validar Kanban e Gantt.
+- A navegação do Gantt foi corrigida na cadeia real de alturas do SVAR: a janela
+  permanece em 590 px, o conteúdo completo mantém 8.682 px e a posição vertical
+  alcança o limite de 8.092 px até a tarefa `5.4.3.2`.
+- A roda do mouse e barras horizontal e vertical foram validadas; a barra
+  vertical ocupa uma coluna própria entre o gráfico e o inspetor, sem sobrepor
+  conteúdo, com trilho visual de 4 px e área de clique ampliada.
+- Gates aprovados: 136 testes TypeScript/React, 37 testes Rust/SQLite, jornada
+  E2E em camadas, 2 cenários de desempenho, ESLint, TypeScript, Cargo
+  fmt/check/Clippy e auditoria npm sem vulnerabilidades conhecidas.
+- O E2E desktop via CDP repetiu a limitação diagnóstica documentada no ADR 019;
+  a janela real e a rolagem foram exercitadas separadamente com sucesso.
+- Instaladores NSIS padrão e offline foram gerados localmente. Assinaturas do
+  updater e `latest.json` aguardam a chave privada externa ao repositório.
+- A Fase 8 foi encerrada. A Fase 9 não foi iniciada.
+- Commit: `não commitado`; nenhum push, tag ou release foi executado.
+
 ## Regras permanentes de acompanhamento
+
 
 - Ler `AGENTS.md` e este documento antes de iniciar uma mudança não trivial.
 - Confirmar `git status`, branch e histórico antes de editar.

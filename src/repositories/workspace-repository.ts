@@ -1,5 +1,6 @@
 import type { Calendar } from "../domain/calendars/calendar";
 import type { Project } from "../domain/projects/project";
+import type { BaselineBundle, BaselineTask, ProjectBaseline } from "../domain/planning/baseline";
 import type { TaskDependency } from "../domain/scheduling/dependency";
 import type { Task } from "../domain/tasks/task";
 import type {
@@ -14,6 +15,8 @@ export interface WorkspaceSnapshot {
   readonly projects: readonly Project[];
   readonly tasks: readonly Task[];
   readonly dependencies: readonly TaskDependency[];
+  readonly baselines: readonly ProjectBaseline[];
+  readonly baselineTasks: readonly BaselineTask[];
   readonly templates: readonly TaskTemplate[];
   readonly templateItems: readonly TaskTemplateItem[];
   readonly templateDependencies: readonly TaskTemplateDependency[];
@@ -101,6 +104,8 @@ export interface WorkspaceRepository {
   reorderProjects(projectIds: readonly string[]): Promise<void>;
   deleteProject(projectId: string): Promise<void>;
   saveTask(task: Task): Promise<void>;
+  saveBaseline(bundle: BaselineBundle): Promise<void>;
+  deleteProjectBaselines(projectId: string): Promise<void>;
   reorderTasks(taskIds: readonly string[]): Promise<void>;
   applyScheduleChanges(changes: ScheduleChangeSet): Promise<void>;
   deleteTaskTree(taskId: string): Promise<void>;

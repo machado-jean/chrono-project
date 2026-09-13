@@ -3,7 +3,8 @@ import type { ILink, ITask } from "@svar-ui/react-gantt";
 import type { Calendar } from "../../domain/calendars/calendar";
 import { isWorkingDay } from "../../domain/calendars/working-calendar";
 import type { TaskDependency } from "../../domain/scheduling/dependency";
-import { flattenVisibleTasks } from "../../domain/tasks/hierarchy";
+import type { BaselineTask } from "../../domain/planning/baseline";
+import { flattenVisibleTasks, taskHierarchyDepth } from "../../domain/tasks/hierarchy";
 import {
   buildTaskOutlineNumbers,
   taskOutlineLabel,
@@ -48,11 +49,13 @@ export function buildGanttProjection(
   tasks: readonly Task[],
   allProjectTasks: readonly Task[],
   dependencies: readonly TaskDependency[],
+  baselineTasks: readonly BaselineTask[] = [],
 ): GanttProjection {
   const summaryIds = new Set(
     allProjectTasks.flatMap((task) => task.parentId === null ? [] : [task.parentId]),
   );
   const outlineNumbers = buildTaskOutlineNumbers(allProjectTasks);
+  const baselineByTaskId = new Map(baselineTasks.map((task) => [task.taskId, task]));
   const scheduledTasks = tasks.filter(
     (task) =>
       task.startDate !== null &&
@@ -65,18 +68,29 @@ export function buildGanttProjection(
       task.parentId !== null && scheduledIds.has(task.parentId) ? [task.parentId] : [],
     ),
   );
-  const projectionTasks: ITask[] = orderedTasks(scheduledTasks).map((task) => ({
-    id: task.id,
-    text: taskOutlineLabel(task, outlineNumbers),
-    details: `${TASK_STATUS_LABELS[task.status]} · ${String(task.progress)}%`,
-    start: dateOnlyToLocalDate(task.startDate as string),
-    end: inclusiveDateOnlyToExclusiveLocalDate(task.endDate as string),
-    workDuration: task.durationDays as number,
-    progress: task.progress,
-    parent: task.parentId !== null && scheduledIds.has(task.parentId) ? task.parentId : 0,
-    type: summaryIds.has(task.id) ? "summary" : "task",
-    open: projectedParentIds.has(task.id),
-  }));
+  const projectionTasks: ITask[] = orderedTasks(scheduledTasks).map((task) => {
+    const baseline = baselineByTaskId.get(task.id);
+    return {
+      id: task.id,
+      text: taskOutlineLabel(task, outlineNumbers),
+      details: `${TASK_STATUS_LABELS[task.status]} · ${String(task.progress)}%`,
+      hierarchyLevel: taskHierarchyDepth(allProjectTasks, task.id),
+      start: dateOnlyToLocalDate(task.startDate as string),
+      end: inclusiveDateOnlyToExclusiveLocalDate(task.endDate as string),
+      workDuration: task.durationDays as number,
+      progress: task.progress,
+      parent: task.parentId !== null && scheduledIds.has(task.parentId) ? task.parentId : 0,
+      type: summaryIds.has(task.id) ? "summary" : "task",
+      open: projectedParentIds.has(task.id),
+      ...(baseline !== undefined && baseline.startDate !== null && baseline.endDate !== null
+        ? {
+            base_start: dateOnlyToLocalDate(baseline.startDate),
+            base_end: inclusiveDateOnlyToExclusiveLocalDate(baseline.endDate),
+            ...(baseline.durationDays === null ? {} : { base_duration: baseline.durationDays }),
+          }
+        : {}),
+    };
+  });
   const links: ILink[] = dependencies
     .filter(
       (dependency) =>

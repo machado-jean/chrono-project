@@ -1,4 +1,10 @@
 import type { Project } from "../projects/project";
+import type { Calendar } from "../calendars/calendar";
+import {
+  compareTaskWithBaseline,
+  type BaselineTask,
+  type ScheduleHealth,
+} from "../planning/baseline";
 import type { TaskDependency } from "../scheduling/dependency";
 import { flattenVisibleTasks } from "../tasks/hierarchy";
 import { buildTaskOutlineNumbers, taskOutlineLabel } from "../tasks/outline-number";
@@ -21,6 +27,7 @@ export interface ProjectPdfOptions {
   readonly scope: ProjectPdfScope;
   readonly pageSize: ProjectPdfPageSize;
   readonly includeDetails: boolean;
+  readonly includeBaseline?: boolean;
   readonly timelineStart: string | null;
   readonly timelineEnd: string | null;
 }
@@ -39,6 +46,11 @@ export interface ProjectReportRow {
   readonly startDate: string | null;
   readonly endDate: string | null;
   readonly durationDays: number | null;
+  readonly deadlineDate: string | null;
+  readonly health: ScheduleHealth;
+  readonly baselineStartDate: string | null;
+  readonly baselineEndDate: string | null;
+  readonly endVarianceDays: number | null;
   readonly assignee: string | null;
   readonly tags: readonly string[];
   readonly description: string | null;
@@ -64,6 +76,8 @@ interface BuildProjectReportInput {
   readonly project: Project;
   readonly tasks: readonly Task[];
   readonly dependencies: readonly TaskDependency[];
+  readonly calendars?: readonly Calendar[];
+  readonly baselineTasks?: readonly BaselineTask[];
   readonly visibleTaskIds?: ReadonlySet<string>;
   readonly options: ProjectPdfOptions;
   readonly generatedAt?: string;
@@ -87,6 +101,8 @@ export function buildProjectReport({
   project,
   tasks,
   dependencies,
+  calendars = [],
+  baselineTasks = [],
   visibleTaskIds,
   options,
   generatedAt = new Date().toISOString(),
@@ -108,8 +124,15 @@ export function buildProjectReport({
   const orderedTasks = flattenVisibleTasks(tasks, expandedIds)
     .filter(({ task }) => scopedIds.has(task.id));
   const tasksById = new Map(tasks.map((task) => [task.id, task]));
+  const baselineByTaskId = new Map(baselineTasks.map((task) => [task.taskId, task]));
+  const today = generatedAt.slice(0, 10);
 
   const rows = orderedTasks.map(({ task, depth }): ProjectReportRow => {
+    const calendar = calendars.find((candidate) => candidate.id === (task.calendarId ?? project.calendarId));
+    const baseline = options.includeBaseline === false ? undefined : baselineByTaskId.get(task.id);
+    const comparison = calendar === undefined
+      ? null
+      : compareTaskWithBaseline(task, baseline ?? null, calendar, today);
     const predecessorLabels = dependencies
       .filter((dependency) => dependency.successorId === task.id)
       .map((dependency) => {
@@ -135,6 +158,11 @@ export function buildProjectReport({
       startDate: task.startDate,
       endDate: task.endDate,
       durationDays: task.durationDays,
+      deadlineDate: task.deadlineDate,
+      health: comparison?.health ?? "NO_DEADLINE",
+      baselineStartDate: baseline?.startDate ?? null,
+      baselineEndDate: baseline?.endDate ?? null,
+      endVarianceDays: comparison?.endVarianceDays ?? null,
       assignee: task.assignee,
       tags: task.tags,
       description: task.description,

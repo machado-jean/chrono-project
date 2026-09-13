@@ -62,6 +62,7 @@ pub struct TaskRecord {
     pub start_date: Option<String>,
     pub end_date: Option<String>,
     pub duration_days: Option<i64>,
+    pub deadline_date: Option<String>,
     pub scheduling_mode: String,
     pub position: i64,
     pub assignee: Option<String>,
@@ -86,6 +87,37 @@ pub struct DependencyRecord {
     pub lag_days: i64,
     pub created_at: String,
     pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectBaselineRecord {
+    pub id: String,
+    pub project_id: String,
+    pub name: String,
+    pub is_active: bool,
+    pub created_at: String,
+    pub replaced_at: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct BaselineTaskRecord {
+    pub baseline_id: String,
+    pub task_id: String,
+    pub title: String,
+    pub outline: String,
+    pub start_date: Option<String>,
+    pub end_date: Option<String>,
+    pub duration_days: Option<i64>,
+    pub progress: i64,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BaselineBundleRecord {
+    pub baseline: ProjectBaselineRecord,
+    pub tasks: Vec<BaselineTaskRecord>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
@@ -173,6 +205,8 @@ pub struct WorkspaceData {
     pub projects: Vec<ProjectRecord>,
     pub tasks: Vec<TaskRecord>,
     pub dependencies: Vec<DependencyRecord>,
+    pub baselines: Vec<ProjectBaselineRecord>,
+    pub baseline_tasks: Vec<BaselineTaskRecord>,
     pub templates: Vec<TaskTemplateRecord>,
     pub template_items: Vec<TaskTemplateItemRecord>,
     pub template_dependencies: Vec<TaskTemplateDependencyRecord>,
@@ -255,7 +289,7 @@ pub async fn load_workspace(pool: &SqlitePool) -> Result<WorkspaceData, sqlx::Er
     .await?;
     let mut tasks = sqlx::query_as::<_, TaskRecord>(
         "SELECT id, code, project_id, parent_id, calendar_id, title, description, status, priority, \
-         progress, start_date, end_date, duration_days, scheduling_mode, position, assignee, \
+         progress, start_date, end_date, duration_days, deadline_date, scheduling_mode, position, assignee, \
          notes, created_at, updated_at FROM tasks ORDER BY project_id, parent_id, position, created_at",
     )
     .fetch_all(pool)
@@ -278,6 +312,18 @@ pub async fn load_workspace(pool: &SqlitePool) -> Result<WorkspaceData, sqlx::Er
     let dependencies = sqlx::query_as::<_, DependencyRecord>(
         "SELECT id, project_id, predecessor_id, successor_id, dependency_type, lag_days, \
          created_at, updated_at FROM task_dependencies ORDER BY project_id, created_at, id",
+    )
+    .fetch_all(pool)
+    .await?;
+    let baselines = sqlx::query_as::<_, ProjectBaselineRecord>(
+        "SELECT id, project_id, name, is_active, created_at, replaced_at \
+         FROM project_baselines ORDER BY project_id, created_at DESC",
+    )
+    .fetch_all(pool)
+    .await?;
+    let baseline_tasks = sqlx::query_as::<_, BaselineTaskRecord>(
+        "SELECT baseline_id, task_id, title, outline, start_date, end_date, duration_days, progress \
+         FROM baseline_tasks ORDER BY baseline_id, outline, task_id",
     )
     .fetch_all(pool)
     .await?;
@@ -329,6 +375,8 @@ pub async fn load_workspace(pool: &SqlitePool) -> Result<WorkspaceData, sqlx::Er
         projects,
         tasks,
         dependencies,
+        baselines,
+        baseline_tasks,
         templates,
         template_items,
         template_dependencies,
@@ -476,9 +524,9 @@ pub(crate) async fn save_task_record(
     sqlx::query(
         "INSERT INTO tasks (
             id, code, project_id, parent_id, calendar_id, title, description, status, priority, progress,
-            start_date, end_date, duration_days, scheduling_mode, position, assignee, notes,
+            start_date, end_date, duration_days, deadline_date, scheduling_mode, position, assignee, notes,
             created_at, updated_at
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(id) DO UPDATE SET
             code = excluded.code,
             parent_id = excluded.parent_id,
@@ -491,6 +539,7 @@ pub(crate) async fn save_task_record(
             start_date = excluded.start_date,
             end_date = excluded.end_date,
             duration_days = excluded.duration_days,
+            deadline_date = excluded.deadline_date,
             scheduling_mode = excluded.scheduling_mode,
             position = excluded.position,
             assignee = excluded.assignee,
@@ -510,6 +559,7 @@ pub(crate) async fn save_task_record(
     .bind(&task.start_date)
     .bind(&task.end_date)
     .bind(task.duration_days)
+    .bind(&task.deadline_date)
     .bind(&task.scheduling_mode)
     .bind(task.position)
     .bind(&task.assignee)
@@ -543,6 +593,70 @@ pub(crate) async fn save_task_record(
             .await?;
     }
 
+    Ok(())
+}
+
+pub async fn save_baseline(
+    pool: &SqlitePool,
+    bundle: &BaselineBundleRecord,
+) -> Result<(), sqlx::Error> {
+    let mut transaction = pool.begin().await?;
+    sqlx::query(
+        "UPDATE project_baselines SET is_active = 0, replaced_at = ? \
+         WHERE project_id = ? AND is_active = 1",
+    )
+    .bind(&bundle.baseline.created_at)
+    .bind(&bundle.baseline.project_id)
+    .execute(&mut *transaction)
+    .await?;
+    save_baseline_bundle_record(&mut transaction, bundle).await?;
+    transaction.commit().await?;
+    Ok(())
+}
+
+pub async fn delete_project_baselines(
+    pool: &SqlitePool,
+    project_id: &str,
+) -> Result<(), sqlx::Error> {
+    sqlx::query("DELETE FROM project_baselines WHERE project_id = ?")
+        .bind(project_id)
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
+pub(crate) async fn save_baseline_bundle_record(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+    bundle: &BaselineBundleRecord,
+) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        "INSERT INTO project_baselines (id, project_id, name, is_active, created_at, replaced_at) \
+         VALUES (?, ?, ?, ?, ?, ?)",
+    )
+    .bind(&bundle.baseline.id)
+    .bind(&bundle.baseline.project_id)
+    .bind(&bundle.baseline.name)
+    .bind(bundle.baseline.is_active)
+    .bind(&bundle.baseline.created_at)
+    .bind(&bundle.baseline.replaced_at)
+    .execute(&mut **transaction)
+    .await?;
+    for task in &bundle.tasks {
+        sqlx::query(
+            "INSERT INTO baseline_tasks (baseline_id, task_id, title, outline, start_date, \
+             end_date, duration_days, progress) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        )
+        .bind(&task.baseline_id)
+        .bind(&task.task_id)
+        .bind(&task.title)
+        .bind(&task.outline)
+        .bind(&task.start_date)
+        .bind(&task.end_date)
+        .bind(task.duration_days)
+        .bind(task.progress)
+        .execute(&mut **transaction)
+        .await?;
+    }
     Ok(())
 }
 
@@ -761,11 +875,11 @@ pub async fn apply_schedule_changes(
             .execute(&mut *transaction)
             .await?;
     }
-    for dependency in &changes.dependencies_to_save {
-        save_dependency_record(&mut transaction, dependency).await?;
-    }
     for task in &changes.tasks {
         save_task_record(&mut transaction, task).await?;
+    }
+    for dependency in &changes.dependencies_to_save {
+        save_dependency_record(&mut transaction, dependency).await?;
     }
     cleanup_orphan_tags(&mut transaction).await?;
     transaction.commit().await?;
@@ -833,14 +947,17 @@ mod tests {
     use sqlx::SqlitePool;
 
     use super::{
-        apply_schedule_changes, delete_project, delete_task_tree, delete_template, load_workspace,
-        reorder_projects, reorder_tasks, save_calendar, save_duplication_bundle, save_project,
-        save_task, save_template_bundle, CalendarExceptionRecord, CalendarRecord, DependencyRecord,
-        DuplicationBundleRecord, ProjectRecord, ScheduleChangeSetRecord, TaskRecord,
-        TaskTemplateBundleRecord, TaskTemplateDependencyRecord, TaskTemplateItemRecord,
-        TaskTemplateRecord,
+        apply_schedule_changes, delete_project, delete_project_baselines, delete_task_tree,
+        delete_template, load_workspace, reorder_projects, reorder_tasks, save_baseline,
+        save_calendar, save_duplication_bundle, save_project, save_task, save_template_bundle,
+        BaselineBundleRecord, BaselineTaskRecord, CalendarExceptionRecord, CalendarRecord,
+        DependencyRecord, DuplicationBundleRecord, ProjectBaselineRecord, ProjectRecord,
+        ScheduleChangeSetRecord, TaskRecord, TaskTemplateBundleRecord,
+        TaskTemplateDependencyRecord, TaskTemplateItemRecord, TaskTemplateRecord,
     };
-    use crate::database::{CORE_SCHEMA, INITIAL_SCHEMA, REUSE_SCHEMA, SCHEDULING_SCHEMA};
+    use crate::database::{
+        CORE_SCHEMA, INITIAL_SCHEMA, PLAN_CONTROL_SCHEMA, REUSE_SCHEMA, SCHEDULING_SCHEMA,
+    };
 
     const PROJECT_ID: &str = "10000000-0000-4000-8000-000000000001";
     const TASK_ID: &str = "20000000-0000-4000-8000-000000000001";
@@ -869,6 +986,10 @@ mod tests {
             .execute(&pool)
             .await
             .expect("reuse migration should execute");
+        sqlx::raw_sql(PLAN_CONTROL_SCHEMA)
+            .execute(&pool)
+            .await
+            .expect("plan control migration should execute");
         pool
     }
 
@@ -901,6 +1022,7 @@ mod tests {
             start_date: None,
             end_date: None,
             duration_days: None,
+            deadline_date: None,
             scheduling_mode: "AUTO".into(),
             position: 0,
             assignee: None,
@@ -1278,6 +1400,54 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn transfers_dependencies_before_turning_a_task_into_a_summary() {
+        let pool = database().await;
+        save_project(&pool, &project())
+            .await
+            .expect("project should save");
+        save_task(&pool, &task(TASK_ID, None))
+            .await
+            .expect("predecessor should save");
+        save_task(&pool, &task(CHILD_ID, None))
+            .await
+            .expect("successor should save");
+        let original = dependency();
+        apply_schedule_changes(
+            &pool,
+            &ScheduleChangeSetRecord {
+                calendars_to_save: vec![],
+                tasks: vec![],
+                dependencies_to_save: vec![original.clone()],
+                dependency_ids_to_delete: vec![],
+                task_tree_ids_to_delete: vec![],
+            },
+        )
+        .await
+        .expect("dependency should save");
+
+        let leaf_id = "20000000-0000-4000-8000-000000000003";
+        let mut transferred = original.clone();
+        transferred.predecessor_id = leaf_id.into();
+        apply_schedule_changes(
+            &pool,
+            &ScheduleChangeSetRecord {
+                calendars_to_save: vec![],
+                tasks: vec![task(leaf_id, Some(TASK_ID))],
+                dependencies_to_save: vec![transferred],
+                dependency_ids_to_delete: vec![original.id],
+                task_tree_ids_to_delete: vec![],
+            },
+        )
+        .await
+        .expect("conversion and transfer should be atomic");
+
+        let workspace = load_workspace(&pool).await.expect("workspace should load");
+        assert_eq!(workspace.tasks.len(), 3);
+        assert_eq!(workspace.dependencies.len(), 1);
+        assert_eq!(workspace.dependencies[0].predecessor_id, leaf_id);
+    }
+
+    #[tokio::test]
     async fn saves_loads_and_deletes_template_bundle_transactionally() {
         let pool = database().await;
         let bundle = template_bundle();
@@ -1335,5 +1505,70 @@ mod tests {
             .expect("task count should load");
         assert_eq!(project_count, 0);
         assert_eq!(task_count, 0);
+    }
+
+    #[tokio::test]
+    async fn replaces_active_baseline_without_losing_history() {
+        let pool = database().await;
+        save_project(&pool, &project())
+            .await
+            .expect("project should save");
+        save_task(&pool, &task(TASK_ID, None))
+            .await
+            .expect("task should save");
+
+        for (index, name) in ["Plano inicial", "Plano revisado"].iter().enumerate() {
+            let baseline_id = format!("50000000-0000-4000-8000-{:012}", index + 1);
+            let timestamp = format!("2026-09-1{}T12:00:00.000Z", index);
+            save_baseline(
+                &pool,
+                &BaselineBundleRecord {
+                    baseline: ProjectBaselineRecord {
+                        id: baseline_id.clone(),
+                        project_id: PROJECT_ID.into(),
+                        name: (*name).into(),
+                        is_active: true,
+                        created_at: timestamp,
+                        replaced_at: None,
+                    },
+                    tasks: vec![BaselineTaskRecord {
+                        baseline_id,
+                        task_id: TASK_ID.into(),
+                        title: "Tarefa".into(),
+                        outline: "1".into(),
+                        start_date: None,
+                        end_date: None,
+                        duration_days: None,
+                        progress: 0,
+                    }],
+                },
+            )
+            .await
+            .expect("baseline should save");
+        }
+
+        let workspace = load_workspace(&pool).await.expect("workspace should load");
+        assert_eq!(workspace.baselines.len(), 2);
+        assert_eq!(
+            workspace
+                .baselines
+                .iter()
+                .filter(|item| item.is_active)
+                .count(),
+            1
+        );
+        assert_eq!(workspace.baseline_tasks.len(), 2);
+        assert!(workspace
+            .baselines
+            .iter()
+            .any(|item| item.replaced_at.is_some()));
+
+        delete_project_baselines(&pool, PROJECT_ID)
+            .await
+            .expect("project baselines should delete");
+        let workspace = load_workspace(&pool).await.expect("workspace should load");
+        assert!(workspace.baselines.is_empty());
+        assert!(workspace.baseline_tasks.is_empty());
+        assert_eq!(workspace.tasks.len(), 1, "tasks must remain untouched");
     }
 }

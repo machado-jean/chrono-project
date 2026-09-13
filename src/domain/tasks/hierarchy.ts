@@ -7,6 +7,42 @@ export interface VisibleTask {
   readonly hasChildren: boolean;
 }
 
+export const MAX_TASK_HIERARCHY_LEVELS = 4;
+
+export function taskHierarchyDepth(tasks: readonly Task[], taskId: string): number {
+  const tasksById = new Map(tasks.map((task) => [task.id, task]));
+  let task = tasksById.get(taskId);
+  let depth = 0;
+  const visited = new Set<string>();
+  while (task?.parentId !== null && task !== undefined) {
+    if (visited.has(task.id)) return Number.POSITIVE_INFINITY;
+    visited.add(task.id);
+    depth += 1;
+    task = tasksById.get(task.parentId);
+  }
+  return depth;
+}
+
+function descendantOffset(tasks: readonly Task[], taskId: string): number {
+  let maximum = 0;
+  const pending: Array<{ readonly id: string; readonly offset: number }> = [{ id: taskId, offset: 0 }];
+  const visited = new Set<string>();
+  while (pending.length > 0) {
+    const current = pending.pop();
+    if (current === undefined || visited.has(current.id)) continue;
+    visited.add(current.id);
+    maximum = Math.max(maximum, current.offset);
+    tasks
+      .filter((task) => task.parentId === current.id)
+      .forEach((task) => { pending.push({ id: task.id, offset: current.offset + 1 }); });
+  }
+  return maximum;
+}
+
+export function canTaskHaveChild(tasks: readonly Task[], taskId: string): boolean {
+  return taskHierarchyDepth(tasks, taskId) < MAX_TASK_HIERARCHY_LEVELS - 1;
+}
+
 function comparePosition(left: Task, right: Task): number {
   return left.position - right.position || left.createdAt.localeCompare(right.createdAt);
 }
@@ -64,6 +100,16 @@ export function assertValidParentAssignment(
     }
     visited.add(candidate.id);
     candidate = candidate.parentId === null ? undefined : tasksById.get(candidate.parentId);
+  }
+
+  const parentDepth = taskHierarchyDepth(tasks, parentId);
+  const resultingDepth = parentDepth + 1 + descendantOffset(tasks, taskId);
+  if (resultingDepth >= MAX_TASK_HIERARCHY_LEVELS) {
+    throw new DomainValidationError(
+      "hierarchy_depth_limit",
+      "parentId",
+      `A hierarquia pode ter no máximo ${String(MAX_TASK_HIERARCHY_LEVELS)} níveis.`,
+    );
   }
 }
 
@@ -129,4 +175,3 @@ export function collectTaskTreeIds(tasks: readonly Task[], rootTaskId: string): 
 
   return collected;
 }
-
