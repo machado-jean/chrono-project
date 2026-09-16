@@ -24,7 +24,7 @@ use crate::{
     },
 };
 
-const FORMAT_NAME: &str = "projectflow";
+const FORMAT_NAME: &str = "chronoproject";
 const FORMAT_VERSION: u32 = 1;
 const MAX_PACKAGE_BYTES: u64 = 512 * 1024 * 1024;
 const MAX_DATA_BYTES: u64 = 500 * 1024 * 1024;
@@ -222,7 +222,7 @@ impl StagingDirectory {
     fn create(parent: &Path) -> PortabilityResult<Self> {
         fs::create_dir_all(parent)
             .map_err(|error| format!("Falha ao preparar staging: {error}"))?;
-        let path = parent.join(format!("projectflow-{}", Uuid::new_v4()));
+        let path = parent.join(format!("chronoproject-{}", Uuid::new_v4()));
         fs::create_dir(&path).map_err(|error| format!("Falha ao criar staging: {error}"))?;
         Ok(Self(path))
     }
@@ -288,7 +288,7 @@ async fn export_package(
     let manifest = build_manifest(&database_path, &workspace, export_type)?;
     write_package(destination, &database_path, &manifest)?;
     info!(
-        "ProjectFlow {:?} package exported with {} projects and {} templates",
+        "Chrono Project {:?} package exported with {} projects and {} templates",
         export_type,
         workspace.projects.len(),
         workspace.templates.len()
@@ -527,7 +527,7 @@ pub async fn import_package(
         .map_err(|error| format!("A importação foi cancelada sem alterações: {error}"))?;
 
     info!(
-        "ProjectFlow package imported: {} replaced/new projects, {} copied projects and {} templates",
+        "Chrono Project package imported: {} replaced/new projects, {} copied projects and {} templates",
         imported,
         copied,
         selection.template_ids.len()
@@ -553,7 +553,7 @@ pub async fn create_backup(
         .filter(|character| character.is_ascii_alphanumeric() || *character == '-')
         .collect();
     let filename = format!(
-        "projectflow-{}-{}-{}.sqlite",
+        "chronoproject-{}-{}-{}.sqlite",
         safe_label,
         Utc::now().format("%Y%m%d-%H%M%S"),
         &Uuid::new_v4().to_string()[..8]
@@ -571,7 +571,7 @@ pub async fn create_backup_at(
         .ok_or_else(|| "O destino do backup não possui uma pasta válida.".to_owned())?;
     fs::create_dir_all(parent)
         .map_err(|error| format!("Falha ao criar a pasta de backups: {error}"))?;
-    let temporary = parent.join(format!("projectflow-backup-{}.tmp", Uuid::new_v4()));
+    let temporary = parent.join(format!("chronoproject-backup-{}.tmp", Uuid::new_v4()));
     vacuum_into(pool, &temporary).await?;
     if let Err(error) = load_validated_database(&temporary).await {
         let _ = fs::remove_file(&temporary);
@@ -587,7 +587,7 @@ pub async fn create_backup_at(
         let _ = fs::remove_file(&temporary);
         format!("Falha ao publicar o backup verificado: {error}")
     })?;
-    info!("Verified ProjectFlow backup created");
+    info!("Verified Chrono Project backup created");
     Ok(BackupResult {
         path: destination.to_string_lossy().into_owned(),
     })
@@ -699,7 +699,7 @@ pub async fn restore_backup(
         .await
         .map_err(|error| format!("A restauração foi cancelada sem alterações: {error}"))?;
     info!(
-        "ProjectFlow workspace restored with {} projects and {} templates",
+        "Chrono Project workspace restored with {} projects and {} templates",
         source.projects.len(),
         source.templates.len()
     );
@@ -836,7 +836,7 @@ fn write_package(
         fs::create_dir_all(parent)
             .map_err(|error| format!("Falha ao preparar destino: {error}"))?;
     }
-    let temporary = destination.with_extension(format!("projectflow.tmp-{}", Uuid::new_v4()));
+    let temporary = destination.with_extension(format!("chronoproject.tmp-{}", Uuid::new_v4()));
     let file = File::create(&temporary)
         .map_err(|error| format!("Falha ao criar pacote temporário: {error}"))?;
     let mut writer = ZipWriter::new(file);
@@ -860,7 +860,7 @@ fn write_package(
         .start_file(README_ENTRY, options)
         .map_err(|error| format!("Falha ao incluir instruções: {error}"))?;
     writer
-        .write_all(b"ProjectFlow portable package. Import it only through ProjectFlow.\r\n")
+        .write_all(b"Chrono Project portable package. Import it only through Chrono Project.\r\n")
         .map_err(|error| format!("Falha ao gravar instruções: {error}"))?;
     writer
         .finish()
@@ -972,7 +972,7 @@ fn validate_manifest(manifest: &PackageManifest, database_path: &Path) -> Portab
         || !(4..=DATABASE_SCHEMA_VERSION).contains(&manifest.schema_version)
     {
         return Err(
-            "Formato ou versão do pacote incompatível com esta versão do ProjectFlow.".into(),
+            "Formato ou versão do pacote incompatível com esta versão do Chrono Project.".into(),
         );
     }
     chrono::DateTime::parse_from_rfc3339(&manifest.exported_at)
@@ -1024,7 +1024,7 @@ async fn load_validated_database(path: &Path) -> PortabilityResult<WorkspaceData
 
 async fn load_upgraded_schema_four_copy(path: &Path) -> PortabilityResult<WorkspaceData> {
     let upgraded_path = std::env::temp_dir().join(format!(
-        "projectflow-schema4-upgrade-{}.sqlite",
+        "chronoproject-schema4-upgrade-{}.sqlite",
         Uuid::new_v4()
     ));
     fs::copy(path, &upgraded_path)
@@ -1610,7 +1610,7 @@ mod tests {
 
     impl TestDirectory {
         fn new() -> Self {
-            let path = std::env::temp_dir().join(format!("projectflow-test-{}", Uuid::new_v4()));
+            let path = std::env::temp_dir().join(format!("chronoproject-test-{}", Uuid::new_v4()));
             std::fs::create_dir(&path).expect("test directory should be created");
             Self(path)
         }
@@ -1889,7 +1889,7 @@ mod tests {
         let expected = persistence::load_workspace(&source)
             .await
             .expect("source should load");
-        let package = directory.path().join("workspace.projectflow");
+        let package = directory.path().join("workspace.chronoproject");
         export_workspace(&source, &package, &directory.path().join("staging"))
             .await
             .expect("workspace should export");
@@ -2008,7 +2008,7 @@ mod tests {
             "2026-08-20T10:00:00Z",
         )
         .await;
-        let package = directory.path().join("workspace.projectflow");
+        let package = directory.path().join("workspace.chronoproject");
         export_workspace(&source, &package, &directory.path().join("staging"))
             .await
             .expect("workspace should export");
@@ -2070,7 +2070,7 @@ mod tests {
         let directory = TestDirectory::new();
         let source = database(&directory.path().join("source.sqlite")).await;
         seed_project(&source, "project-a", "Projeto A", "2026-08-20T10:00:00Z").await;
-        let package = directory.path().join("workspace.projectflow");
+        let package = directory.path().join("workspace.chronoproject");
         export_workspace(&source, &package, &directory.path().join("staging"))
             .await
             .expect("workspace should export");
@@ -2150,7 +2150,7 @@ mod tests {
         let directory = TestDirectory::new();
         let source = database(&directory.path().join("source.sqlite")).await;
         seed_project(&source, "project-a", "Projeto A", "2026-08-20T10:00:00Z").await;
-        let package = directory.path().join("workspace.projectflow");
+        let package = directory.path().join("workspace.chronoproject");
         export_workspace(&source, &package, &directory.path().join("staging"))
             .await
             .expect("workspace should export");
@@ -2187,7 +2187,7 @@ mod tests {
         let source = database(&directory.path().join("source.sqlite")).await;
         seed_project(&source, "project-a", "Projeto A", "2026-08-20T10:00:00Z").await;
         seed_template(&source, "template-a").await;
-        let package = directory.path().join("workspace.projectflow");
+        let package = directory.path().join("workspace.chronoproject");
         export_workspace(&source, &package, &directory.path().join("staging"))
             .await
             .expect("workspace should export");

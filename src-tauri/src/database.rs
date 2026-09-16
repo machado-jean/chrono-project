@@ -2,8 +2,8 @@ use std::path::{Path, PathBuf};
 
 use tauri_plugin_sql::{Migration, MigrationKind};
 
-pub const PRODUCTION_DATABASE_URL: &str = "sqlite:projectflow.sqlite";
-pub const DATABASE_FILENAME: &str = "projectflow.sqlite";
+pub const PRODUCTION_DATABASE_URL: &str = "sqlite:chronoproject.sqlite";
+pub const DATABASE_FILENAME: &str = "chronoproject.sqlite";
 pub const DATABASE_SCHEMA_VERSION: i64 = 5;
 pub const SCHEDULING_MIGRATION_VERSION: i64 = 3;
 
@@ -24,7 +24,7 @@ pub fn uses_e2e_database() -> bool {
 pub fn project_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
-        .expect("src-tauri must be inside the ProjectFlow repository")
+        .expect("src-tauri must be inside the Chrono Project repository")
         .to_path_buf()
 }
 
@@ -42,7 +42,7 @@ pub fn e2e_database_path() -> PathBuf {
 pub fn e2e_root() -> PathBuf {
     let root = project_root().join(".local").join("e2e");
     if cfg!(feature = "e2e") {
-        if let Ok(id) = std::env::var("PROJECTFLOW_E2E_RUN_ID") {
+        if let Ok(id) = std::env::var("CHRONO_PROJECT_E2E_RUN_ID") {
             assert!(
                 !id.is_empty() && id.bytes().all(|c| c.is_ascii_alphanumeric() || c == b'-'),
                 "Invalid E2E run identifier"
@@ -149,29 +149,30 @@ mod tests {
     #[test]
     fn shared_development_database_is_inside_local_data() {
         let path = database_path_for_mode(
-            Path::new("C:/Users/test/AppData/Roaming/com.projectflow.desktop"),
-            Path::new("C:/workspace/project-flow"),
+            Path::new("C:/Users/test/AppData/Roaming/io.github.machadojean.chronoproject"),
+            Path::new("C:/workspace/chrono-project"),
             true,
         );
 
         assert_eq!(
             path,
-            Path::new("C:/workspace/project-flow")
+            Path::new("C:/workspace/chrono-project")
                 .join(".local")
                 .join("data")
                 .join(DATABASE_FILENAME)
         );
         assert_eq!(
             sqlite_url(&path),
-            "sqlite:C:/workspace/project-flow/.local/data/projectflow.sqlite"
+            "sqlite:C:/workspace/chrono-project/.local/data/chronoproject.sqlite"
         );
     }
 
     #[test]
     fn production_database_remains_inside_app_config() {
-        let app_config = Path::new("C:/Users/test/AppData/Roaming/com.projectflow.desktop");
+        let app_config =
+            Path::new("C:/Users/test/AppData/Roaming/io.github.machadojean.chronoproject");
         let path =
-            database_path_for_mode(app_config, Path::new("C:/workspace/project-flow"), false);
+            database_path_for_mode(app_config, Path::new("C:/workspace/chrono-project"), false);
 
         assert_eq!(path, app_config.join(DATABASE_FILENAME));
     }

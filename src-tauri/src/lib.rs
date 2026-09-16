@@ -20,7 +20,7 @@ pub fn run() {
         Target::new(TargetKind::Stdout),
         Target::new(TargetKind::Folder {
             path: database::e2e_root().join("logs"),
-            file_name: Some("ProjectFlow-e2e".into()),
+            file_name: Some("Chrono-Project-e2e".into()),
         }),
     ]);
 
@@ -95,7 +95,7 @@ pub fn run() {
                 }
             }
             info!(
-                "ProjectFlow {} started with database schema {} using {}",
+                "Chrono Project {} started with database schema {} using {}",
                 env!("CARGO_PKG_VERSION"),
                 DATABASE_SCHEMA_VERSION,
                 database_url()

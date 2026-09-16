@@ -100,7 +100,7 @@ export function ProjectPdfExport({
       });
       const bytes = await generateProjectPdf(report);
       const path = await onSave(
-        `${safeFilename(project.name)}-${format.toLocaleLowerCase()}-projectflow`,
+        `${safeFilename(project.name)}-${format.toLocaleLowerCase()}-chronoproject`,
         Array.from(bytes),
       );
       if (path === null) return;

@@ -247,7 +247,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .dependency-item input { width: 40px; padding: 2px; text-align: right; background: #fff; border: 1px solid #d1d9e2; border-radius: 3px; }
 .dependency-item button { padding: 2px 4px; color: #315d9e; background: transparent; border: 0; font-size: 8px; }
 .dependency-item .dependency-remove { color: #a13a32; font-size: 13px; }
-.dependency-add { display: grid; grid-template-columns: minmax(0, 1fr) 42px 25px; gap: 3px; }
+.dependency-add { display: grid; grid-template-columns: minmax(0, 1fr) 42px 58px; gap: 3px; }
 .dependency-add select, .dependency-add input, .dependency-add button { min-width: 0; min-height: 25px; padding: 3px 4px; background: #fff; border: 1px solid #d3dae3; border-radius: 4px; font-size: 9px; }
 .dependency-add input { text-align: right; }
 .dependency-add button { color: #fff; background: #3774d4; border-color: #2d63b8; font-weight: 700; }
@@ -523,8 +523,8 @@ button.baseline-status.active { cursor: pointer; color: #175cd3; font-weight: 70
 .gantt-chart-shell .wx-bar[data-hierarchy-level="1"] { --wx-gantt-task-color: #2f6fdd; --wx-gantt-task-fill-color: #2457ae; --wx-gantt-summary-color: #377dc9; --wx-gantt-summary-fill-color: #2a619d; }
 .gantt-chart-shell .wx-bar[data-hierarchy-level="2"] { --wx-gantt-task-color: #7656c9; --wx-gantt-task-fill-color: #5c429e; --wx-gantt-summary-color: #7656c9; --wx-gantt-summary-fill-color: #5c429e; }
 .gantt-chart-shell .wx-bar[data-hierarchy-level="3"] { --wx-gantt-task-color: #b45b87; --wx-gantt-task-fill-color: #8d4569; --wx-gantt-summary-color: #b45b87; --wx-gantt-summary-fill-color: #8d4569; }
-.gantt-chart-shell .projectflow-gantt-weekend { color: #8d98a5; background: #f2f4f7; }
-.gantt-chart-shell .projectflow-gantt-holiday { color: #9a641d; background: #fff1d9; }
+.gantt-chart-shell .chronoproject-gantt-weekend { color: #8d98a5; background: #f2f4f7; }
+.gantt-chart-shell .chronoproject-gantt-holiday { color: #9a641d; background: #fff1d9; }
 .gantt-chart-shell .wx-line-hitbox { cursor: pointer; }
 .gantt-chart-shell .wx-line:hover > .wx-line-draw { stroke: #2563eb; stroke-width: 3px; }
 .gantt-chart-shell.dependency-focus-active .wx-line:not(.wx-line-selected) { opacity: .32; }

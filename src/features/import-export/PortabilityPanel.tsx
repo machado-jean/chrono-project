@@ -268,7 +268,7 @@ export function PortabilityPanel({
                 <p id="restore-description">O backup contém {packageSummary(restorePreview)}.</p>
               </div>
             </header>
-            <p className="import-warning">A restauração substitui todo o workspace atual. Antes disso, o ProjectFlow cria outro backup de segurança.</p>
+            <p className="import-warning">A restauração substitui todo o workspace atual. Antes disso, o Chrono Project cria outro backup de segurança.</p>
             <footer>
               <button type="button" className="secondary-button" data-dialog-initial-focus disabled={busy} onClick={() => { setRestorePreview(null); }}>Cancelar</button>
               <button type="button" className="danger-button" disabled={busy} onClick={applyRestore}>Restaurar tudo</button>

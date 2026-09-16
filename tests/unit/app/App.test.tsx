@@ -395,11 +395,11 @@ class MemoryWorkspaceRepository implements WorkspaceRepository {
   }
 
   exportProject(): Promise<ExportResult | null> {
-    return Promise.resolve({ path: "C:\\exports\\projeto.projectflow", projectCount: 1, templateCount: 0 });
+    return Promise.resolve({ path: "C:\\exports\\projeto.chronoproject", projectCount: 1, templateCount: 0 });
   }
 
   exportWorkspace(): Promise<ExportResult | null> {
-    return Promise.resolve({ path: "C:\\exports\\workspace.projectflow", projectCount: this.projects.length, templateCount: this.templates.length });
+    return Promise.resolve({ path: "C:\\exports\\workspace.chronoproject", projectCount: this.projects.length, templateCount: this.templates.length });
   }
 
   savePdfReport(): Promise<{ readonly path: string } | null> {
@@ -437,7 +437,7 @@ class MemoryWorkspaceRepository implements WorkspaceRepository {
   }
 }
 
-describe("aplicação ProjectFlow", () => {
+describe("aplicação Chrono Project", () => {
   it("recolhe e restaura a lista de projetos", async () => {
     render(<App repository={new MemoryWorkspaceRepository({ projects: [project()] })} />);
     await screen.findByRole("heading", { name: "Tabela de tarefas" });
@@ -490,7 +490,7 @@ describe("aplicação ProjectFlow", () => {
   it("permite escolher projetos e templates de um pacote antes de importar", async () => {
     const repository = new MemoryWorkspaceRepository({ projects: [project()] });
     repository.importPreview = {
-      packagePath: "C:\\imports\\workspace.projectflow",
+      packagePath: "C:\\imports\\workspace.chronoproject",
       exportType: "workspace",
       exportedAt: NOW,
       schemaVersion: 4,
@@ -703,7 +703,7 @@ describe("aplicação ProjectFlow", () => {
     });
   });
 
-  it("cria predecessora TI e empurra a sucessora automática para o próximo dia útil", async () => {
+  it("cria predecessora TI com lag zero no mesmo dia do fim", async () => {
     const predecessor = scheduledTask(TASK_ID, "Predecessora", "2026-08-28");
     const successor = scheduledTask(SECOND_TASK_ID, "Sucessora", "2026-08-28", { position: 1 });
     const repository = new MemoryWorkspaceRepository({
@@ -719,10 +719,42 @@ describe("aplicação ProjectFlow", () => {
 
     await waitFor(() => {
       expect(repository.dependencies).toHaveLength(1);
-      expect(repository.tasks.find(({ id }) => id === successor.id)?.startDate).toBe("2026-08-31");
-      expect(repository.tasks.find(({ id }) => id === successor.id)?.endDate).toBe("2026-08-31");
+      expect(repository.tasks.find(({ id }) => id === successor.id)?.startDate).toBe("2026-08-28");
+      expect(repository.tasks.find(({ id }) => id === successor.id)?.endDate).toBe("2026-08-28");
     });
+    expect(screen.getByLabelText("Confirmar predecessora de Sucessora")).toHaveTextContent("Adicionar");
     expect(await screen.findByText("1. Predecessora", { selector: ".dependency-item span" })).toBeVisible();
+  });
+
+  it("preenche o cronograma de uma nova tarefa ao adicionar predecessora", async () => {
+    const predecessor = scheduledTask(TASK_ID, "Descongelamento", "2026-09-14", {
+      endDate: "2026-09-15",
+      durationDays: 2,
+    });
+    const successor = {
+      ...task(),
+      id: SECOND_TASK_ID,
+      title: "CBM",
+      position: 1,
+    };
+    const repository = new MemoryWorkspaceRepository({
+      projects: [project()],
+      tasks: [predecessor, successor],
+    });
+    render(<App repository={repository} />);
+
+    fireEvent.change(await screen.findByLabelText("Nova predecessora de CBM"), {
+      target: { value: predecessor.id },
+    });
+    fireEvent.click(screen.getByLabelText("Confirmar predecessora de CBM"));
+
+    await waitFor(() => {
+      expect(repository.tasks.find(({ id }) => id === successor.id)).toMatchObject({
+        startDate: "2026-09-15",
+        endDate: "2026-09-15",
+        durationDays: 1,
+      });
+    });
   });
 
   it("antecipa sucessoras automáticas em cadeia quando a predecessora termina mais cedo", async () => {
@@ -756,8 +788,8 @@ describe("aplicação ProjectFlow", () => {
 
     await waitFor(() => {
       expect(repository.tasks.find(({ id }) => id === predecessor.id)?.endDate).toBe("2026-09-02");
-      expect(repository.tasks.find(({ id }) => id === successor.id)?.startDate).toBe("2026-09-03");
-      expect(repository.tasks.find(({ id }) => id === finalTask.id)?.startDate).toBe("2026-09-04");
+      expect(repository.tasks.find(({ id }) => id === successor.id)?.startDate).toBe("2026-09-02");
+      expect(repository.tasks.find(({ id }) => id === finalTask.id)?.startDate).toBe("2026-09-02");
     });
     expect(repository.appliedScheduleChanges.at(-1)?.tasks.map(({ id }) => id)).toEqual(
       expect.arrayContaining([predecessor.id, successor.id, finalTask.id]),
@@ -766,7 +798,7 @@ describe("aplicação ProjectFlow", () => {
 
   it("salva tarefa e lag juntos pelo único botão da coluna Ações", async () => {
     const predecessor = scheduledTask(TASK_ID, "Predecessora", "2026-08-28");
-    const successor = scheduledTask(SECOND_TASK_ID, "Sucessora", "2026-08-31", { position: 1 });
+    const successor = scheduledTask(SECOND_TASK_ID, "Sucessora", "2026-08-28", { position: 1 });
     const repository = new MemoryWorkspaceRepository({
       projects: [project()],
       tasks: [predecessor, successor],
@@ -790,7 +822,7 @@ describe("aplicação ProjectFlow", () => {
     await waitFor(() => {
       expect(repository.dependencies[0]?.lagDays).toBe(2);
       expect(repository.tasks.find(({ id }) => id === successor.id)?.status).toBe("IN_PROGRESS");
-      expect(repository.tasks.find(({ id }) => id === successor.id)?.startDate).toBe("2026-09-02");
+      expect(repository.tasks.find(({ id }) => id === successor.id)?.startDate).toBe("2026-09-01");
     });
     expect(repository.appliedScheduleChanges).toHaveLength(1);
     expect(repository.appliedScheduleChanges[0]?.dependenciesToSave[0]?.lagDays).toBe(2);
@@ -801,7 +833,7 @@ describe("aplicação ProjectFlow", () => {
 
   it("não salva a tarefa quando o lag da mesma linha é inválido", async () => {
     const predecessor = scheduledTask(TASK_ID, "Predecessora", "2026-08-28");
-    const successor = scheduledTask(SECOND_TASK_ID, "Sucessora", "2026-08-31", { position: 1 });
+    const successor = scheduledTask(SECOND_TASK_ID, "Sucessora", "2026-08-28", { position: 1 });
     const repository = new MemoryWorkspaceRepository({
       projects: [project()],
       tasks: [predecessor, successor],
@@ -827,7 +859,7 @@ describe("aplicação ProjectFlow", () => {
 
   it("preserva tarefa manual e apresenta conflito apenas para sua predecessora declarada", async () => {
     const predecessor = scheduledTask(TASK_ID, "Entrega anterior", "2026-08-28");
-    const manual = scheduledTask(SECOND_TASK_ID, "Marco manual", "2026-08-28", {
+    const manual = scheduledTask(SECOND_TASK_ID, "Marco manual", "2026-08-27", {
       position: 1,
       schedulingMode: "MANUAL",
     });
@@ -843,8 +875,8 @@ describe("aplicação ProjectFlow", () => {
     fireEvent.click(screen.getByLabelText("Confirmar predecessora de Marco manual"));
 
     expect(await screen.findByText("1 conflito de agendamento")).toBeVisible();
-    expect(screen.getByText(/deveria começar em 2026-08-31 ou depois/)).toBeVisible();
-    expect(repository.tasks.find(({ id }) => id === manual.id)?.startDate).toBe("2026-08-28");
+    expect(screen.getByText(/deveria começar em 2026-08-28 ou depois/)).toBeVisible();
+    expect(repository.tasks.find(({ id }) => id === manual.id)?.startDate).toBe("2026-08-27");
   });
 
   it("usa o calendário da tarefa para permitir propagação no fim de semana", async () => {
@@ -862,6 +894,9 @@ describe("aplicação ProjectFlow", () => {
 
     fireEvent.change(await screen.findByLabelText("Nova predecessora de Plantão"), {
       target: { value: predecessor.id },
+    });
+    fireEvent.change(screen.getByLabelText("Novo intervalo de Plantão"), {
+      target: { value: "1" },
     });
     fireEvent.click(screen.getByLabelText("Confirmar predecessora de Plantão"));
 
@@ -904,7 +939,7 @@ describe("aplicação ProjectFlow", () => {
     const repository = new MemoryWorkspaceRepository({
       projects: [project()],
       tasks: [predecessor, manual],
-      dependencies: [dependency(predecessor.id, manual.id)],
+      dependencies: [{ ...dependency(predecessor.id, manual.id), lagDays: 1 }],
     });
     render(<App repository={repository} />);
 
@@ -922,7 +957,7 @@ describe("aplicação ProjectFlow", () => {
 
   it("reconstrói e mantém conflito persistido ao editar uma tarefa não relacionada", async () => {
     const predecessor = scheduledTask(TASK_ID, "Entrega anterior", "2026-08-28");
-    const manual = scheduledTask(SECOND_TASK_ID, "Marco manual", "2026-08-28", {
+    const manual = scheduledTask(SECOND_TASK_ID, "Marco manual", "2026-08-27", {
       position: 1,
       schedulingMode: "MANUAL",
     });
@@ -932,7 +967,7 @@ describe("aplicação ProjectFlow", () => {
     const repository = new MemoryWorkspaceRepository({
       projects: [project()],
       tasks: [predecessor, manual, unrelated],
-      dependencies: [dependency(predecessor.id, manual.id)],
+      dependencies: [{ ...dependency(predecessor.id, manual.id), lagDays: 1 }],
     });
     render(<App repository={repository} />);
 
@@ -950,7 +985,7 @@ describe("aplicação ProjectFlow", () => {
 
   it("reconcilia e persiste uma cadeia automática ao carregar o workspace", async () => {
     const predecessor = scheduledTask(TASK_ID, "Predecessora", "2026-08-28");
-    const successor = scheduledTask(SECOND_TASK_ID, "Sucessora", "2026-08-28", { position: 1 });
+    const successor = scheduledTask(SECOND_TASK_ID, "Sucessora", "2026-08-31", { position: 1 });
     const repository = new MemoryWorkspaceRepository({
       projects: [project()],
       tasks: [predecessor, successor],
@@ -960,9 +995,9 @@ describe("aplicação ProjectFlow", () => {
 
     expect(await screen.findByDisplayValue("Sucessora")).toBeVisible();
     await waitFor(() => {
-      expect(repository.tasks.find(({ id }) => id === successor.id)?.startDate).toBe("2026-08-31");
+      expect(repository.tasks.find(({ id }) => id === successor.id)?.startDate).toBe("2026-08-28");
     });
-    expect(screen.getAllByLabelText("Início da tarefa")[1]).toHaveValue("2026-08-31");
+    expect(screen.getAllByLabelText("Início da tarefa")[1]).toHaveValue("2026-08-28");
   });
 
   it("deriva e bloqueia as datas da tarefa-resumo a partir da subtarefa", async () => {
@@ -1141,20 +1176,20 @@ describe("aplicação ProjectFlow", () => {
       expect(screen.getByTestId("svar-gantt-rows")).toHaveStyle({ minHeight: "1260px" });
     });
 
-    fireEvent.wheel(screen.getByTestId("projectflow-gantt"), { deltaY: 140 });
+    fireEvent.wheel(screen.getByTestId("chronoproject-gantt"), { deltaY: 140 });
 
     expect(verticalScroller.scrollTop).toBe(140);
     expect(ganttHarness.setScrollState).toHaveBeenCalledWith({ scrollTop: 140 });
-    fireEvent.wheel(screen.getByTestId("projectflow-gantt"), { deltaY: 140 });
+    fireEvent.wheel(screen.getByTestId("chronoproject-gantt"), { deltaY: 140 });
     expect(verticalScroller.scrollTop).toBe(280);
     expect(ganttHarness.setScrollState).toHaveBeenCalledWith({ scrollTop: 280 });
     const verticalBar = screen.getByLabelText("Percorrer atividades do Gantt");
-    expect(screen.getByTestId("projectflow-gantt")).not.toContainElement(verticalBar);
+    expect(screen.getByTestId("chronoproject-gantt")).not.toContainElement(verticalBar);
     fireEvent.input(verticalBar, { target: { value: "305" } });
     expect(ganttHarness.setScrollState).toHaveBeenCalledWith({ scrollTop: 305 });
     expect(screen.getByText(/barra inferior para navegar pelas datas/i)).toBeVisible();
     const horizontalScroll = screen.getByLabelText("Navegar pelas datas do Gantt");
-    expect(screen.getByTestId("projectflow-gantt")).not.toContainElement(horizontalScroll);
+    expect(screen.getByTestId("chronoproject-gantt")).not.toContainElement(horizontalScroll);
     await waitFor(() => { expect(horizontalScroll).not.toBeDisabled(); });
     fireEvent.input(horizontalScroll, { target: { value: "320" } });
     expect(timeline.scrollLeft).toBe(320);
@@ -1230,7 +1265,7 @@ describe("aplicação ProjectFlow", () => {
     const repository = new MemoryWorkspaceRepository({
       projects: [project()],
       tasks: [predecessor, successor],
-      dependencies: [dependency(predecessor.id, successor.id)],
+      dependencies: [{ ...dependency(predecessor.id, successor.id), lagDays: 1 }],
     });
     render(<App repository={repository} />);
     fireEvent.click(await screen.findByRole("tab", { name: "Gantt" }));
@@ -1262,7 +1297,7 @@ describe("aplicação ProjectFlow", () => {
     const successor = scheduledTask(SECOND_TASK_ID, "Sucessora", "2026-08-31", { position: 1 });
     const repository = new MemoryWorkspaceRepository({
       projects: [project()], tasks: [predecessor, successor],
-      dependencies: [dependency(predecessor.id, successor.id)],
+      dependencies: [{ ...dependency(predecessor.id, successor.id), lagDays: 1 }],
     });
     render(<App repository={repository} />);
     fireEvent.click(await screen.findByRole("tab", { name: "Gantt" }));
@@ -1277,7 +1312,7 @@ describe("aplicação ProjectFlow", () => {
 
     await waitFor(() => {
       expect(repository.tasks[1]?.startDate).toBe("2026-09-02");
-      expect(repository.dependencies[0]?.lagDays).toBe(2);
+      expect(repository.dependencies[0]?.lagDays).toBe(3);
     });
     expect(screen.getByText(/1 intervalo FS ajustado/)).toBeInTheDocument();
   });
@@ -1287,7 +1322,7 @@ describe("aplicação ProjectFlow", () => {
     const successor = scheduledTask(SECOND_TASK_ID, "Sucessora", "2026-08-31", { position: 1 });
     const repository = new MemoryWorkspaceRepository({
       projects: [project()], tasks: [predecessor, successor],
-      dependencies: [dependency(predecessor.id, successor.id)],
+      dependencies: [{ ...dependency(predecessor.id, successor.id), lagDays: 1 }],
     });
     render(<App repository={repository} />);
     fireEvent.click(await screen.findByRole("tab", { name: "Gantt" }));
@@ -1533,7 +1568,7 @@ describe("aplicação ProjectFlow", () => {
     const applied = repository.tasks.slice(3);
     expect(applied.every((candidate) => candidate.progress === 0)).toBe(true);
     expect(applied.every((candidate) => candidate.assignee === null)).toBe(true);
-    expect(applied.find((candidate) => candidate.title === "Executar")?.startDate).toBe("2026-09-07");
+    expect(applied.find((candidate) => candidate.title === "Executar")?.startDate).toBe("2026-09-04");
 
     vi.spyOn(window, "confirm").mockReturnValueOnce(true);
     const templateCard = screen.getByText("Entrega padrão").closest("li");

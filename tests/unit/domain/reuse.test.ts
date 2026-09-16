@@ -220,9 +220,9 @@ describe("reutilização de estruturas", () => {
     const successor = result.tasks.find((candidate) => candidate.id === relation?.successorId);
     const summary = result.tasks.find((candidate) => candidate.parentId === null);
     expect(predecessor?.startDate).toBe("2026-09-04");
-    expect(successor?.startDate).toBe("2026-09-08");
+    expect(successor?.startDate).toBe("2026-09-07");
     expect(summary?.startDate).toBe("2026-09-04");
-    expect(summary?.endDate).toBe("2026-09-08");
+    expect(summary?.endDate).toBe("2026-09-07");
     expect(result.tasks.every((candidate) => candidate.progress === 0)).toBe(true);
     expect(result.tasks.every((candidate) => candidate.assignee === null)).toBe(true);
   });

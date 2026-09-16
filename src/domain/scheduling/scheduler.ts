@@ -61,7 +61,7 @@ export function calculateEarliestStart(
       const predecessorEnd = tasksById.get(dependency.predecessorId)?.endDate;
       return predecessorEnd === null || predecessorEnd === undefined
         ? []
-        : [addWorkingDays(calendar, predecessorEnd, dependency.lagDays + 1)];
+        : [addWorkingDays(calendar, predecessorEnd, dependency.lagDays)];
     });
   return constraints.sort((left, right) => right.localeCompare(left))[0] ?? null;
 }
@@ -102,23 +102,15 @@ export function rescheduleAffectedTasks(input: ScheduleInput): ScheduleResult {
       continue;
     }
 
-    if (task.durationDays === null) {
-      conflicts.push({
-        kind: "UNSCHEDULED_AUTO",
-        taskId,
-        requiredStartDate: earliestStart,
-        actualStartDate: task.startDate,
-        message: "A tarefa automática possui predecessora, mas ainda não tem duração definida.",
-      });
-      continue;
-    }
+    const durationDays = task.durationDays ?? 1;
     // AUTO tasks with dependencies are anchored to the latest FS constraint.
     // An intentional gap belongs in lag; MANUAL tasks retain user-controlled dates.
     if (task.startDate !== earliestStart) {
       tasksById.set(taskId, {
         ...task,
         startDate: earliestStart,
-        endDate: endDateForDuration(calendarForTask(task), earliestStart, task.durationDays),
+        endDate: endDateForDuration(calendarForTask(task), earliestStart, durationDays),
+        durationDays,
       });
     }
   }

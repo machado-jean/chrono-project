@@ -17,6 +17,11 @@ export interface GanttProjection {
   readonly unscheduledCount: number;
 }
 
+export interface GanttDateRange {
+  readonly start: Date;
+  readonly end: Date;
+}
+
 export function dateOnlyToLocalDate(value: string): Date {
   const [year, month, day] = value.split("-").map(Number);
   if (year === undefined || month === undefined || day === undefined) {
@@ -36,6 +41,39 @@ export function inclusiveDateOnlyToExclusiveLocalDate(value: string): Date {
   const exclusiveEnd = dateOnlyToLocalDate(value);
   exclusiveEnd.setDate(exclusiveEnd.getDate() + 1);
   return exclusiveEnd;
+}
+
+function addLocalMonths(value: Date, amount: number): Date {
+  const result = new Date(value);
+  const originalDay = result.getDate();
+  result.setDate(1);
+  result.setMonth(result.getMonth() + amount);
+  const lastDayOfTargetMonth = new Date(
+    result.getFullYear(),
+    result.getMonth() + 1,
+    0,
+  ).getDate();
+  result.setDate(Math.min(originalDay, lastDayOfTargetMonth));
+  return result;
+}
+
+export function calculateGanttDateRange(tasks: readonly Task[]): GanttDateRange | null {
+  const scheduled = tasks.filter(
+    (task) => task.startDate !== null && task.endDate !== null,
+  );
+  const firstStart = scheduled
+    .map((task) => task.startDate as string)
+    .sort((left, right) => left.localeCompare(right))[0];
+  const lastEnd = scheduled
+    .map((task) => task.endDate as string)
+    .sort((left, right) => right.localeCompare(left))[0];
+  if (firstStart === undefined || lastEnd === undefined) return null;
+
+  const start = dateOnlyToLocalDate(firstStart);
+  start.setDate(start.getDate() - 7);
+  const end = addLocalMonths(dateOnlyToLocalDate(lastEnd), 1);
+  end.setDate(end.getDate() + 1);
+  return { start, end };
 }
 
 function orderedTasks(tasks: readonly Task[]): readonly Task[] {
@@ -114,6 +152,6 @@ export function buildGanttProjection(
 export function ganttCalendarClass(calendar: Calendar, date: Date): string {
   const dateOnly = localDateToDateOnly(date);
   const exception = calendar.exceptions.find((candidate) => candidate.date === dateOnly);
-  if (exception !== undefined && !exception.isWorkingDay) return "projectflow-gantt-holiday";
-  return isWorkingDay(calendar, dateOnly) ? "" : "projectflow-gantt-weekend";
+  if (exception !== undefined && !exception.isWorkingDay) return "chronoproject-gantt-holiday";
+  return isWorkingDay(calendar, dateOnly) ? "" : "chronoproject-gantt-weekend";
 }

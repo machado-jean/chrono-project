@@ -112,7 +112,7 @@ Na VM Windows limpa:
 ## Limites conhecidos
 
 - O renderer SVAR fornece a camada visual do Gantt. As informações essenciais
-  e a edição permanecem disponíveis nos controles nativos do ProjectFlow e na
+  e a edição permanecem disponíveis nos controles nativos do Chrono Project e na
   Tabela, que é a interface acessível de referência.
 - A simulação automatizada de 125%/150% foi aprovada. Ainda é necessário repetir
   no instalador com a escala real do Windows e ouvir o Narrador na VM limpa.

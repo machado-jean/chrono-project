@@ -22,7 +22,7 @@ async fn sqlite_pool(db_instances: &DbInstances) -> Result<sqlx::SqlitePool, Str
     let database_url = database::database_url();
     let database = instances
         .get(&database_url)
-        .ok_or_else(|| "O banco de dados do ProjectFlow não foi carregado.".to_owned())?;
+        .ok_or_else(|| "O banco de dados do Chrono Project não foi carregado.".to_owned())?;
 
     let DbPool::Sqlite(pool) = database;
     Ok(pool.clone())
@@ -235,7 +235,7 @@ pub async fn save_pdf_report(
     validate_pdf_bytes(&bytes)?;
 
     #[cfg(feature = "e2e")]
-    let selected = e2e_path("PROJECTFLOW_E2E_PDF_PATH").map(tauri_plugin_dialog::FilePath::Path);
+    let selected = e2e_path("CHRONO_PROJECT_E2E_PDF_PATH").map(tauri_plugin_dialog::FilePath::Path);
     #[cfg(not(feature = "e2e"))]
     let selected = None;
 
@@ -244,7 +244,7 @@ pub async fn save_pdf_report(
         None => app
             .dialog()
             .file()
-            .set_title("Salvar relatório PDF do ProjectFlow")
+            .set_title("Salvar relatório PDF do Chrono Project")
             .set_file_name(format!("{suggested_name}.pdf"))
             .add_filter("Documento PDF", &["pdf"])
             .blocking_save_file(),
@@ -261,7 +261,7 @@ pub async fn save_pdf_report(
 }
 
 fn portability_error(context: &str, error: String) -> String {
-    warn!("ProjectFlow portability error during {context}: {error}");
+    warn!("Chrono Project portability error during {context}: {error}");
     error
 }
 
@@ -274,34 +274,34 @@ fn e2e_path(variable: &str) -> Option<PathBuf> {
 
 fn workspace_export_destination(app: &AppHandle) -> Result<Option<PathBuf>, String> {
     #[cfg(feature = "e2e")]
-    if let Some(destination) = e2e_path("PROJECTFLOW_E2E_EXPORT_PATH") {
-        return Ok(Some(with_extension(destination, "projectflow")));
+    if let Some(destination) = e2e_path("CHRONO_PROJECT_E2E_EXPORT_PATH") {
+        return Ok(Some(with_extension(destination, "chronoproject")));
     }
 
     app.dialog()
         .file()
-        .set_title("Exportar workspace do ProjectFlow")
+        .set_title("Exportar workspace do Chrono Project")
         .set_file_name(format!(
-            "projectflow-workspace-{}.projectflow",
+            "chronoproject-workspace-{}.chronoproject",
             chrono::Local::now().format("%Y%m%d")
         ))
-        .add_filter("Pacote ProjectFlow", &["projectflow"])
+        .add_filter("Pacote Chrono Project", &["chronoproject"])
         .blocking_save_file()
         .map(file_path)
         .transpose()
-        .map(|path| path.map(|value| with_extension(value, "projectflow")))
+        .map(|path| path.map(|value| with_extension(value, "chronoproject")))
 }
 
 fn import_package_path(app: &AppHandle) -> Result<Option<PathBuf>, String> {
     #[cfg(feature = "e2e")]
-    if let Some(path) = e2e_path("PROJECTFLOW_E2E_IMPORT_PATH") {
+    if let Some(path) = e2e_path("CHRONO_PROJECT_E2E_IMPORT_PATH") {
         return Ok(Some(path));
     }
 
     app.dialog()
         .file()
-        .set_title("Importar pacote do ProjectFlow")
-        .add_filter("Pacote ProjectFlow", &["projectflow"])
+        .set_title("Importar pacote do Chrono Project")
+        .add_filter("Pacote Chrono Project", &["chronoproject"])
         .blocking_pick_file()
         .map(file_path)
         .transpose()
@@ -317,14 +317,14 @@ pub async fn export_project(
     let selected = app
         .dialog()
         .file()
-        .set_title("Exportar projeto do ProjectFlow")
-        .set_file_name(format!("{suggested_name}.projectflow"))
-        .add_filter("Pacote ProjectFlow", &["projectflow"])
+        .set_title("Exportar projeto do Chrono Project")
+        .set_file_name(format!("{suggested_name}.chronoproject"))
+        .add_filter("Pacote Chrono Project", &["chronoproject"])
         .blocking_save_file();
     let Some(selected) = selected else {
         return Ok(None);
     };
-    let destination = with_extension(file_path(selected)?, "projectflow");
+    let destination = with_extension(file_path(selected)?, "chronoproject");
     let pool = sqlite_pool(&db_instances).await?;
     portability::export_project(
         &pool,
@@ -394,12 +394,12 @@ pub async fn create_backup(
     let selected = app
         .dialog()
         .file()
-        .set_title("Salvar backup do ProjectFlow")
+        .set_title("Salvar backup do Chrono Project")
         .set_file_name(format!(
-            "projectflow-backup-{}.sqlite",
+            "chronoproject-backup-{}.sqlite",
             chrono::Local::now().format("%Y%m%d-%H%M")
         ))
-        .add_filter("Backup SQLite do ProjectFlow", &["sqlite"])
+        .add_filter("Backup SQLite do Chrono Project", &["sqlite"])
         .blocking_save_file();
     let Some(selected) = selected else {
         return Ok(None);
@@ -429,8 +429,8 @@ pub async fn choose_restore_backup(app: AppHandle) -> Result<Option<ImportPackag
     let selected = app
         .dialog()
         .file()
-        .set_title("Selecionar backup do ProjectFlow")
-        .add_filter("Backup SQLite do ProjectFlow", &["sqlite"])
+        .set_title("Selecionar backup do Chrono Project")
+        .add_filter("Backup SQLite do Chrono Project", &["sqlite"])
         .blocking_pick_file();
     let Some(selected) = selected else {
         return Ok(None);

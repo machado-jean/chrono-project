@@ -29,9 +29,9 @@ Existem dois modos deliberados:
 
 1. **Desenvolvimento compartilhado** — builds debug e builds com a feature
    `shared-dev-data` usam o caminho absoluto
-   `project-flow\.local\data\projectflow.sqlite`.
+   `chrono-project\.local\data\chronoproject.sqlite`.
 2. **Distribuição** — builds release sem essa feature continuam usando
-   `sqlite:projectflow.sqlite`, resolvido pelo Tauri em `AppConfig`.
+   `sqlite:chronoproject.sqlite`, resolvido pelo Tauri em `AppConfig`.
 
 O preload fixo do plugin foi removido. A aplicação nativa expõe a URL calculada
 e o adapter Tauri carrega explicitamente essa mesma URL antes de invocar o

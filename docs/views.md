@@ -79,7 +79,7 @@ A projeção transitória contém:
 - foco de dependência por clique na linha ou por seletor acessível.
 - linha de base ativa desenhada atrás das barras correntes, quando existente.
 
-As datas do ProjectFlow são inclusivas. Na projeção, o fim é convertido para o
+As datas do Chrono Project são inclusivas. Na projeção, o fim é convertido para o
 dia civil seguinte porque o renderer usa fim exclusivo. Assim, uma tarefa de
 sexta a segunda ocupa corretamente sexta, sábado, domingo e segunda no eixo,
 enquanto a coluna **Duração** continua mostrando a quantidade de dias úteis
@@ -105,7 +105,7 @@ mantêm datas derivadas; a seleção de relação não oculta as demais linhas.
 O painel **Inspecionar tarefa** permite
 alterar início e duração apenas quando isso é seguro; tarefas-resumo exibem a
 explicação de que suas datas são derivadas. O salvamento usa o scheduler do
-ProjectFlow e nunca o mecanismo de agendamento da biblioteca.
+Chrono Project e nunca o mecanismo de agendamento da biblioteca.
 
 ## Controle do plano de referência
 

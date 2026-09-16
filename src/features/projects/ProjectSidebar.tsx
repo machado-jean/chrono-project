@@ -93,7 +93,7 @@ export function ProjectSidebar({
         <>
       <div className="brand-block">
         <span className="brand-mark" aria-hidden="true">PF</span>
-        <div><strong>ProjectFlow</strong><span>Planejamento local</span></div>
+        <div><strong>Chrono Project</strong><span>Planejamento local</span></div>
         <button className="sidebar-collapse-button" type="button" aria-label="Recolher projetos" title="Recolher projetos" onClick={onToggle}>‹</button>
       </div>
 

@@ -33,7 +33,11 @@ import {
   buildTaskOutlineNumbers,
   taskOutlineLabel,
 } from "../../domain/tasks/outline-number";
-import { buildGanttProjection, ganttCalendarClass } from "./gantt-adapter";
+import {
+  buildGanttProjection,
+  calculateGanttDateRange,
+  ganttCalendarClass,
+} from "./gantt-adapter";
 
 type GanttScale = "DAY" | "WEEK" | "MONTH";
 
@@ -201,6 +205,10 @@ export function TaskGantt({
     [allProjectTasks, baselineTasks, dependencies, tasks],
   );
   const scaleConfig = useMemo(() => scalesFor(scale), [scale]);
+  const dateRange = useMemo(
+    () => calculateGanttDateRange(allProjectTasks),
+    [allProjectTasks],
+  );
   const tasksById = useMemo(
     () => new Map(allProjectTasks.map((task) => [task.id, task])),
     [allProjectTasks],
@@ -466,7 +474,7 @@ export function TaskGantt({
 
   useEffect(() => {
     if (ganttApi === null) return;
-    const listenerTag = Symbol("projectflow-gantt-selection");
+    const listenerTag = Symbol("chronoproject-gantt-selection");
     ganttApi.on("select-task", ({ id }) => {
       if (typeof id === "string") selectTask(id);
     }, { tag: listenerTag });
@@ -685,7 +693,7 @@ export function TaskGantt({
 
   useEffect(() => {
     if (ganttApi === null) return;
-    const listenerTag = Symbol("projectflow-gantt-edits");
+    const listenerTag = Symbol("chronoproject-gantt-edits");
     ganttApi.intercept("update-task", (input) => {
       if (input.eventSource !== undefined) return true;
       if (input.inProgress === true) return true;
@@ -804,7 +812,7 @@ export function TaskGantt({
           <div
             ref={chartShellRef}
             className={`gantt-chart-shell${focusedLink === null ? "" : " dependency-focus-active"}`}
-            data-testid="projectflow-gantt"
+            data-testid="chronoproject-gantt"
             onClick={focusDependencyFromChart}
             onContextMenu={openContextMenu}
           >
@@ -816,6 +824,7 @@ export function TaskGantt({
                 links={[...projection.links]}
                 columns={GANTT_COLUMNS}
                 scales={scaleConfig.scales}
+                {...(dateRange === null ? {} : { start: dateRange.start, end: dateRange.end })}
                 cellWidth={scaleConfig.cellWidth}
                 cellHeight={42}
                 gridWidth={454}

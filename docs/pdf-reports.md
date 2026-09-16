@@ -1,6 +1,6 @@
 # Relatórios PDF
 
-O ProjectFlow gera documentos PDF inteiramente no computador do usuário. Abra
+O Chrono Project gera documentos PDF inteiramente no computador do usuário. Abra
 um projeto e selecione **Gerar PDF**, ao lado das visualizações.
 
 ## Formatos

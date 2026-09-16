@@ -1,10 +1,10 @@
 # Roadmap e registro de evolução
 
-Este é o registro vivo de execução do ProjectFlow. Ele traduz o roadmap definido em `AGENTS.md` em fases acompanháveis, checkpoints verificáveis e um histórico cronológico das entregas.
+Este é o registro vivo de execução do Chrono Project. Ele traduz o roadmap definido em `AGENTS.md` em fases acompanháveis, checkpoints verificáveis e um histórico cronológico das entregas.
 
 `AGENTS.md` continua sendo a fonte de verdade para produto, arquitetura e regras operacionais. Este documento não substitui a especificação e não deve introduzir escopo incompatível com ela.
 
-Última atualização: **12 de setembro de 2026**.
+Última atualização: **16 de setembro de 2026**.
 
 ## Como manter este documento
 
@@ -31,10 +31,10 @@ Não usar percentuais subjetivos. O progresso deve ser demonstrado por entregáv
 
 | Item | Estado |
 | --- | --- |
-| Etapa do produto | Fechamento local da versão 0.1.8 |
-| Fase ativa | Nenhuma implementação; Fase 8 concluída e pronta para checkpoint |
-| Próxima fase | Fase 9 — identidade visual, somente após publicar e validar a v0.1.8 |
-| Versão da aplicação | `0.1.8` |
+| Etapa do produto | Rebranding completo para Chrono Project 0.2.0 |
+| Fase ativa | Identidade, persistência, portabilidade e distribuição em validação |
+| Próxima fase | Publicar e validar a v0.2.0 após os gates locais |
+| Versão da aplicação | `0.2.0` |
 | Versão do schema SQLite | `5` |
 | Último commit de referência | `427599e` — `docs: consolidate post-MVP roadmap` |
 | Branch de trabalho | `main`; fechamento da Fase 8 ainda não commitado |
@@ -196,7 +196,7 @@ válida, omitem relações externas e nunca compartilham identidade com a origem
 
 Estado: **Concluída; pronta para auditoria e commit local**.
 
-- [x] Finalizar e documentar o formato `.projectflow`.
+- [x] Finalizar e documentar o formato `.chronoproject`.
 - [x] Exportar projeto.
 - [x] Exportar workspace completo.
 - [x] Validar manifest, schema, versão, integridade, tamanho e entradas.
@@ -233,7 +233,7 @@ Critério de saída: Checkpoint E concluído e critérios de aceite do MVP verif
 
 ## Roadmap consolidado pós-MVP
 
-As fases seguintes ampliam o planejamento sem transformar o ProjectFlow em
+As fases seguintes ampliam o planejamento sem transformar o Chrono Project em
 sistema de apontamento de horas, gestão de pessoas ou colaboração online. A
 ordem é deliberada: primeiro registrar o plano aprovado, depois explicar seus
 riscos, consolidar o progresso e somente então aumentar produtividade e
@@ -272,7 +272,7 @@ Estado: **Concluída**. Versão: `0.1.8`.
 - Comparação em dias úteis respeitando calendário e exceções do projeto.
 - Plano de referência imutável durante edições comuns; alterações correntes não podem
   modificar silenciosamente a fotografia aprovada.
-- Testes de Tabela, Gantt, PDF e round-trip `.projectflow`.
+- Testes de Tabela, Gantt, PDF e round-trip `.chronoproject`.
 
 ### Critério de saída
 
@@ -289,7 +289,7 @@ Estado: **Planejada**. Versão-alvo sugerida: `0.1.9`.
 
 ### Escopo
 
-- Definir uma direção visual profissional, moderna e sóbria para o ProjectFlow.
+- Definir uma direção visual profissional, moderna e sóbria para o Chrono Project.
 - Criar propostas de ícone baseadas em fluxo estruturado, cronograma e marco,
   evitando símbolos genéricos ou excessivamente abstratos.
 - Validar legibilidade em tamanhos pequenos, contraste e reconhecimento na barra
@@ -313,7 +313,7 @@ Estado: **Planejada**. Versão-alvo sugerida: `0.1.9`.
 
 ### Critério de saída
 
-O ProjectFlow possui um ícone aprovado, reconhecível e consistente na interface,
+O Chrono Project possui um ícone aprovado, reconhecível e consistente na interface,
 no Windows e nos artefatos de distribuição, sem regressão funcional.
 
 ## Fase 10 — Análise e explicação do cronograma
@@ -360,7 +360,7 @@ Estado: **Planejada**. Versão-alvo sugerida: `0.2.1`.
 - Introduzir marco como tipo de item de cronograma de duração zero e data única.
 - Representar marcos de forma própria na Tabela, Gantt, filtros e PDF.
 - Preservar marcos e política de progresso em duplicação, templates e pacotes
-  `.projectflow`.
+  `.chronoproject`.
 
 ### Decisões obrigatórias antes da implementação
 
@@ -423,7 +423,7 @@ Estado: **Planejada**. Versão-alvo sugerida: `0.2.3`.
   visual somente dentro do projeto importado.
 - Permitir importar como novo projeto ou atualizar por UUID, com confirmação.
 - Produzir relatório claro de linhas criadas, atualizadas, ignoradas ou inválidas.
-- Preservar `.projectflow` como único formato de fidelidade completa para backup,
+- Preservar `.chronoproject` como único formato de fidelidade completa para backup,
   templates, calendários, configurações e transporte entre computadores.
 
 ### Integridade e testes obrigatórios
@@ -436,8 +436,8 @@ Estado: **Planejada**. Versão-alvo sugerida: `0.2.3`.
 
 ### Critério de saída
 
-O ProjectFlow troca listas de tarefas com planilhas de forma previsível e segura,
-sem enfraquecer o pacote `.projectflow` nem a integridade do banco local.
+O Chrono Project troca listas de tarefas com planilhas de forma previsível e segura,
+sem enfraquecer o pacote `.chronoproject` nem a integridade do banco local.
 
 ## Escopo explicitamente descartado deste roadmap
 
@@ -518,7 +518,7 @@ Estas decisões ainda não bloqueiam o projeto, mas devem ser resolvidas antes d
 | --- | --- | --- |
 | Biblioteca ou estratégia da Tabela | Antes de adicionar uma dependência de grid | A base atual usa HTML nativo; ADR se uma dependência estrutural for necessária |
 | Biblioteca de Gantt | Resolvida na Fase 4 | ADR 013 — SVAR React Gantt 2.7.1 |
-| Formato final `.projectflow` | Antes da Fase 6 | `import-export.md` e ADR se necessário |
+| Formato final `.chronoproject` | Antes da Fase 6 | `import-export.md` e ADR se necessário |
 | Bundle WebView2 e instalador offline | Resolvida na Fase 7 | ADR 017 — NSIS padrão + variante offline |
 | Política de atualização sem chaves | Resolvida na Fase 7 | ADR 018 — consulta manual e instalação externa |
 | Automação E2E | Resolvida em camadas na Fase 7 | ADR 019 — jornada da aplicação + testes nativos; janela Tauri em diagnóstico |
@@ -581,7 +581,7 @@ matriz no host, na VM limpa e no CI Windows.
 - Qualidade, testes, CI, logging, SQLite e migration inicial configurados.
 - Aplicação vazia compilada e executada com banco e logs locais.
 - Validações: ESLint, TypeScript, Vitest, Cargo fmt/check/test, Clippy, auditoria npm e build Tauri aprovados.
-- Commit: `7b41a4a` — `chore: bootstrap ProjectFlow foundation`.
+- Commit: `7b41a4a` — `chore: bootstrap Chrono Project foundation`.
 - Checkpoints: A, B, C, D e Git 1–2 concluídos.
 - Resultado: base estável para iniciar o Core, sem funcionalidades de negócio antecipadas.
 
@@ -687,7 +687,7 @@ matriz no host, na VM limpa e no CI Windows.
   conhecidos. Para a variante legada, ela verifica integridade, histórico,
   schema completo e dados estruturais da versão 3.
 - Antes de qualquer reparo efetivo é criado um backup consistente em
-  `%APPDATA%\com.projectflow.desktop\backups\`. Uma transação altera somente o
+  `%APPDATA%\io.github.machadojean.chronoproject\backups\`. Uma transação altera somente o
   checksum da migration 3; projetos, tarefas e dependências não entram em
   nenhuma instrução de atualização.
 - Checksum, histórico ou schema inesperado falha de forma conservadora e sem
@@ -713,12 +713,12 @@ matriz no host, na VM limpa e no CI Windows.
   múltiplas predecessoras, feriado em 07/09, calendário **Todos os dias** e
   conflito informativo de uma tarefa manual.
 - Uma cópia byte a byte do banco vazio foi criada antes do seed em
-  `.local/backups/projectflow-pre-phase3-seed-20260828.sqlite`.
+  `.local/backups/chronoproject-pre-phase3-seed-20260828.sqlite`.
 - A gravação ocorreu em uma única transação. `quick_check`, chaves estrangeiras,
   contagens, datas calculadas e reabertura do release foram validados.
 - Depois da validação de persistência, uma cópia byte a byte do cenário pronto
   foi criada em
-  `.local/backups/projectflow-phase3-audit-baseline-20260828.sqlite`, permitindo
+  `.local/backups/chronoproject-phase3-audit-baseline-20260828.sqlite`, permitindo
   restaurar o ponto inicial dos testes manuais sem depender de dados versionados.
 - O cenário e seus resultados esperados foram registrados em
   `docs/scheduling.md` para orientar auditorias futuras.
@@ -739,7 +739,7 @@ matriz no host, na VM limpa e no CI Windows.
   auditoria. O executável e seu código eram os mesmos; o contexto do Windows era
   diferente.
 - Builds debug e o novo release local de teste passaram a compartilhar
-  `.local/data/projectflow.sqlite`. Builds de distribuição continuam usando o
+  `.local/data/chronoproject.sqlite`. Builds de distribuição continuam usando o
   diretório oficial do perfil.
 - A primeira abertura manual preserva o banco recuperado com `VACUUM INTO`,
   verifica origem, backup e cópia, e nunca sobrescreve uma base compartilhada
@@ -765,10 +765,10 @@ matriz no host, na VM limpa e no CI Windows.
   configurado e incorpora `frontendDist` ao executável.
 - A primeira abertura havia importado o banco recuperado, não o baseline de
   auditoria. Ele foi preservado em
-  `.local/backups/projectflow-recovered-user-data-before-audit-switch-20260828.sqlite`
+  `.local/backups/chronoproject-recovered-user-data-before-audit-switch-20260828.sqlite`
   e a base compartilhada recebeu o cenário **Auditoria do scheduler — Fase 3**.
 - Hashes, conteúdo das duas bases e reabertura foram conferidos. O novo
-  `project-flow.exe` iniciou sem servidor Vite, permaneceu responsivo e não
+  `chrono-project.exe` iniciou sem servidor Vite, permaneceu responsivo e não
   produziu saída de erro.
 - Commit: `não commitado`.
 - Resultado: release local com frontend incorporado e apontando para a mesma
@@ -787,10 +787,10 @@ matriz no host, na VM limpa e no CI Windows.
   acessibilidade e bundle. A decisão está no ADR 013.
 - O Gantt apresenta hierarquia, resumos, progresso, dependências FS, escalas de
   dias/semanas/meses, finais de semana e feriados. O renderer é somente leitura;
-  início e duração são editados no painel do ProjectFlow e passam pelo scheduler.
+  início e duração são editados no painel do Chrono Project e passam pelo scheduler.
 - A numeração hierárquica `1.`, `1.1.`, `1.1.1.` passou a ser derivada da árvore
   e aparece nas três views sem alterar títulos nem o banco.
-- A projeção temporal passou a converter o fim inclusivo do ProjectFlow para o
+- A projeção temporal passou a converter o fim inclusivo do Chrono Project para o
   limite exclusivo do renderer; resumos que atravessam o fim de semana agora
   ocupam todos os dias civis até a data final.
 - Dependências podem ser isoladas por clique na linha ou pelo seletor acessível,
@@ -814,7 +814,7 @@ matriz no host, na VM limpa e no CI Windows.
   Clippy e build Tauri local com a feature de dados compartilhados.
 - Nenhuma migration foi criada: a Fase 4 altera somente projeção e interação.
 - Release local validado em
-  `src-tauri/target/release/project-flow.exe`, com as dez tarefas do cenário de
+  `src-tauri/target/release/chrono-project.exe`, com as dez tarefas do cenário de
   auditoria e sem servidor Vite.
 - Commit: `não commitado`.
 - Checkpoint: Git 5 pronto para auditoria do usuário e versionamento posterior.
@@ -873,14 +873,14 @@ matriz no host, na VM limpa e no CI Windows.
   permite duplicar o projeto e a biblioteca **Templates** permite aplicar ou
   excluir estruturas em qualquer projeto.
 - A decisão de templates globais no mesmo SQLite foi registrada no ADR 014. Um
-  backup integral do banco os preserva; a portabilidade `.projectflow` pertence
+  backup integral do banco os preserva; a portabilidade `.chronoproject` pertence
   à Fase 6.
 - Auditoria manual: [reuse.md](reuse.md).
 - Gates aprovados: 78 testes TypeScript/React, 23 testes Rust/SQLite, lint,
   typecheck, build web, Cargo fmt/check, Clippy, auditoria npm sem vulnerabilidades
   e release Tauri local. A abertura real confirmou schema 4 no banco compartilhado.
 - O banco foi copiado antes da migration para um backup de hash idêntico em
-  `.local/backups/projectflow-before-schema4-20260829-1018.sqlite`.
+  `.local/backups/chronoproject-before-schema4-20260829-1018.sqlite`.
 - Nenhuma dependência externa foi adicionada e nenhuma ferramenta global foi
   instalada ou atualizada.
 - Commit: `não commitado`; nenhuma operação remota foi executada.
@@ -900,12 +900,12 @@ matriz no host, na VM limpa e no CI Windows.
 - Ao reproduzir todo o CI localmente, o build de distribuição substituiu o
   release de teste no mesmo caminho e exibiu o banco antigo de `AppConfig`. O
   release foi recompilado com `shared-dev-data`, e o log confirmou novamente
-  schema 4 em `.local/data/projectflow.sqlite`. Ambos os bancos foram preservados.
+  schema 4 em `.local/data/chronoproject.sqlite`. Ambos os bancos foram preservados.
 - Commit: `não commitado`; nenhuma nova execução remota foi disparada.
 
 ### 29 de agosto de 2026 — Fase 6: portabilidade e recuperação
 
-- O formato `.projectflow` versão 1 foi implementado como ZIP estrito com
+- O formato `.chronoproject` versão 1 foi implementado como ZIP estrito com
   `manifest.json`, `data.sqlite` e `README.txt`, catálogo verificável e hash
   SHA-256 do snapshot.
 - A barra **Dados** permite exportar projeto ou workspace, criar backup,

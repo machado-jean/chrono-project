@@ -5,7 +5,7 @@
 
 ## Contexto
 
-ProjectFlow precisa de uma aplicação Windows instalável, offline e com integração segura a filesystem e SQLite, sem exigir toolchain no computador do usuário final.
+Chrono Project precisa de uma aplicação Windows instalável, offline e com integração segura a filesystem e SQLite, sem exigir toolchain no computador do usuário final.
 
 ## Decisão
 

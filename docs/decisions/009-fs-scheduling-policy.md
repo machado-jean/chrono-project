@@ -2,8 +2,9 @@
 
 ## Estado
 
-Aceita em 27 de agosto de 2026 e revisada em 28 de agosto de 2026 após auditoria
-manual da propagação regressiva.
+Aceita em 27 de agosto de 2026, revisada em 28 de agosto de 2026 após auditoria
+manual da propagação regressiva e revisada em 13 de setembro de 2026 para
+permitir a transição no mesmo dia.
 
 ## Contexto
 
@@ -15,8 +16,9 @@ coincidência: duas tarefas sem relação podem ocorrer no mesmo dia.
 
 Implementar somente Finish-to-Start (`FS`), apresentado em português como
 Término para Início (`TI`). O lag é um inteiro não negativo contado no
-calendário efetivo da sucessora. Lag zero começa no primeiro dia útil posterior
-ao fim da predecessora; lag positivo acrescenta dias úteis completos.
+calendário efetivo da sucessora. Lag zero permite que a sucessora comece no
+mesmo dia do fim da predecessora; lag `1` seleciona o próximo dia útil e os
+valores seguintes acrescentam dias úteis.
 
 Dependências são aceitas apenas entre tarefas-folha do mesmo projeto. O domínio
 rejeita auto-dependência, duplicidade e ciclo antes da persistência. O banco
@@ -46,6 +48,8 @@ ou outra âncora, o domínio não possui uma data anterior correta para inferir.
 - toda propagação precisa ser persistida em uma transação única;
 - tarefas automáticas com relação não preservam folgas implícitas; use lag ou
   modo manual conforme a intenção.
+- uma sucessora automática ainda sem cronograma assume duração inicial de um
+  dia e é preenchida a partir da restrição FS.
 
 ## Histórico da decisão
 

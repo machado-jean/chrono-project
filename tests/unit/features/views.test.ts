@@ -10,6 +10,7 @@ import {
 } from "../../../src/domain/tasks/outline-number";
 import {
   buildGanttProjection,
+  calculateGanttDateRange,
   dateOnlyToLocalDate,
   ganttCalendarClass,
   localDateToDateOnly,
@@ -117,6 +118,35 @@ describe("adaptador do Gantt", () => {
     expect(localDateToDateOnly(date)).toBe("2026-08-28");
   });
 
+  it("amplia a janela em uma semana antes e um mês depois", () => {
+    const first = task(CHILD_ID, "Primeira", {
+      startDate: "2026-09-14",
+      endDate: "2026-09-15",
+      durationDays: 2,
+    });
+    const last = task(SUCCESSOR_ID, "Última", {
+      startDate: "2026-09-28",
+      endDate: "2026-09-30",
+      durationDays: 3,
+    });
+
+    const range = calculateGanttDateRange([first, last]);
+
+    expect(localDateToDateOnly(range?.start as Date)).toBe("2026-09-07");
+    expect(localDateToDateOnly(range?.end as Date)).toBe("2026-10-31");
+  });
+
+  it("limita corretamente o mês adicional quando o dia não existe", () => {
+    const january = task(CHILD_ID, "Fim de janeiro", {
+      startDate: "2026-01-31",
+      endDate: "2026-01-31",
+    });
+
+    const range = calculateGanttDateRange([january]);
+
+    expect(localDateToDateOnly(range?.end as Date)).toBe("2026-03-01");
+  });
+
   it("projeta hierarquia, progresso e dependência FS sem duplicar tarefas", () => {
     const parent = task(PARENT_ID, "Resumo", { endDate: "2026-08-31", durationDays: 2 });
     const child = task(CHILD_ID, "Primeira", { parentId: PARENT_ID, progress: 40 });
@@ -187,8 +217,8 @@ describe("adaptador do Gantt", () => {
       createdAt: NOW,
       updatedAt: NOW,
     };
-    expect(ganttCalendarClass(calendar, dateOnlyToLocalDate("2026-08-29"))).toBe("projectflow-gantt-weekend");
-    expect(ganttCalendarClass(calendar, dateOnlyToLocalDate("2026-09-07"))).toBe("projectflow-gantt-holiday");
+    expect(ganttCalendarClass(calendar, dateOnlyToLocalDate("2026-08-29"))).toBe("chronoproject-gantt-weekend");
+    expect(ganttCalendarClass(calendar, dateOnlyToLocalDate("2026-09-07"))).toBe("chronoproject-gantt-holiday");
     expect(ganttCalendarClass(calendar, dateOnlyToLocalDate("2026-08-28"))).toBe("");
   });
 

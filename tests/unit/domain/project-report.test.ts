@@ -15,7 +15,7 @@ const NOW = "2026-09-08T12:00:00.000Z";
 
 const project: Project = {
   id: PROJECT_ID,
-  name: "Implantação ProjectFlow",
+  name: "Implantação Chrono Project",
   description: "Plano de validação",
   status: "ACTIVE",
   calendarId: "30000000-0000-4000-8000-000000000001",
@@ -131,7 +131,7 @@ describe("relatório PDF de projeto", () => {
     const report = buildProjectReport({ project, tasks, dependencies, options, generatedAt: NOW });
     const definition = buildProjectPdfDefinition(report);
     const bytes = await generateProjectPdf(report);
-    const artifactPath = process.env.PROJECTFLOW_PDF_ARTIFACT;
+    const artifactPath = process.env.CHRONO_PROJECT_PDF_ARTIFACT;
     if (artifactPath !== undefined) await writeFile(artifactPath, bytes);
 
     expect(definition.pageOrientation).toBe("landscape");

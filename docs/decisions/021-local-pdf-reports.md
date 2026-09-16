@@ -6,7 +6,7 @@ Aceita em 8 de setembro de 2026.
 
 ## Contexto
 
-O ProjectFlow precisa compartilhar atividades e gráficos sem exigir que o
+O Chrono Project precisa compartilhar atividades e gráficos sem exigir que o
 destinatário instale o aplicativo. A saída deve continuar offline, respeitar a
 hierarquia e os filtros e usar o seletor nativo do Windows.
 

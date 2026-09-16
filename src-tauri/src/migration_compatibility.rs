@@ -136,7 +136,7 @@ pub(crate) async fn prepare_shared_development_database(
 
     let timestamp = timestamp_millis()?;
     let backup_path = backup_dir.join(format!(
-        "projectflow-before-shared-development-{timestamp}.sqlite"
+        "chronoproject-before-shared-development-{timestamp}.sqlite"
     ));
     let backup_path_text = path_as_sqlite_text(&backup_path, "backup")?;
     let mut source = open_existing_database(source_database_path).await?;
@@ -165,7 +165,7 @@ pub(crate) async fn prepare_shared_development_database(
         ))
     })?;
 
-    let temporary_path = target_parent.join(format!(".projectflow-importing-{timestamp}.sqlite"));
+    let temporary_path = target_parent.join(format!(".chronoproject-importing-{timestamp}.sqlite"));
     std::fs::copy(&backup_path, &temporary_path).map_err(|error| {
         MigrationCompatibilityError::new(format!(
             "não foi possível preparar o banco compartilhado {}: {error}",
@@ -576,7 +576,7 @@ async fn create_verified_backup(
     let stem = database_path
         .file_stem()
         .and_then(|value| value.to_str())
-        .unwrap_or("projectflow");
+        .unwrap_or("chronoproject");
     let backup_path = backup_dir.join(format!(
         "{stem}-before-migration-{SCHEDULING_MIGRATION_VERSION}-repair-{timestamp}.sqlite"
     ));
@@ -653,7 +653,7 @@ fn known_legacy_scheduling_schema() -> String {
 fn migration_checksum(sql: Cow<'static, str>) -> Vec<u8> {
     SqlxMigration::new(
         SCHEDULING_MIGRATION_VERSION,
-        Cow::Borrowed("ProjectFlow migration compatibility"),
+        Cow::Borrowed("Chrono Project migration compatibility"),
         MigrationType::Simple,
         sql,
         false,
@@ -703,12 +703,12 @@ mod tests {
                 .expect("test clock should be after the Unix epoch")
                 .as_nanos();
             let root = std::env::temp_dir().join(format!(
-                "projectflow-migration-compatibility-{label}-{}-{unique}",
+                "chronoproject-migration-compatibility-{label}-{}-{unique}",
                 std::process::id()
             ));
             std::fs::create_dir_all(&root).expect("test workspace should be created");
             Self {
-                database: root.join("projectflow.sqlite"),
+                database: root.join("chronoproject.sqlite"),
                 backups: root.join("backups"),
                 root,
             }
@@ -850,7 +850,7 @@ mod tests {
     #[tokio::test]
     async fn imports_app_data_into_shared_development_database_with_verified_backup() {
         let workspace = TestWorkspace::new("shared-development-import");
-        let target = workspace.root.join("data").join("projectflow.sqlite");
+        let target = workspace.root.join("data").join("chronoproject.sqlite");
         create_database(
             &workspace.database,
             SCHEDULING_SCHEMA,

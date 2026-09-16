@@ -6,7 +6,7 @@ Aceita em 2026-08-30 para a Fase 7.
 
 ## Contexto
 
-O ProjectFlow precisa ser instalável no Windows 11 x64, funcionar sem Node,
+O Chrono Project precisa ser instalável no Windows 11 x64, funcionar sem Node,
 Rust, Git ou Build Tools e oferecer uma alternativa de instalação sem internet.
 O aplicativo e seus dados continuam locais; WebView2 é apenas o runtime de
 renderização fornecido e atualizado pelo Windows.
@@ -19,7 +19,7 @@ e `skip` para o WebView2.
 
 Usar NSIS como formato principal da V1, com instalação `currentUser` e idiomas
 `PortugueseBR` e `English`. A instalação por usuário evita pedir elevação e usa
-o perfil do Windows, coerente com o armazenamento local do ProjectFlow.
+o perfil do Windows, coerente com o armazenamento local do Chrono Project.
 
 Manter dois comandos de build:
 

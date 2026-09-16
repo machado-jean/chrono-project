@@ -41,7 +41,7 @@ Quando e somente quando esse checksum é encontrado, o processo:
    triggers;
 4. valida a versão lógica e os dados estruturais semeados pela migration 3;
 5. cria um backup SQLite consistente com `VACUUM INTO` em
-   `%APPDATA%\com.projectflow.desktop\backups\`;
+   `%APPDATA%\io.github.machadojean.chronoproject\backups\`;
 6. abre uma transação e atualiza exclusivamente o checksum da linha 3 em
    `_sqlx_migrations`, condicionado ao valor legado ainda estar presente;
 7. confirma o novo checksum e executa novamente `PRAGMA quick_check`.

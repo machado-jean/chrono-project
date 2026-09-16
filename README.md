@@ -1,6 +1,9 @@
-# ProjectFlow
+# Chrono Project
 
-ProjectFlow é uma aplicação desktop local-first para planejamento de projetos e tarefas. A V1 tem como alvo exclusivo o Windows 11 x64 e deve operar integralmente offline após instalada.
+Chrono Project é uma aplicação desktop local-first para planejamento de projetos e tarefas. A V1 tem como alvo exclusivo o Windows 11 x64 e deve operar integralmente offline após instalada.
+
+> Chrono Project é um projeto independente de gestão de projetos e não possui
+> vínculo com o Project Chrono, plataforma de simulação física.
 
 ## Estado atual
 
@@ -41,7 +44,7 @@ As Fases 0 a 6 estão concluídas e o Checkpoint Git 7 foi consolidado no commit
 - preservação somente das dependências internas ao conteúdo duplicado;
 - biblioteca global de templates de árvores, com aplicação em qualquer projeto
   e data de início escolhida;
-- exportação de projeto e workspace em pacote `.projectflow` validado;
+- exportação de projeto e workspace em pacote `.chronoproject` validado;
 - relatórios PDF locais com atividades, indicadores e cronograma Gantt;
 - comparação opcional da linha de base na Tabela, no Gantt e no PDF;
 - importação seletiva com atualização por UUID ou cópia independente;
@@ -56,7 +59,7 @@ As Fases 0 a 6 estão concluídas e o Checkpoint Git 7 foi consolidado no commit
   com download, validação de assinatura, instalação passiva e reinício;
 - download alternativo do instalador offline pelo navegador padrão.
 
-A Fase 8 foi concluída na versão `0.1.8`. A migration 5 adiciona controle do
+A identidade Chrono Project estreia na versão `0.2.0`. A migration 5 adiciona controle do
 plano sem modificar as regras do scheduler. A Fase 7 permanece com
 a validação manual em máquina Windows limpa registrada separadamente. Seu primeiro incremento adicionou orçamentos de
 desempenho, navegação das views por teclado, instaladores NSIS padrão/offline e
@@ -112,7 +115,7 @@ npm run tauri:dev
 Durante o desenvolvimento, `tauri dev` e o release local de teste compartilham:
 
 ```text
-project-flow\.local\data\projectflow.sqlite
+chrono-project\.local\data\chronoproject.sqlite
 ```
 
 Na primeira abertura, um banco existente no perfil é copiado de forma
@@ -123,13 +126,13 @@ O build de distribuição continua usando o diretório de configuração do usu�
 resolvido pelo Tauri. No Windows usado no bootstrap:
 
 ```text
-%APPDATA%\com.projectflow.desktop\projectflow.sqlite
+%APPDATA%\io.github.machadojean.chronoproject\chronoproject.sqlite
 ```
 
 Logs ficam no diretório recomendado do Windows:
 
 ```text
-%LOCALAPPDATA%\com.projectflow.desktop\logs\
+%LOCALAPPDATA%\io.github.machadojean.chronoproject\logs\
 ```
 
 `.local/` é ignorado pelo Git. A separação entre o release local de teste e o
@@ -141,7 +144,7 @@ migration 3 existiu em builds locais. A inicialização reconhece somente essa
 variante, valida integralmente o banco e cria uma cópia anterior ao reparo em:
 
 ```text
-%APPDATA%\com.projectflow.desktop\backups\
+%APPDATA%\io.github.machadojean.chronoproject\backups\
 ```
 
 Projetos e tarefas não são modificados. Qualquer divergência diferente da
@@ -171,7 +174,7 @@ Para gerar o executável local de teste que usa o mesmo banco de `tauri dev`:
 npm run tauri:build:test
 ```
 
-O resultado fica em `src-tauri\target\release\project-flow.exe`. Não distribuir
+O resultado fica em `src-tauri\target\release\chrono-project.exe`. Não distribuir
 esse binário, pois ele referencia a `.local` do checkout em que foi compilado.
 Como builds de produção usam o mesmo nome, o comando de teste deve ser sempre o
 último executado antes da auditoria local.

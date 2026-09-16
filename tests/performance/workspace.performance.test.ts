@@ -57,6 +57,13 @@ function createTasks(count: number): Task[] {
 describe("limites de desempenho do workspace", () => {
   it("reagenda uma cadeia de 1.000 tarefas dentro do orçamento de segurança", () => {
     const tasks = createTasks(1_000);
+    const firstTask = tasks[0];
+    if (firstTask === undefined) throw new Error("A cadeia de desempenho precisa de uma tarefa inicial.");
+    tasks[0] = {
+      ...firstTask,
+      startDate: "2026-08-31",
+      endDate: "2026-08-31",
+    };
     const dependencies: TaskDependency[] = tasks.slice(1).map((task, index) => ({
       id: dependencyId(index + 1),
       projectId: PROJECT_ID,

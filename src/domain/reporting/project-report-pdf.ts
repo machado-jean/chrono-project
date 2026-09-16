@@ -42,7 +42,7 @@ function reportHeader(report: ProjectReport, subtitle: string): PdfNode[] {
   return [
     {
       columns: [
-        { stack: [{ text: "PROJECTFLOW", style: "brand" }, { text: report.project.name, style: "title" }] },
+        { stack: [{ text: "CHRONO PROJECT", style: "brand" }, { text: report.project.name, style: "title" }] },
         { text: `Gerado em ${formatGeneratedAt(report.generatedAt)}`, style: "generated", alignment: "right" },
       ],
       margin: [0, 0, 0, 4],
@@ -330,8 +330,8 @@ export function buildProjectPdfDefinition(report: ProjectReport): PdfDefinition 
     pageOrientation: "landscape",
     pageMargins: [28, 34, 28, 30],
     info: {
-      title: `${report.project.name} - ProjectFlow`,
-      author: "ProjectFlow",
+      title: `${report.project.name} - Chrono Project`,
+      author: "Chrono Project",
       subject: "Relatório local de planejamento",
     },
     content,
@@ -355,7 +355,7 @@ export function buildProjectPdfDefinition(report: ProjectReport): PdfDefinition 
     },
     footer: (currentPage: number, pageCount: number) => ({
       columns: [
-        { text: "ProjectFlow - planejamento local", margin: [28, 0, 0, 0] },
+        { text: "Chrono Project - planejamento local", margin: [28, 0, 0, 0] },
         { text: `Página ${String(currentPage)} de ${String(pageCount)}`, alignment: "right", margin: [0, 0, 28, 0] },
       ],
       fontSize: 7,

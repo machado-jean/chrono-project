@@ -59,7 +59,7 @@ portanto o recurso não foi habilitado nem alterado.
 | Tauri Opener plugin | 2.5.4 | MIT/Apache-2.0 | abertura restrita dos instaladores publicados no navegador padrão |
 | Playwright Core | 1.62.1 | Apache-2.0 | diagnóstico CDP local da janela Tauri; sem navegador incorporado |
 | pdfmake / @types/pdfmake | 0.3.11 / 0.3.3 | MIT | relatórios PDF locais com tabelas e gráficos vetoriais, carregados sob demanda |
-| zip (crate) | 8.6.0 | MIT | leitura e escrita estrita de `.projectflow` |
+| zip (crate) | 8.6.0 | MIT | leitura e escrita estrita de `.chronoproject` |
 | sha2 (crate) | 0.11.0 | MIT/Apache-2.0 | integridade SHA-256 dos pacotes |
 | uuid (crate) | 1.26.0 | MIT/Apache-2.0 | remapeamento na importação como cópia |
 | chrono (crate) | 0.4.45 | MIT/Apache-2.0 | timestamps e nomes de backup |
@@ -92,7 +92,7 @@ rustup --version
 Scaffold e dependências locais:
 
 ```powershell
-npm create tauri-app@latest . -- --manager npm --template react-ts --identifier com.projectflow.app --tauri-version 2 --force --yes
+npm create tauri-app@latest . -- --manager npm --template react-ts --identifier io.github.machadojean.chronoproject --tauri-version 2 --force --yes
 npm install
 npm run tauri add sql
 cargo add tauri-plugin-sql --features sqlite
@@ -115,7 +115,8 @@ e as alternativas estão no [ADR 013](decisions/013-svar-react-gantt.md). A
 instalação adicionou 35 pacotes ao lockfile e a auditoria npm não encontrou
 vulnerabilidades conhecidas nessa resolução.
 
-O identificador foi ajustado antes da validação final para `com.projectflow.desktop`, eliminando o sufixo `.app` desaconselhado pela CLI.
+O identificador vigente é `io.github.machadojean.chronoproject`, definido com a
+identidade Chrono Project 0.2.0.
 
 Instalação global:
 
@@ -182,7 +183,7 @@ cargo uninstall tauri-driver
 O build de distribuição sem feature mantém dados no perfil do usuário. O comando
 `npm run tauri:build:test` ativa a feature Cargo `shared-dev-data` e gera, no
 mesmo caminho, um executável estritamente local que compartilha
-`.local/data/projectflow.sqlite` com `tauri dev`. Internamente ele usa
+`.local/data/chronoproject.sqlite` com `tauri dev`. Internamente ele usa
 `tauri build --no-bundle --features shared-dev-data`, garantindo que o
 `beforeBuildCommand` seja executado e que `frontendDist` seja incorporado ao
 executável; executar apenas `cargo build` deixaria a janela dependente do
@@ -194,7 +195,7 @@ absoluta e deliberada. Os instaladores NSIS foram gerados na Fase 7; a validaç�
 em uma máquina Windows limpa permanece reservada ao Checkpoint E.
 
 Os modos de distribuição e teste escrevem no mesmo
-`src-tauri/target/release/project-flow.exe`; o último build vence. Depois de
+`src-tauri/target/release/chrono-project.exe`; o último build vence. Depois de
 reproduzir localmente o passo de distribuição do CI, executar novamente
 `npm run tauri:build:test` antes de entregar o executável para auditoria. Isso
 troca apenas o destino compilado do banco; não copia, apaga ou mistura os dois
@@ -207,7 +208,7 @@ npm sem vulnerabilidades conhecidas e release local de teste gerado com o
 frontend incorporado. A abertura nativa aplicou a migration 4 ao banco
 compartilhado e registrou `database schema 4` no log. Antes da migração foi
 criado o backup verificado
-`.local/backups/projectflow-before-schema4-20260829-1018.sqlite`, com o mesmo
+`.local/backups/chronoproject-before-schema4-20260829-1018.sqlite`, com o mesmo
 SHA-256 da origem (`4ACF477596010BD7D0BA8E23AE2271194BC631609B5C99E782D0DB0BEA1CDDB7`).
 Nenhuma ferramenta global, dependência npm ou crate foi instalada ou atualizada
 na Fase 5.
@@ -222,7 +223,7 @@ auditoria npm, build Tauri de distribuição e release local de teste foram
 aprovados. Passaram 80 testes TypeScript/React e 29 testes Rust/SQLite; seis dos
 testes nativos cobrem especificamente portabilidade, integridade, rollback e
 restauração. O release de teste foi gerado por último e o log confirmou schema
-4 usando `.local/data/projectflow.sqlite`.
+4 usando `.local/data/chronoproject.sqlite`.
 
 Depois da Fase 6, `date-holidays` 3.36.0 foi adicionada somente ao projeto, sem
 instalação global. O chunk do catálogo é carregado quando a prévia de feriados é
@@ -303,8 +304,8 @@ para 94 testes TypeScript/React. Foram repetidos com sucesso `npm run check`,
 `npm audit --audit-level=high` e o build NSIS padrão. A auditoria npm encontrou
 zero vulnerabilidades. O executável de teste foi gerado novamente por último
 com `npm run tauri:build:test`, portanto
-`src-tauri/target/release/project-flow.exe` continua usando o banco
-compartilhado `.local/data/projectflow.sqlite`.
+`src-tauri/target/release/chrono-project.exe` continua usando o banco
+compartilhado `.local/data/chronoproject.sqlite`.
 
 Após a publicação da `v0.1.0`, `@tauri-apps/plugin-opener` e
 `tauri-plugin-opener` 2.5.4 foram adicionados somente ao projeto. A capability
@@ -348,7 +349,7 @@ adicionados somente ao projeto, com versões exatas nos manifests e lockfiles.
 Nenhuma ferramenta global foi instalada. O updater usa `latest.json` no GitHub
 Releases, assinatura Minisign obrigatória e instalação NSIS `passive`.
 
-A chave privada foi gerada em `.local/secrets/projectflow-updater.key`, área
+A chave privada foi gerada em `.local/secrets/chronoproject-updater.key`, área
 ignorada pelo Git; seu conteúdo não foi registrado na documentação. A chave
 pública está incorporada em `tauri.conf.json`. Antes da publicação, a chave
 privada precisa ser copiada para armazenamento seguro e para um GitHub Secret.
@@ -419,7 +420,7 @@ Os dois instaladores e o manifesto do updater foram validados contra a chave
 pública incorporada. O script de publicação verifica hashes, assinaturas, CI de
 `main` e, após criar a release, aguarda obrigatoriamente o CI da tag `v0.1.7`.
 
-## Artefatos da v0.1.8
+## Artefatos históricos da v0.1.8
 
 Nenhuma ferramenta global ou dependência externa foi adicionada. Os manifests
 do frontend, Rust e Tauri estão alinhados em `0.1.8`; a migration
@@ -436,16 +437,16 @@ Os instaladores NSIS de produção foram gerados em
 O pacote padrão usa o WebView2 disponível no Windows. O pacote offline inclui
 o bootstrapper oficial necessário para uma instalação sem rede. Ambos foram
 gerados com `--no-sign`. A finalização procura a chave privada permanente em
-`.local/secrets/projectflow-updater.key`, diretório ignorado pelo Git, e gera os
+`.local/secrets/chronoproject-updater.key`, diretório ignorado pelo Git, e gera os
 arquivos `.sig` e o `latest.json` sem copiar a chave para a distribuição.
 
 Antes da abertura foi preservada uma cópia em
-`.local/backups/projectflow-before-phase8-audit-20260910.sqlite`. O processo
+`.local/backups/chronoproject-before-phase8-audit-20260910.sqlite`. O processo
 iniciou responsivo e o log confirmou explicitamente a feature de dados
 compartilhados; nenhum banco do perfil Windows foi substituído.
 
 Antes de popular o projeto inicial de auditoria de UX, o banco foi preservado em
-`.local/backups/projectflow-before-phase8-ux-seed-20260911.sqlite`. O projeto
+`.local/backups/chronoproject-before-phase8-ux-seed-20260911.sqlite`. O projeto
 foi escrito atomicamente pelas rotinas de persistência do aplicativo, sem SQL
 manual. A auditoria final usou uma estrutura completa de 205 tarefas, quatro
 níveis, datas e predecessoras. No Gantt real, uma janela de 590 px percorreu o

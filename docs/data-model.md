@@ -138,7 +138,7 @@ o cronograma corrente não são alterados.
 - persistência e exclusão de templates, duplicação atômica e rollback são testados;
 - importação/exportação foi implementada na Fase 6 com validação e transações.
 
-Ao alterar o schema, atualizar `schemaVersion`, criar migration nova, testar banco novo e upgrade, e revisar o impacto no pacote `.projectflow`.
+Ao alterar o schema, atualizar `schemaVersion`, criar migration nova, testar banco novo e upgrade, e revisar o impacto no pacote `.chronoproject`.
 
 O reparo de checksum não altera o schema nem substitui uma migration. Seu
 contrato restrito e o local do backup estão documentados no

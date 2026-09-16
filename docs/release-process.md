@@ -17,7 +17,7 @@ o release: a execução de CI associada à **tag** também precisa ficar verde.
 No PowerShell, execute:
 
 ```powershell
-.\scripts\Check-ReleaseCi.ps1 -Tag v0.1.8
+.\scripts\Check-ReleaseCi.ps1 -Tag v0.2.0
 ```
 
 O script espera o workflow `CI` da tag aparecer, acompanha a execução e termina

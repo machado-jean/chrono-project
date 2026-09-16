@@ -33,7 +33,7 @@ O gate obrigatório `npm run test:e2e` será composto por:
 1. uma jornada de aplicação em Vitest + Testing Library, sobre React, estado e
    domínio reais, usando um repositório em memória específico do teste;
 2. a suíte Rust real, que cobre SQLite, migrations, transações, backups e
-   exportação/importação `.projectflow`.
+   exportação/importação `.chronoproject`.
 
 A jornada cobre criação de projeto, tarefas e subtarefa, A → B → C, propagação,
 Tabela/Kanban/Gantt, duplicação, exportação, workspace vazio, importação e

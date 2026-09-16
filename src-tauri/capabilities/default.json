@@ -15,10 +15,10 @@
       "identifier": "opener:allow-open-url",
       "allow": [
         {
-          "url": "https://github.com/machado-jean/project-flow/releases/latest/download/ProjectFlow-Windows-x64-Setup.exe"
+          "url": "https://github.com/machado-jean/chrono-project/releases/latest/download/Chrono-Project-Windows-x64-Setup.exe"
         },
         {
-          "url": "https://github.com/machado-jean/project-flow/releases/latest/download/ProjectFlow-Windows-x64-Offline-Setup.exe"
+          "url": "https://github.com/machado-jean/chrono-project/releases/latest/download/Chrono-Project-Windows-x64-Offline-Setup.exe"
         }
       ]
     }

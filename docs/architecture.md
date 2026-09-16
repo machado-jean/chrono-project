@@ -67,7 +67,7 @@ calculada pelo backend antes do primeiro comando de workspace, evitando que o
 preload abra uma segunda instância.
 
 Builds debug e o release local criado por `npm run tauri:build:test` compartilham
-`project-flow\.local\data\projectflow.sqlite`. Um build de distribuição sem a
+`chrono-project\.local\data\chronoproject.sqlite`. Um build de distribuição sem a
 feature `shared-dev-data` continua usando `AppConfig` resolvido pelo Tauri. Na
 primeira abertura do modo compartilhado, o banco existente em `AppConfig` é
 preservado com `VACUUM INTO`, verificado e copiado para `.local` sem sobrescrever
@@ -154,7 +154,7 @@ regras detalhadas e a matriz de testes estão em [scheduling.md](scheduling.md).
   seletor equivalente operável por teclado;
 - o Gantt é carregado sob demanda; gestos de barra e de dependência são
   interceptados antes da gravação e convertidos em comandos do domínio do
-  ProjectFlow, sem transformar o estado interno do renderer em fonte de verdade;
+  Chrono Project, sem transformar o estado interno do renderer em fonte de verdade;
 - o Gantt converte o fim inclusivo para o limite exclusivo esperado pelo
   renderer e permite destacar relações longas por clique ou seletor;
 - a janela desktop inicia maximizada, preservando dimensões mínimas para
@@ -184,7 +184,7 @@ durante a composição nem uma segunda fonte de verdade. Ver
   manual de atualização.
 - Capabilities habilitam os plugins de updater/processo, `core:default`, leitura/carga SQL padrão, logging e
   abertura exclusivamente dos dois links permanentes de instalador do
-  repositório ProjectFlow.
+  repositório Chrono Project.
 - Não há backend remoto, telemetria, conta ou sincronização.
 - Nenhuma consulta remota ocorre na inicialização. **Ajuda > Verificar
   atualizações** consulta a release pública somente após ação do usuário, sem

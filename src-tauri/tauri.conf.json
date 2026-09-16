@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "ProjectFlow",
-  "version": "0.1.8",
-  "identifier": "com.projectflow.desktop",
+  "productName": "Chrono Project",
+  "version": "0.2.0",
+  "identifier": "io.github.machadojean.chronoproject",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "ProjectFlow",
+        "title": "Chrono Project",
         "width": 1280,
         "height": 800,
         "maximized": true,
@@ -31,7 +31,7 @@
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDgwQUMxNUJERjdDQTdDRjIKUldUeWZNcjN2UldzZ0VXTWhIc0FtNmdzM0tNZzRFcDRkZHh4b0h3QTU0aU5aWld3d214RGtPaVMK",
       "endpoints": [
-        "https://github.com/machado-jean/project-flow/releases/latest/download/latest.json"
+        "https://github.com/machado-jean/chrono-project/releases/latest/download/latest.json"
       ],
       "windows": {
         "installMode": "passive"

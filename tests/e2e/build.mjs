@@ -17,7 +17,7 @@ writeFileSync(configPath, `${JSON.stringify({
         maximized: true,
         minHeight: 640,
         minWidth: 960,
-        title: "ProjectFlow E2E",
+        title: "Chrono Project E2E",
         width: 1280,
       },
     ],

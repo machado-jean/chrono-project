@@ -1,22 +1,52 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { check, type DownloadEvent, type Update } from "@tauri-apps/plugin-updater";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { version as appVersion } from "../../package.json";
 import {
-  PROJECTFLOW_OFFLINE_INSTALLER_URL,
+  CHRONO_PROJECT_OFFLINE_INSTALLER_URL,
 } from "../domain/updates/release";
 import { ModalDialog } from "./ModalDialog";
 
-export function WorkspaceHelpMenu() {
-  const [checking, setChecking] = useState(false);
+let automaticUpdateCheck: Promise<Update | null> | null = null;
+
+function checkForUpdatesAtStartup(): Promise<Update | null> {
+  automaticUpdateCheck ??= check({ timeout: 15_000 });
+  return automaticUpdateCheck;
+}
+
+interface WorkspaceHelpMenuProps {
+  readonly automatic?: boolean;
+}
+
+export function WorkspaceHelpMenu({ automatic = true }: WorkspaceHelpMenuProps) {
+  const [checking, setChecking] = useState(automatic);
   const [installing, setInstalling] = useState(false);
   const [availableUpdate, setAvailableUpdate] = useState<Update | null>(null);
   const [checkedCurrent, setCheckedCurrent] = useState(false);
   const [progress, setProgress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const menuRef = useRef<HTMLDetailsElement>(null);
+
+  useEffect(() => {
+    if (!automatic) return;
+    let active = true;
+    void checkForUpdatesAtStartup()
+      .then((update) => {
+        if (!active || update === null) return;
+        setAvailableUpdate(update);
+        if (menuRef.current !== null) menuRef.current.open = true;
+      })
+      .catch(() => {
+        // Falha de rede na inicialização não interrompe o uso offline.
+      })
+      .finally(() => {
+        if (active) setChecking(false);
+      });
+    return () => { active = false; };
+  }, [automatic]);
 
   useEffect(() => {
     const openShortcuts = (event: KeyboardEvent): void => {
@@ -71,7 +101,7 @@ export function WorkspaceHelpMenu() {
     };
     try {
       await availableUpdate.downloadAndInstall(onProgress);
-      setProgress("Atualização instalada. Reiniciando o ProjectFlow…");
+      setProgress("Atualização instalada. Reiniciando o Chrono Project…");
       await relaunch();
     } catch (reason) {
       setError(reason instanceof Error
@@ -92,7 +122,7 @@ export function WorkspaceHelpMenu() {
 
   return (
     <>
-    <details className="workspace-menu help-menu" name="workspace-menu">
+    <details ref={menuRef} className="workspace-menu help-menu" name="workspace-menu">
       <summary>Ajuda</summary>
       <div className="workspace-menu-popover help-menu-popover">
         <strong>Orientações rápidas</strong>
@@ -111,7 +141,7 @@ export function WorkspaceHelpMenu() {
         <hr />
         <section className="update-check" aria-labelledby="update-check-title">
           <strong id="update-check-title">Atualizações</strong>
-          <small>ProjectFlow {appVersion} · a consulta ocorre somente quando solicitada.</small>
+          <small>Chrono Project {appVersion} · verifica automaticamente ao abrir.</small>
           <button type="button" disabled={checking} onClick={() => { void checkForUpdates(); }}>
             {checking ? "Verificando…" : "Verificar atualizações"}
           </button>
@@ -122,7 +152,7 @@ export function WorkspaceHelpMenu() {
                 <button type="button" disabled={installing} onClick={() => { void installUpdate(); }}>
                   {installing ? "Atualizando…" : "Baixar e instalar atualização"}
                 </button>
-                <button className="text-update-button" type="button" onClick={() => { void openInstaller(PROJECTFLOW_OFFLINE_INSTALLER_URL); }}>
+                <button className="text-update-button" type="button" onClick={() => { void openInstaller(CHRONO_PROJECT_OFFLINE_INSTALLER_URL); }}>
                   Baixar instalador offline
                 </button>
               </>
@@ -133,7 +163,7 @@ export function WorkspaceHelpMenu() {
           </div>
         </section>
         <hr />
-        <small>Operação local e offline; atualizações só são consultadas quando solicitadas.</small>
+        <small>Operação local e offline; falhas na consulta de atualizações não impedem o uso.</small>
         <small>Licenças de terceiros: THIRD_PARTY_NOTICES.md</small>
       </div>
     </details>
@@ -147,7 +177,7 @@ export function WorkspaceHelpMenu() {
         <header>
           <div>
             <h2 id="keyboard-shortcuts-title">Atalhos de teclado</h2>
-            <p id="keyboard-shortcuts-description">Navegue pelo ProjectFlow sem tirar as mãos do teclado.</p>
+            <p id="keyboard-shortcuts-description">Navegue pelo Chrono Project sem tirar as mãos do teclado.</p>
           </div>
           <button type="button" aria-label="Fechar atalhos" onClick={() => { setShowShortcuts(false); }}>×</button>
         </header>

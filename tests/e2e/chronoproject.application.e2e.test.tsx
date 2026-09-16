@@ -46,7 +46,7 @@ vi.mock("@svar-ui/react-gantt", () => ({
     readonly init?: (api: typeof ganttHarness.api) => void;
   }) => {
     useEffect(() => { init?.(ganttHarness.api); }, [init]);
-    return <div data-testid="projectflow-gantt" />;
+    return <div data-testid="chronoproject-gantt" />;
   },
   Willow: ({ children }: PropsWithChildren) => <>{children}</>,
 }));
@@ -178,7 +178,7 @@ class JourneyRepository implements WorkspaceRepository {
 
   async exportWorkspace(): Promise<ExportResult | null> {
     this.exportedSnapshot = await this.load();
-    return { path: "C:\\e2e\\workspace.projectflow", projectCount: this.projects.length, templateCount: this.templates.length };
+    return { path: "C:\\e2e\\workspace.chronoproject", projectCount: this.projects.length, templateCount: this.templates.length };
   }
 
   savePdfReport(): Promise<{ readonly path: string } | null> {
@@ -189,7 +189,7 @@ class JourneyRepository implements WorkspaceRepository {
     const project = this.exportedSnapshot?.projects[0];
     if (project === undefined || this.exportedSnapshot === null) return Promise.resolve(null);
     return Promise.resolve({
-      packagePath: "C:\\e2e\\workspace.projectflow",
+      packagePath: "C:\\e2e\\workspace.chronoproject",
       exportType: "workspace",
       exportedAt: NOW,
       schemaVersion: 4,
@@ -282,8 +282,8 @@ describe("jornada E2E mínima da aplicação", () => {
     fireEvent.change(within(rowA).getByLabelText("Início da tarefa"), { target: { value: "2026-09-03" } });
     fireEvent.click(within(rowA).getByRole("button", { name: "Salvar" }));
     await waitFor(() => {
-      expect(repository.tasks.find(({ title }) => title === "Tarefa B")?.startDate).toBe("2026-09-07");
-      expect(repository.tasks.find(({ title }) => title === "Tarefa C")?.startDate).toBe("2026-09-09");
+      expect(repository.tasks.find(({ title }) => title === "Tarefa B")?.startDate).toBe("2026-09-04");
+      expect(repository.tasks.find(({ title }) => title === "Tarefa C")?.startDate).toBe("2026-09-07");
     });
 
     fireEvent.click(screen.getByRole("tab", { name: "Kanban" }));
@@ -298,7 +298,7 @@ describe("jornada E2E mínima da aplicação", () => {
 
     fireEvent.click(screen.getByText("Arquivo"));
     fireEvent.click(screen.getByRole("button", { name: "Exportar workspace" }));
-    expect(await screen.findByText(/Workspace exportado para C:\\e2e\\workspace.projectflow/)).toBeVisible();
+    expect(await screen.findByText(/Workspace exportado para C:\\e2e\\workspace.chronoproject/)).toBeVisible();
     const expectedSnapshot = await repository.load();
 
     repository.clearWorkspace(); firstRender.unmount();
@@ -313,7 +313,7 @@ describe("jornada E2E mínima da aplicação", () => {
     await waitFor(async () => {
       expect(repository.tasks).toHaveLength(7);
       expect(repository.dependencies).toHaveLength(2);
-      expect(repository.tasks.find(({ title }) => title === "Tarefa C")?.startDate).toBe("2026-09-09");
+      expect(repository.tasks.find(({ title }) => title === "Tarefa C")?.startDate).toBe("2026-09-07");
       expect(await repository.load()).toEqual(expectedSnapshot);
     });
     fireEvent.click(screen.getByRole("tab", { name: "Kanban" }));

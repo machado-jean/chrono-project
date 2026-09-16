@@ -1,7 +1,7 @@
-# AGENTS.md — ProjectFlow
+# AGENTS.md — Chrono Project
 
 > Este arquivo é a especificação principal do projeto e a instrução operacional permanente para agentes Codex.
-> Ele deve funcionar como o único arquivo inicial necessário para preparar o ambiente, criar a estrutura do repositório e desenvolver o ProjectFlow.
+> Ele deve funcionar como o único arquivo inicial necessário para preparar o ambiente, criar a estrutura do repositório e desenvolver o Chrono Project.
 
 ---
 
@@ -12,7 +12,7 @@
 ```text
 Ambiente de desenvolvimento: Windows 11 x64
 Target primário da V1:       Windows 11 x64
-Raiz do workspace:           C:\Users\jeanm\Github\project-flow
+Raiz do workspace:           C:\Users\jeanm\Github\chrono-project
 ```
 
 A V1 não possui obrigação de suportar Linux ou macOS. Não gastar tempo de desenvolvimento, CI ou empacotamento nesses sistemas sem decisão explícita posterior.
@@ -20,13 +20,13 @@ A V1 não possui obrigação de suportar Linux ou macOS. Não gastar tempo de de
 O projeto começa em:
 
 ```text
-C:\Users\jeanm\Github\project-flow
+C:\Users\jeanm\Github\chrono-project
 ```
 
 No início, essa pasta pode conter apenas:
 
 ```text
-C:\Users\jeanm\Github\project-flow\
+C:\Users\jeanm\Github\chrono-project\
 └── AGENTS.md
 ```
 
@@ -38,7 +38,7 @@ Não assumir que Node.js, Rust, Visual Studio Build Tools, WebView2, Git, Tauri 
 
 # 2. MISSÃO DO AGENTE
 
-O agente deve preparar e desenvolver uma aplicação desktop chamada provisoriamente **ProjectFlow**, voltada a gestão de projetos e tarefas com foco em:
+O agente deve preparar e desenvolver uma aplicação desktop chamada **Chrono Project**, voltada a gestão de projetos e tarefas com foco em:
 
 - tarefas e subtarefas;
 - prioridade;
@@ -138,7 +138,7 @@ SQLite é a fonte local de verdade na V1.
 Durante desenvolvimento, os dados locais podem residir em:
 
 ```text
-project-flow\.local\data\
+chrono-project\.local\data\
 ```
 
 Esse diretório deve ser ignorado pelo Git.
@@ -306,7 +306,7 @@ Não instalar automaticamente “a versão mais nova” se ela não for a mais c
 O Codex deve trabalhar dentro de:
 
 ```text
-C:\Users\jeanm\Github\project-flow
+C:\Users\jeanm\Github\chrono-project
 ```
 
 como raiz do projeto.
@@ -424,7 +424,7 @@ Usar `npm`.
 A estrutura desejada é aproximadamente:
 
 ```text
-project-flow/
+chrono-project/
 │
 ├── AGENTS.md
 ├── README.md
@@ -550,15 +550,15 @@ tmp/
 *.db-shm
 *.db-wal
 
-# ProjectFlow exports
-*.projectflow
+# Chrono Project exports
+*.chronoproject
 
 # Logs
 *.log
 logs/
 ```
 
-Se uma fixture SQLite ou `.projectflow` precisar ser versionada, criar exceção explícita.
+Se uma fixture SQLite ou `.chronoproject` precisar ser versionada, criar exceção explícita.
 
 ---
 
@@ -569,19 +569,19 @@ Se uma fixture SQLite ou `.projectflow` precisar ser versionada, criar exceção
 Antes do primeiro trabalho do Codex, o fluxo recomendado é:
 
 ```text
-1. criar C:\Users\jeanm\Github\project-flow
+1. criar C:\Users\jeanm\Github\chrono-project
 2. colocar somente AGENTS.md
 3. inicializar Git
 4. criar/conectar o repositório remoto GitHub
 5. fazer o primeiro commit contendo somente AGENTS.md
 6. fazer push desse commit para main
-7. somente então abrir a raiz project-flow no Codex
+7. somente então abrir a raiz chrono-project no Codex
 ```
 
 Primeiro commit recomendado:
 
 ```text
-docs: add initial ProjectFlow specification
+docs: add initial Chrono Project specification
 ```
 
 Esse commit representa o estado zero recuperável do projeto.
@@ -774,7 +774,7 @@ Seu uso NÃO significa que a aplicação seja web-hosted ou que necessite intern
 O fluxo de execução deve ser local:
 
 ```text
-ProjectFlow.exe
+chrono-project.exe
       │
       ├── Tauri local
       ├── WebView2 Runtime local
@@ -803,7 +803,7 @@ Não congelar agora valores de tamanho do WebView2 ou opções de bundle; verifi
 Durante desenvolvimento:
 
 ```text
-project-flow\.local\
+chrono-project\.local\
 ```
 
 Na aplicação instalada, dados persistentes devem ficar em diretório apropriado do perfil do usuário Windows, resolvido pelas APIs oficiais do Tauri/Windows, e nunca misturados ao diretório do código-fonte.
@@ -814,7 +814,7 @@ Atualização ou reinstalação do executável não deve apagar silenciosamente 
 
 # 14. PRODUTO — VISÃO GERAL
 
-O ProjectFlow é uma aplicação desktop de planejamento operacional.
+O Chrono Project é uma aplicação desktop de planejamento operacional.
 
 O foco é resolver muito bem:
 
@@ -1324,7 +1324,7 @@ Exportar:
 Usar extensão própria, provisoriamente:
 
 ```text
-.projectflow
+.chronoproject
 ```
 
 Formato interno recomendado:
@@ -1347,7 +1347,7 @@ Exemplo conceitual:
 
 ```json
 {
-  "format": "projectflow",
+  "format": "chronoproject",
   "schemaVersion": 1,
   "appVersion": "0.1.0",
   "exportType": "workspace",
@@ -1878,7 +1878,7 @@ Só então iniciar regras de negócio.
 Antes de considerar a V1 distribuível, confirmar em ambiente Windows limpo:
 
 - instalador executa;
-- ProjectFlow inicia;
+- Chrono Project inicia;
 - usuário não precisa do toolchain de desenvolvimento;
 - SQLite funciona sem instalação separada;
 - WebView2 está corretamente tratado pela estratégia escolhida;
@@ -1911,7 +1911,7 @@ Não duplicar toda a especificação do `AGENTS.md`.
 Ao finalizar a preparação inicial, o repositório deve estar aproximadamente assim:
 
 ```text
-project-flow/
+chrono-project/
 ├── AGENTS.md
 ├── README.md
 ├── .gitignore
@@ -1936,7 +1936,7 @@ e os comandos básicos devem funcionar.
 
 # 65. PRIMEIRA ENTREGA DO CODEX
 
-A primeira entrega não deve tentar implementar ProjectFlow completo.
+A primeira entrega não deve tentar implementar Chrono Project completo.
 
 Deve se limitar a:
 

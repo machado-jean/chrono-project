@@ -56,7 +56,7 @@ jobs:
         working-directory: src-tauri
         run: cargo clippy --locked --all-targets -- -D warnings
 
-      - name: Run minimum ProjectFlow journey
+      - name: Run minimum Chrono Project journey
         # Native SQLite/portability coverage already ran above. Keeping the
         # application journey separate avoids reopening the same temporary
         # backup files twice in one Windows runner job.

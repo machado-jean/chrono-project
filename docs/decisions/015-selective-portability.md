@@ -9,7 +9,7 @@ O usuário precisa transportar vários projetos entre computadores, atualizar um
 
 ## Decisão
 
-Usar `.projectflow` como ZIP estrito contendo manifest, snapshot SQLite e README. A prévia validada lista projetos e templates individualmente.
+Usar `.chronoproject` como ZIP estrito contendo manifest, snapshot SQLite e README. A prévia validada lista projetos e templates individualmente.
 
 Projeto selecionado é tratado como agregado:
 

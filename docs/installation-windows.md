@@ -38,10 +38,10 @@ conservar ambos.
 
 ## Instalação
 
-1. Feche o ProjectFlow se ele estiver aberto.
-2. Execute o arquivo `ProjectFlow_*_x64-setup.exe`.
+1. Feche o Chrono Project se ele estiver aberto.
+2. Execute o arquivo `Chrono-Project_*_x64-setup.exe`.
 3. Conclua o assistente no idioma sugerido pelo Windows.
-4. Abra o ProjectFlow pelo Menu Iniciar.
+4. Abra o Chrono Project pelo Menu Iniciar.
 
 A instalação é feita somente para o usuário atual e não deve pedir privilégios
 de administrador no fluxo normal.
@@ -57,7 +57,7 @@ Use **Ajuda > Verificar atualizações**. A consulta ocorre somente nesse moment
 e compara a versão instalada com o `latest.json` da última release estável.
 Quando houver uma versão superior, **Baixar e instalar atualização** baixa o
 NSIS, verifica sua assinatura criptográfica e inicia a instalação em modo
-passivo. O ProjectFlow fecha durante a troca dos binários e reinicia ao final.
+passivo. O Chrono Project fecha durante a troca dos binários e reinicia ao final.
 
 A alternativa offline continua abrindo o download manual no navegador, pois o
 updater usa o pacote padrão menor. O uso normal do aplicativo não depende de
@@ -70,7 +70,7 @@ não são armazenados junto ao executável. Downgrade é bloqueado por seguranç
 No ambiente atual, o banco de produção é resolvido pelo Tauri sob:
 
 ```text
-%APPDATA%\com.projectflow.desktop\projectflow.sqlite
+%APPDATA%\io.github.machadojean.chronoproject\chronoproject.sqlite
 ```
 
 Antes de uma atualização importante, use **Arquivo > Backup e portabilidade**
@@ -83,7 +83,7 @@ segredo no ambiente que gera releases.
 
 ## Desinstalação
 
-Use **Configurações > Aplicativos > Aplicativos instalados > ProjectFlow >
+Use **Configurações > Aplicativos > Aplicativos instalados > Chrono Project >
 Desinstalar**. A validação final da Fase 7 deve confirmar separadamente o que o
 NSIS mantém ou remove no perfil. Até essa auditoria, não se deve prometer que a
 desinstalação apaga os dados pessoais; faça backup e, se desejar remoção total,

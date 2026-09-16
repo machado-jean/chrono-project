@@ -2,12 +2,12 @@
 
 A Fase 6 implementa portabilidade local e offline em duas camadas distintas:
 
-- pacotes `.projectflow` permitem transportar um projeto ou um workspace e escolher o conteúdo que será importado;
+- pacotes `.chronoproject` permitem transportar um projeto ou um workspace e escolher o conteúdo que será importado;
 - backups `.sqlite` são snapshots integrais destinados à recuperação do mesmo workspace.
 
 Nenhuma operação envia dados para a rede. Os seletores de arquivo são nativos do Windows e toda leitura, validação e escrita ocorre no processo Tauri.
 
-## Pacote `.projectflow` versão 1
+## Pacote `.chronoproject` versão 1
 
 O arquivo é um ZIP sem compressão e contém exatamente:
 
@@ -39,7 +39,7 @@ Limites da versão 1:
 ## Importação seletiva
 
 Timestamps de auditoria aceitam as duas representações UTC RFC 3339 produzidas
-pelas camadas do ProjectFlow: sufixo `Z` e offset `+00:00`. Valores com
+pelas camadas do Chrono Project: sufixo `Z` e offset `+00:00`. Valores com
 `+00:00` são normalizados para `Z` ao entrarem no domínio. Novas exportações e
 registros criados pela camada nativa usam diretamente o formato canônico com
 `Z`; datas de cronograma continuam independentes, em `YYYY-MM-DD`.
@@ -77,7 +77,7 @@ Explorador de Arquivos.
 
 ## Segurança e integridade
 
-Antes de escrever, o ProjectFlow verifica tamanho do pacote e entradas, caminhos confinados, conjunto exato de arquivos, manifest estrito, data, SHA-256, `PRAGMA quick_check`, `PRAGMA foreign_key_check`, schema, catálogo, hierarquia, referências, ciclos, seleção e colisões de UUID. O conteúdo importado nunca é executado e a extração usa leitura limitada.
+Antes de escrever, o Chrono Project verifica tamanho do pacote e entradas, caminhos confinados, conjunto exato de arquivos, manifest estrito, data, SHA-256, `PRAGMA quick_check`, `PRAGMA foreign_key_check`, schema, catálogo, hierarquia, referências, ciclos, seleção e colisões de UUID. O conteúdo importado nunca é executado e a extração usa leitura limitada.
 
 ## Auditoria manual
 

@@ -3,14 +3,14 @@
 ## Estado
 
 Substituída parcialmente pelo [ADR 020](020-signed-passive-updater.md) desde
-v0.1.3: a consulta permanece manual, mas download e instalação passiva agora
-usam o updater assinado. O restante deste documento preserva a decisão inicial.
+v0.1.3 e novamente quanto à consulta na inicialização em 14/09/2026. O
+restante deste documento preserva a decisão inicial.
 
 Aceita em 30/08/2026 para a Fase 7.
 
 ## Contexto
 
-O ProjectFlow precisa informar quando existe uma versão Windows mais recente,
+O Chrono Project precisa informar quando existe uma versão Windows mais recente,
 mas a primeira política de distribuição não usará o updater automático do
 Tauri nem suas chaves de assinatura. O aplicativo deve continuar plenamente
 funcional offline e não deve fazer consultas remotas silenciosas.
@@ -25,20 +25,20 @@ Adicionar **Ajuda > Verificar atualizações** como ação exclusivamente manual
 Ao acioná-la, o frontend consulta somente:
 
 ```text
-https://api.github.com/repos/machado-jean/project-flow/releases/latest
+https://api.github.com/repos/machado-jean/chrono-project/releases/latest
 ```
 
 A resposta deve representar uma release publicada, não preliminar, com tag
-SemVer e o asset `ProjectFlow-Windows-x64-Setup.exe`. A versão é comparada com a
+SemVer e o asset `Chrono-Project-Windows-x64-Setup.exe`. A versão é comparada com a
 versão do `package.json`. Se houver versão superior, o usuário pode abrir no
 navegador padrão um dos links permanentes:
 
 ```text
-https://github.com/machado-jean/project-flow/releases/latest/download/ProjectFlow-Windows-x64-Setup.exe
-https://github.com/machado-jean/project-flow/releases/latest/download/ProjectFlow-Windows-x64-Offline-Setup.exe
+https://github.com/machado-jean/chrono-project/releases/latest/download/Chrono-Project-Windows-x64-Setup.exe
+https://github.com/machado-jean/chrono-project/releases/latest/download/Chrono-Project-Windows-x64-Offline-Setup.exe
 ```
 
-O ProjectFlow não baixa, executa nem instala o arquivo. O usuário mantém o
+O Chrono Project não baixa, executa nem instala o arquivo. O usuário mantém o
 controle do download e da instalação manual.
 
 Usar o plugin oficial Tauri Opener com capability restrita aos dois endereços
@@ -49,7 +49,7 @@ já existentes.
 
 Nenhuma consulta ocorre na inicialização. O único tráfego é a requisição
 solicitada pelo usuário ao GitHub; nenhum projeto, tarefa, banco, configuração
-ou identificador interno é enviado pelo ProjectFlow. Falha de rede apenas gera
+ou identificador interno é enviado pelo Chrono Project. Falha de rede apenas gera
 mensagem informativa e não afeta as demais funções.
 
 ## Consequências

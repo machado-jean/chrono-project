@@ -4,7 +4,7 @@ param(
     [ValidatePattern('^v\d+\.\d+\.\d+$')]
     [string]$Tag,
 
-    [string]$Repository = 'machado-jean/project-flow',
+    [string]$Repository = 'machado-jean/chrono-project',
 
     [ValidateRange(1, 30)]
     [int]$WaitMinutes = 5

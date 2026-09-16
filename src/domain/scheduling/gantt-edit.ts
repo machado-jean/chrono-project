@@ -22,7 +22,7 @@ export interface GanttFsMoveResult {
 }
 
 function fsStart(calendar: Calendar, predecessorEnd: string, lagDays: number): string {
-  return addWorkingDays(calendar, predecessorEnd, lagDays + 1);
+  return addWorkingDays(calendar, predecessorEnd, lagDays);
 }
 
 function lagForStart(calendar: Calendar, predecessorEnd: string, targetStart: string): number {

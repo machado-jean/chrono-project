@@ -15,9 +15,9 @@ const E2E_ROOT = resolve(PROJECT_ROOT, ".local", "e2e", "runs", RUN_ID);
 const DATA_DIR = resolve(E2E_ROOT, "data");
 const WEBVIEW_DIR = resolve(E2E_ROOT, "webview");
 const ARTIFACTS_DIR = resolve(E2E_ROOT, "artifacts");
-const PACKAGE_PATH = resolve(ARTIFACTS_DIR, "workspace.projectflow");
+const PACKAGE_PATH = resolve(ARTIFACTS_DIR, "workspace.chronoproject");
 const PDF_PATH = resolve(ARTIFACTS_DIR, "project-report.pdf");
-const EXECUTABLE = resolve(PROJECT_ROOT, "src-tauri", "target", "debug", "project-flow.exe");
+const EXECUTABLE = resolve(PROJECT_ROOT, "src-tauri", "target", "debug", "chrono-project.exe");
 type SearchContext = Page | Locator;
 
 interface RunningApp {
@@ -99,12 +99,12 @@ async function startApp(): Promise<RunningApp> {
     cwd: PROJECT_ROOT,
     env: {
       ...process.env,
-      PROJECTFLOW_E2E_RUN_ID: RUN_ID,
+      CHRONO_PROJECT_E2E_RUN_ID: RUN_ID,
       WEBVIEW2_USER_DATA_FOLDER: profile,
       WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${String(port)}`,
-      PROJECTFLOW_E2E_EXPORT_PATH: PACKAGE_PATH,
-      PROJECTFLOW_E2E_IMPORT_PATH: PACKAGE_PATH,
-      PROJECTFLOW_E2E_PDF_PATH: PDF_PATH,
+      CHRONO_PROJECT_E2E_EXPORT_PATH: PACKAGE_PATH,
+      CHRONO_PROJECT_E2E_IMPORT_PATH: PACKAGE_PATH,
+      CHRONO_PROJECT_E2E_PDF_PATH: PDF_PATH,
     },
     stdio: ["ignore", "pipe", "pipe"],
   });
@@ -116,7 +116,7 @@ async function startApp(): Promise<RunningApp> {
   try {
     await waitUntil(async () => {
       if (child.exitCode !== null) {
-        throw new Error(`ProjectFlow E2E encerrou com código ${String(child.exitCode)}.`);
+        throw new Error(`Chrono Project E2E encerrou com código ${String(child.exitCode)}.`);
       }
       try {
         const response = await fetch(`${cdpUrl}/json/version`);
@@ -138,7 +138,7 @@ async function startApp(): Promise<RunningApp> {
     const page = await waitUntil(() => {
       const pages = browser.contexts().flatMap((context) => context.pages());
       return pages.find((candidate) => !candidate.url().startsWith("devtools://")) ?? false;
-    }, "a página principal do ProjectFlow");
+    }, "a página principal do Chrono Project");
     await page.waitForLoadState("domcontentloaded");
     const version = browser.version();
     await writeFile(resolve(ARTIFACTS_DIR, `${launchId}-runtime.json`), JSON.stringify({ version, url: page.url(), connectedAt: new Date().toISOString() }, null, 2));
@@ -270,7 +270,7 @@ async function scheduleTask(page: Page, title: string, startDate: string, durati
   await waitUntil(async () => (await row.innerText()).includes("Salva"), `o salvamento de “${title}”`);
 }
 
-describe("fluxo mínimo do ProjectFlow no Tauri real", () => {
+describe("fluxo mínimo do Chrono Project no Tauri real", () => {
   let app: RunningApp | null = null;
 
   beforeAll(async () => {
@@ -333,15 +333,15 @@ describe("fluxo mínimo do ProjectFlow no Tauri real", () => {
     const rowA = await taskRow(page, "Tarefa A");
     await setValue(rowA.locator('[aria-label="Início da tarefa"]'), "2026-09-03");
     await (await findByExactText(rowA, "button", "Salvar")).click();
-    await waitForInputValue(rowB.locator('[aria-label="Início da tarefa"]'), "2026-09-07");
-    await waitForInputValue(rowC.locator('[aria-label="Início da tarefa"]'), "2026-09-09");
+    await waitForInputValue(rowB.locator('[aria-label="Início da tarefa"]'), "2026-09-04");
+    await waitForInputValue(rowC.locator('[aria-label="Início da tarefa"]'), "2026-09-07");
 
     await (await findByExactText(page, '[role="tab"]', "Kanban")).click();
     await findByExactText(page, "h1,h2,h3", "Quadro Kanban");
     expect(await page.locator("article.kanban-card").count()).toBe(5);
     await (await findByExactText(page, '[role="tab"]', "Gantt")).click();
     await findByExactText(page, "h1,h2,h3", "Gráfico de Gantt");
-    await page.locator('[data-testid="projectflow-gantt"]').waitFor();
+    await page.locator('[data-testid="chronoproject-gantt"]').waitFor();
     await (await findByExactText(page, '[role="tab"]', "Tabela")).click();
 
     await (await findByExactText(page, "button", "Gerar PDF")).click();
@@ -378,8 +378,8 @@ describe("fluxo mínimo do ProjectFlow no Tauri real", () => {
     await waitForInputValue(page.locator("#project-name"), "E2E — Fluxo mínimo");
     await waitForTaskCount(page, 7);
     await waitForInputValue((await taskRow(page, "Tarefa A")).locator('[aria-label="Início da tarefa"]'), "2026-09-03");
-    await waitForInputValue((await taskRow(page, "Tarefa B")).locator('[aria-label="Início da tarefa"]'), "2026-09-07");
-    await waitForInputValue((await taskRow(page, "Tarefa C")).locator('[aria-label="Início da tarefa"]'), "2026-09-09");
+    await waitForInputValue((await taskRow(page, "Tarefa B")).locator('[aria-label="Início da tarefa"]'), "2026-09-04");
+    await waitForInputValue((await taskRow(page, "Tarefa C")).locator('[aria-label="Início da tarefa"]'), "2026-09-07");
     expect((await (await taskRow(page, "Tarefa B")).innerText()).includes("1. Tarefa A")).toBe(true);
     expect((await (await taskRow(page, "Tarefa C")).innerText()).includes("2. Tarefa B")).toBe(true);
 
@@ -388,7 +388,7 @@ describe("fluxo mínimo do ProjectFlow no Tauri real", () => {
     expect(await page.locator("article.kanban-card").count()).toBe(7);
     await (await findByExactText(page, '[role="tab"]', "Gantt")).click();
     await findByExactText(page, "h1,h2,h3", "Gráfico de Gantt");
-    await page.locator('[data-testid="projectflow-gantt"]').waitFor();
+    await page.locator('[data-testid="chronoproject-gantt"]').waitFor();
     expect(await workspaceSnapshot(page)).toEqual(exportedWorkspace);
     await stopApp(app); app = null;
     app = await startApp();

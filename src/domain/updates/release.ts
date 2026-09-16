@@ -1,11 +1,11 @@
-export const PROJECTFLOW_RELEASE_API_URL =
-  "https://api.github.com/repos/machado-jean/project-flow/releases/latest";
-export const PROJECTFLOW_STANDARD_INSTALLER_URL =
-  "https://github.com/machado-jean/project-flow/releases/latest/download/ProjectFlow-Windows-x64-Setup.exe";
-export const PROJECTFLOW_OFFLINE_INSTALLER_URL =
-  "https://github.com/machado-jean/project-flow/releases/latest/download/ProjectFlow-Windows-x64-Offline-Setup.exe";
+export const CHRONO_PROJECT_RELEASE_API_URL =
+  "https://api.github.com/repos/machado-jean/chrono-project/releases/latest";
+export const CHRONO_PROJECT_STANDARD_INSTALLER_URL =
+  "https://github.com/machado-jean/chrono-project/releases/latest/download/Chrono-Project-Windows-x64-Setup.exe";
+export const CHRONO_PROJECT_OFFLINE_INSTALLER_URL =
+  "https://github.com/machado-jean/chrono-project/releases/latest/download/Chrono-Project-Windows-x64-Offline-Setup.exe";
 
-const STANDARD_INSTALLER_NAME = "ProjectFlow-Windows-x64-Setup.exe";
+const STANDARD_INSTALLER_NAME = "Chrono-Project-Windows-x64-Setup.exe";
 
 interface SemanticVersion {
   readonly major: number;
@@ -42,7 +42,7 @@ export function isNewerVersion(candidate: string, current: string): boolean {
   const candidateVersion = parseSemanticVersion(candidate);
   const currentVersion = parseSemanticVersion(current);
   if (candidateVersion === null || currentVersion === null) {
-    throw new Error("A versão publicada pelo ProjectFlow não está no formato esperado.");
+    throw new Error("A versão publicada pelo Chrono Project não está no formato esperado.");
   }
 
   const parts: readonly (keyof SemanticVersion)[] = ["major", "minor", "patch"];
@@ -71,7 +71,7 @@ function validateRelease(payload: unknown): string {
     (asset: GithubReleaseAsset) => asset.name === STANDARD_INSTALLER_NAME,
   );
   if (!hasStandardInstaller) {
-    throw new Error("A release mais recente não contém o instalador padrão do ProjectFlow.");
+    throw new Error("A release mais recente não contém o instalador padrão do Chrono Project.");
   }
   return release.tag_name;
 }
@@ -86,7 +86,7 @@ export async function checkLatestRelease(
   }, 10_000);
   let response: Response;
   try {
-    response = await fetcher(PROJECTFLOW_RELEASE_API_URL, {
+    response = await fetcher(CHRONO_PROJECT_RELEASE_API_URL, {
       headers: {
         Accept: "application/vnd.github+json",
         "X-GitHub-Api-Version": "2026-03-10",

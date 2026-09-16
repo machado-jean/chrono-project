@@ -5,7 +5,7 @@ import {
   isNewerVersion,
 } from "../../../src/domain/updates/release";
 
-const STANDARD_ASSET = { name: "ProjectFlow-Windows-x64-Setup.exe" };
+const STANDARD_ASSET = { name: "Chrono-Project-Windows-x64-Setup.exe" };
 
 function releaseResponse(tag: string, assets: readonly object[] = [STANDARD_ASSET]): Response {
   return Response.json({

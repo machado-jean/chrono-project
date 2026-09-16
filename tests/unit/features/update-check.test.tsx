@@ -16,16 +16,20 @@ afterEach(() => {
 });
 
 describe("verificação de atualização no menu Ajuda", () => {
-  it("não consulta atualizações ao abrir o aplicativo", () => {
+  it("verifica ao abrir e abre Ajuda quando existe atualização", async () => {
+    vi.mocked(check).mockResolvedValue({ version: "0.2.0" } as never);
     render(<WorkspaceHelpMenu />);
-    expect(check).not.toHaveBeenCalled();
+
+    expect(await screen.findByText("Versão 0.2.0 disponível.")).toBeVisible();
+    expect(screen.getByText("Ajuda").closest("details")).toHaveAttribute("open");
+    expect(check).toHaveBeenCalledOnce();
     expect(relaunch).not.toHaveBeenCalled();
   });
 
   it.each(["download interrompido", "assinatura inválida"])("informa %s e permite tentar novamente sem reiniciar", async (message) => {
     const downloadAndInstall = vi.fn().mockRejectedValue(new Error(message));
     vi.mocked(check).mockResolvedValue({ version: "0.2.0", downloadAndInstall } as never);
-    render(<WorkspaceHelpMenu />);
+    render(<WorkspaceHelpMenu automatic={false} />);
     fireEvent.click(screen.getByText("Ajuda"));
     fireEvent.click(screen.getByRole("button", { name: "Verificar atualizações" }));
     fireEvent.click(await screen.findByRole("button", { name: "Baixar e instalar atualização" }));
@@ -43,7 +47,7 @@ describe("verificação de atualização no menu Ajuda", () => {
     });
     vi.mocked(check).mockResolvedValue({ version: "0.2.0", downloadAndInstall } as never);
     vi.mocked(relaunch).mockResolvedValue(undefined);
-    render(<WorkspaceHelpMenu />);
+    render(<WorkspaceHelpMenu automatic={false} />);
 
     fireEvent.click(screen.getByText("Ajuda"));
     fireEvent.click(screen.getByRole("button", { name: "Verificar atualizações" }));
@@ -58,7 +62,7 @@ describe("verificação de atualização no menu Ajuda", () => {
 
   it("confirma quando a versão instalada já é a mais recente", async () => {
     vi.mocked(check).mockResolvedValue(null);
-    render(<WorkspaceHelpMenu />);
+    render(<WorkspaceHelpMenu automatic={false} />);
 
     fireEvent.click(screen.getByText("Ajuda"));
     fireEvent.click(screen.getByRole("button", { name: "Verificar atualizações" }));
@@ -69,7 +73,7 @@ describe("verificação de atualização no menu Ajuda", () => {
 
   it("informa falha de consulta sem iniciar instalação", async () => {
     vi.mocked(check).mockRejectedValue(new Error("latest.json indisponível"));
-    render(<WorkspaceHelpMenu />);
+    render(<WorkspaceHelpMenu automatic={false} />);
 
     fireEvent.click(screen.getByText("Ajuda"));
     fireEvent.click(screen.getByRole("button", { name: "Verificar atualizações" }));

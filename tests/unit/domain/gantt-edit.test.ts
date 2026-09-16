@@ -131,7 +131,7 @@ describe("movimento FS pelo Gantt", () => {
     const dep = dependency("40000000-0000-4000-8000-000000000001", pred.id, 0);
     const result = planGanttFsMove(current, 2, calendar, [dep], [pred, current]);
     expect(result.appliedStartDate).toBe("2026-09-03");
-    expect(result.dependencyUpdates).toEqual([{ ...dep, lagDays: 2 }]);
+    expect(result.dependencyUpdates).toEqual([{ ...dep, lagDays: 3 }]);
     expect(result.task.endDate).toBe("2026-09-08");
   });
 
@@ -141,7 +141,7 @@ describe("movimento FS pelo Gantt", () => {
     const dep = dependency("40000000-0000-4000-8000-000000000001", pred.id, 3);
     const result = planGanttFsMove(current, -10, calendar, [dep], [pred, current]);
     expect(result.requestedStartDate).toBe("2026-08-25");
-    expect(result.appliedStartDate).toBe("2026-09-01");
+    expect(result.appliedStartDate).toBe("2026-08-31");
     expect(result.dependencyUpdates[0]?.lagDays).toBe(0);
     expect(result.limitingPredecessorIds).toEqual([pred.id]);
   });
@@ -156,7 +156,7 @@ describe("movimento FS pelo Gantt", () => {
     expect(result.appliedStartDate).toBe("2026-08-31");
     expect(result.calendarAdjusted).toBe(true);
     expect(result.task).toEqual(current);
-    expect(result.dependencyUpdates).toEqual([]);
+    expect(result.dependencyUpdates).toEqual([{ ...dep, lagDays: 1 }]);
   });
 
   it("reduz todas as restrições necessárias com múltiplas predecessoras", () => {
@@ -167,7 +167,7 @@ describe("movimento FS pelo Gantt", () => {
     const secondDep = dependency("40000000-0000-4000-8000-000000000002", second.id, 3);
     const result = planGanttFsMove(current, -2, calendar, [firstDep, secondDep], [first, second, current]);
     expect(result.appliedStartDate).toBe("2026-09-02");
-    expect(result.dependencyUpdates.map(({ lagDays }) => lagDays)).toEqual([2, 1]);
+    expect(result.dependencyUpdates.map(({ lagDays }) => lagDays)).toEqual([3, 2]);
   });
 
   it("move tarefa manual sem alterar lag", () => {

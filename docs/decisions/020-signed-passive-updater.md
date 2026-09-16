@@ -7,9 +7,12 @@ Substitui a parte de download/instalação externa da ADR 018.
 
 ## Decisão vigente
 
-**Ajuda > Verificar atualizações** aciona o plugin nativo Tauri Updater.
+Ao iniciar, o Chrono Project aciona uma única consulta pelo plugin nativo Tauri
+Updater. Quando existe uma nova versão, o menu **Ajuda** é aberto automaticamente
+com a versão disponível e as opções de instalação. **Ajuda > Verificar
+atualizações** permanece disponível para repetir a consulta manualmente.
 O endpoint é o asset `latest.json` da última release do repositório
-`machado-jean/project-flow`. O manifesto seleciona Windows x64 e contém versão,
+`machado-jean/chrono-project`. O manifesto seleciona Windows x64 e contém versão,
 URL e assinatura. O usuário confirma **Baixar e instalar atualização**.
 
 O plugin verifica a assinatura com a chave pública incorporada. O NSIS usa
@@ -17,7 +20,8 @@ O plugin verifica a assinatura com a chave pública incorporada. O NSIS usa
 plugin Process. Falhas são informadas e não devem solicitar reinício.
 O download offline continua como alternativa externa no navegador.
 
-Nenhuma consulta ocorre ao iniciar. Não há envio de conteúdo do workspace.
+Falhas na consulta inicial são silenciosas e não bloqueiam a operação offline;
+uma consulta manual continua apresentando o erro. Não há envio de conteúdo do workspace.
 O banco permanece no perfil do usuário, separado dos binários.
 
 ## Chaves e publicação

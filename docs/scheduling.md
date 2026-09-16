@@ -55,17 +55,17 @@ início mínimo da sucessora =
   adicionar_dias_úteis(
     calendário efetivo da sucessora,
     fim da predecessora,
-    lag + 1
+    lag
   )
 ```
 
 Consequências práticas:
 
-- predecessora termina sexta, calendário segunda–sexta e lag `0`: sucessora começa segunda;
-- predecessora termina sexta, calendário **Todos os dias** e lag `0`: sucessora começa sábado;
-- no mesmo calendário contínuo, lag `1`: sucessora começa domingo;
+- predecessora termina sexta e lag `0`: sucessora começa na própria sexta;
+- predecessora termina sexta, calendário segunda–sexta e lag `1`: sucessora começa segunda;
+- predecessora termina sexta, calendário **Todos os dias** e lag `1`: sucessora começa sábado;
 - com múltiplas predecessoras, vale a data mínima mais tardia;
-- lag é inteiro não negativo e representa dias úteis completos entre as tarefas.
+- lag é inteiro não negativo: `0` permite iniciar no mesmo dia do fim e `1` usa o próximo dia útil.
 
 Dependências são permitidas somente:
 
@@ -102,7 +102,7 @@ Para tarefa `MANUAL`:
 - tarefas distintas que apenas coincidem na mesma data não geram conflito;
 - sem dependência declarada, não existe restrição a verificar.
 
-Uma tarefa `AUTO` com predecessora, mas sem duração, também recebe aviso porque ainda não pode ser reposicionada com segurança.
+Uma tarefa `AUTO` totalmente sem cronograma recebe início e fim pela restrição da predecessora e assume duração inicial de um dia. Se já possui cronograma, sua duração é preservada.
 
 ## Tarefas-resumo
 
@@ -185,6 +185,10 @@ nenhum dos sentidos; quando sua data viola a relação, deve apenas exibir o avi
 ## Edição direta no Gantt
 
 O Gantt é uma superfície de comando, não uma segunda fonte de cronograma:
+
+- a linha do tempo inclui sete dias antes do primeiro início e um mês após
+  o último fim do projeto, permitindo rolar e arrastar tarefas para fora da janela
+  originalmente ocupada;
 
 - tarefa executável sem predecessora pode ser movida e ter as duas bordas
   redimensionadas;

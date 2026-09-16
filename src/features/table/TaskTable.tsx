@@ -206,8 +206,8 @@ function PredecessorCell({
           <option value="">Adicionar…</option>
           {available.map((candidate) => <option key={candidate.id} value={candidate.id}>{taskOutlineLabel(candidate, outlineNumbers)}</option>)}
         </select>
-        <input type="number" min={0} value={lagDays} aria-label={`Novo intervalo de ${task.title}`} title="Intervalo em dias úteis" disabled={disabled || predecessorId.length === 0} onChange={(event) => { setLagDays(Number(event.target.value)); }} />
-        <button type="button" aria-label={`Confirmar predecessora de ${task.title}`} title="Adicionar predecessora FS" disabled={disabled || predecessorId.length === 0} onClick={() => { void addDependency(); }}>+</button>
+        <input type="number" min={0} value={lagDays} aria-label={`Novo intervalo de ${task.title}`} title="Intervalo: 0 inicia no mesmo dia do fim; 1 no próximo dia útil" disabled={disabled || predecessorId.length === 0} onChange={(event) => { setLagDays(Number(event.target.value)); }} />
+        <button type="button" aria-label={`Confirmar predecessora de ${task.title}`} title="Adicionar predecessora TI" disabled={disabled || predecessorId.length === 0} onClick={() => { void addDependency(); }}>Adicionar</button>
       </div>
     </div>
   );

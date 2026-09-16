@@ -142,8 +142,8 @@ describe("scheduler FS", () => {
     );
     const successor = result.tasks.find(({ id }) => id === B);
 
-    expect(successor?.startDate).toBe("2026-08-31");
-    expect(successor?.endDate).toBe("2026-09-01");
+    expect(successor?.startDate).toBe("2026-08-28");
+    expect(successor?.endDate).toBe("2026-08-31");
     expect(successor?.durationDays).toBe(2);
   });
 
@@ -157,8 +157,8 @@ describe("scheduler FS", () => {
       [A],
     );
 
-    expect(result.tasks.find(({ id }) => id === B)?.startDate).toBe("2026-08-31");
-    expect(result.tasks.find(({ id }) => id === C)?.startDate).toBe("2026-09-01");
+    expect(result.tasks.find(({ id }) => id === B)?.startDate).toBe("2026-08-28");
+    expect(result.tasks.find(({ id }) => id === C)?.startDate).toBe("2026-08-28");
   });
 
   it("usa a restrição mais tardia em A e B → C", () => {
@@ -171,7 +171,7 @@ describe("scheduler FS", () => {
       [A, B],
     );
 
-    expect(result.tasks.find(({ id }) => id === C)?.startDate).toBe("2026-09-01");
+    expect(result.tasks.find(({ id }) => id === C)?.startDate).toBe("2026-08-31");
   });
 
   it("conta lag positivo em dias úteis", () => {
@@ -181,13 +181,32 @@ describe("scheduler FS", () => {
       [A],
     );
 
-    expect(result.tasks.find(({ id }) => id === B)?.startDate).toBe("2026-09-01");
+    expect(result.tasks.find(({ id }) => id === B)?.startDate).toBe("2026-08-31");
   });
 
-  it("respeita sexta → segunda no calendário padrão", () => {
+  it("preenche uma sucessora AUTO sem cronograma a partir da predecessora", () => {
+    const result = schedule(
+      [task(A, { endDate: "2026-09-15", durationDays: 2 }), task(B, {
+        startDate: null,
+        endDate: null,
+        durationDays: null,
+      })],
+      [dependency("40000000-0000-4000-8000-000000000001", A, B)],
+      [A],
+    );
+
+    expect(result.tasks.find(({ id }) => id === B)).toMatchObject({
+      startDate: "2026-09-15",
+      endDate: "2026-09-15",
+      durationDays: 1,
+    });
+    expect(result.conflicts).toEqual([]);
+  });
+
+  it("usa o próximo dia útil para lag 1", () => {
     const result = schedule(
       [task(A), task(B)],
-      [dependency("40000000-0000-4000-8000-000000000001", A, B)],
+      [dependency("40000000-0000-4000-8000-000000000001", A, B, 1)],
       [A],
     );
 
@@ -211,7 +230,7 @@ describe("scheduler FS", () => {
     };
     const result = schedule(
       [task(A), task(B)],
-      [dependency("40000000-0000-4000-8000-000000000001", A, B)],
+      [dependency("40000000-0000-4000-8000-000000000001", A, B, 1)],
       [A],
       [calendarWithHoliday, continuousCalendar],
     );
@@ -226,7 +245,7 @@ describe("scheduler FS", () => {
       [A],
     );
 
-    expect(result.tasks.find(({ id }) => id === B)?.startDate).toBe("2026-08-30");
+    expect(result.tasks.find(({ id }) => id === B)?.startDate).toBe("2026-08-29");
   });
 
   it("antecipa tarefa AUTO para a primeira data permitida pela predecessora", () => {
@@ -237,8 +256,8 @@ describe("scheduler FS", () => {
       [A],
     );
 
-    expect(result.tasks.find(({ id }) => id === B)?.startDate).toBe("2026-08-31");
-    expect(result.tasks.find(({ id }) => id === B)?.endDate).toBe("2026-08-31");
+    expect(result.tasks.find(({ id }) => id === B)?.startDate).toBe("2026-08-28");
+    expect(result.tasks.find(({ id }) => id === B)?.endDate).toBe("2026-08-28");
     expect(result.changedTaskIds.has(B)).toBe(true);
   });
 
@@ -256,8 +275,8 @@ describe("scheduler FS", () => {
       [A],
     );
 
-    expect(result.tasks.find(({ id }) => id === B)?.startDate).toBe("2026-08-31");
-    expect(result.tasks.find(({ id }) => id === C)?.startDate).toBe("2026-09-01");
+    expect(result.tasks.find(({ id }) => id === B)?.startDate).toBe("2026-08-28");
+    expect(result.tasks.find(({ id }) => id === C)?.startDate).toBe("2026-08-28");
     expect([...result.changedTaskIds].sort()).toEqual([B, C]);
   });
 
@@ -275,7 +294,7 @@ describe("scheduler FS", () => {
       [A, B],
     );
 
-    expect(result.tasks.find(({ id }) => id === C)?.startDate).toBe("2026-09-01");
+    expect(result.tasks.find(({ id }) => id === C)?.startDate).toBe("2026-08-31");
   });
 
   it("recalcula pela predecessora restante quando outra relação é removida", () => {
@@ -289,7 +308,7 @@ describe("scheduler FS", () => {
       [C],
     );
 
-    expect(result.tasks.find(({ id }) => id === C)?.startDate).toBe("2026-08-31");
+    expect(result.tasks.find(({ id }) => id === C)?.startDate).toBe("2026-08-28");
     expect(result.changedTaskIds.has(C)).toBe(true);
   });
 
@@ -302,7 +321,11 @@ describe("scheduler FS", () => {
   });
 
   it("mantém tarefa MANUAL e informa conflito apenas quando viola predecessora", () => {
-    const manual = task(B, { schedulingMode: "MANUAL" });
+    const manual = task(B, {
+      startDate: "2026-08-27",
+      endDate: "2026-08-27",
+      schedulingMode: "MANUAL",
+    });
     const result = schedule(
       [task(A), manual, task(C, { schedulingMode: "MANUAL" })],
       [dependency("40000000-0000-4000-8000-000000000001", A, B)],
@@ -371,13 +394,20 @@ describe("scheduler FS", () => {
       [A],
     );
 
-    expect(result.tasks.find(({ id }) => id === B)?.startDate).toBe("2026-08-31");
+    expect(result.tasks.find(({ id }) => id === B)?.startDate).toBe("2026-08-28");
     expect(result.tasks.find(({ id }) => id === D)?.startDate).toBe("2026-08-28");
   });
 
   it("calcula múltiplas alterações como um único resultado atômico", () => {
     const result = schedule(
-      [task(A), task(B), task(C), task(D), task(E), task(F)],
+      [
+        task(A, { endDate: "2026-08-31", durationDays: 2 }),
+        task(B),
+        task(C),
+        task(D, { endDate: "2026-08-31", durationDays: 2 }),
+        task(E),
+        task(F),
+      ],
       [
         dependency("40000000-0000-4000-8000-000000000001", A, B),
         dependency("40000000-0000-4000-8000-000000000002", B, C),

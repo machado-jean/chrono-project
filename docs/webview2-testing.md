@@ -23,7 +23,7 @@ concluída nem de correção universal de falhas WebView2.
 
 As regras abaixo continuam sendo os critérios para promover o teste ao gate.
 
-Este documento define como validar o WebView2 usado pelo ProjectFlow e como
+Este documento define como validar o WebView2 usado pelo Chrono Project e como
 evoluir o teste E2E da janela Tauri sem colocar dados reais, o ambiente do
 usuário ou o gate de release em risco.
 
@@ -33,7 +33,7 @@ camada nativa e encerra sem deixar recursos que impeçam a execução seguinte.
 
 ## Decisão vigente
 
-O ProjectFlow continuará usando o **WebView2 Evergreen**:
+O Chrono Project continuará usando o **WebView2 Evergreen**:
 
 - é a opção recomendada pela Microsoft para a maioria dos aplicativos;
 - no Windows 11 normalmente já está presente e é mantido pelo Windows;
@@ -43,7 +43,7 @@ O ProjectFlow continuará usando o **WebView2 Evergreen**:
 O instalador padrão usa o bootstrapper e a variante offline incorpora o
 instalador offline do runtime. O WebView2 Fixed Version não deve ser adotado
 como solução para falhas de automação: ele aumentaria o pacote e transferiria
-ao ProjectFlow a responsabilidade por atualizações do runtime.
+ao Chrono Project a responsabilidade por atualizações do runtime.
 
 ## Princípios obrigatórios para o E2E desktop
 
@@ -74,10 +74,10 @@ entre processos e resultados dependentes da execução anterior.
 
 - Registrar edição e build do Windows.
 - Registrar a versão instalada do WebView2 Runtime.
-- Confirmar que nenhum `project-flow.exe` de teste está em execução.
+- Confirmar que nenhum `chrono-project.exe` de teste está em execução.
 - Confirmar que a porta selecionada está livre.
 - Confirmar que os caminhos E2E estão dentro de `.local/e2e/`.
-- Confirmar que o banco de produção e `.local/data/projectflow.sqlite` não serão
+- Confirmar que o banco de produção e `.local/data/chronoproject.sqlite` não serão
   usados pelo cenário isolado.
 
 Resultado esperado: o teste inicia somente após comprovar isolamento e não
@@ -151,7 +151,7 @@ Se a criação da janela falhar:
 1. guardar stdout, stderr e logs do run ID;
 2. registrar o HRESULT e a etapa exata;
 3. verificar se pasta, porta ou executável foram reutilizados;
-4. verificar processos `project-flow` e WebView2 associados ainda ativos;
+4. verificar processos `chrono-project` e WebView2 associados ainda ativos;
 5. repetir com novo diretório e nova porta, sem alterar o runtime global;
 6. comparar com o E2E em camadas (`npm run test:e2e`) para separar falha do
    produto de falha do mecanismo de automação;
@@ -159,7 +159,7 @@ Se a criação da janela falhar:
 8. não promover o teste a gate enquanto houver falha intermitente não explicada.
 
 `HRESULT 0x800700AA` significa que um recurso solicitado estava em uso. Ele não
-prova sozinho defeito funcional do ProjectFlow nem inadequação do WebView2. O
+prova sozinho defeito funcional do Chrono Project nem inadequação do WebView2. O
 diagnóstico deve demonstrar qual recurso foi reutilizado ou registrar a
 regressão upstream correspondente.
 

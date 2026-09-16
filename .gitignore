@@ -49,8 +49,8 @@ tmp/
 *.db-shm
 *.db-wal
 
-# ProjectFlow exports
-*.projectflow
+# Chrono Project exports
+*.chronoproject
 
 # Logs
 *.log

@@ -605,6 +605,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "chrono-project"
+version = "0.2.0"
+dependencies = [
+ "chrono",
+ "serde",
+ "serde_json",
+ "sha2 0.11.0",
+ "sqlx",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-dialog",
+ "tauri-plugin-log",
+ "tauri-plugin-opener",
+ "tauri-plugin-process",
+ "tauri-plugin-sql",
+ "tauri-plugin-updater",
+ "tokio",
+ "uuid",
+ "zip 8.6.0",
+]
+
+[[package]]
 name = "combine"
 version = "4.6.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3251,28 +3273,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "985e7ec9bb745e6ce6535b544d84d6cd6f7ad8bd711c398938ae983b91a766d9"
 dependencies = [
  "unicode-ident",
-]
-
-[[package]]
-name = "project-flow"
-version = "0.1.8"
-dependencies = [
- "chrono",
- "serde",
- "serde_json",
- "sha2 0.11.0",
- "sqlx",
- "tauri",
- "tauri-build",
- "tauri-plugin-dialog",
- "tauri-plugin-log",
- "tauri-plugin-opener",
- "tauri-plugin-process",
- "tauri-plugin-sql",
- "tauri-plugin-updater",
- "tokio",
- "uuid",
- "zip 8.6.0",
 ]
 
 [[package]]

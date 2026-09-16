@@ -18,7 +18,7 @@ npm run test:e2e
    Tabela/Kanban/Gantt, duplicação de árvore, exportação, workspace vazio,
    importação e comparação semântica;
 2. `test:e2e:native` executa os testes Rust reais de SQLite, migrations,
-   transações, backup e pacotes `.projectflow`.
+   transações, backup e pacotes `.chronoproject`.
 
 A primeira camada usa um repositório em memória dedicado ao teste. Isso permite
 que o cenário funcional seja determinístico e seguro, enquanto a segunda camada

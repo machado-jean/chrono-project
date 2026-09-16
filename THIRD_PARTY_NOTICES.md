@@ -2,7 +2,7 @@
 
 ## date-holidays 3.36.0
 
-O ProjectFlow usa a biblioteca `date-holidays` para oferecer uma prévia offline de
+O Chrono Project usa a biblioteca `date-holidays` para oferecer uma prévia offline de
 feriados nacionais e estaduais do Brasil.
 
 - código da biblioteca: licença ISC;
@@ -11,13 +11,13 @@ feriados nacionais e estaduais do Brasil.
 - projeto e autores: <https://github.com/commenthol/date-holidays>;
 - texto da licença dos dados: <https://creativecommons.org/licenses/by-sa/3.0/>.
 
-O ProjectFlow seleciona o país Brasil, opcionalmente uma unidade federativa, filtra
+O Chrono Project seleciona o país Brasil, opcionalmente uma unidade federativa, filtra
 os tipos exibidos e converte as datas escolhidas em exceções locais de calendário.
 Feriados municipais não são fornecidos automaticamente.
 
 ## Tauri Opener 2.5.4
 
-O ProjectFlow usa `@tauri-apps/plugin-opener` e `tauri-plugin-opener` somente
+O Chrono Project usa `@tauri-apps/plugin-opener` e `tauri-plugin-opener` somente
 para abrir, no navegador padrão, os dois instaladores publicados pelo próprio
 projeto. A capability nativa restringe os endereços permitidos.
 
@@ -27,7 +27,7 @@ projeto. A capability nativa restringe os endereços permitidos.
 
 ## Playwright Core 1.62.1
 
-O ProjectFlow usa `playwright-core` somente no diagnóstico local da automação da
+O Chrono Project usa `playwright-core` somente no diagnóstico local da automação da
 janela Tauri. O pacote não incorpora navegador, não é necessário no gate E2E em
 camadas e não é incluído no executável ou nos instaladores de produção.
 

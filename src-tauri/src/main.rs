@@ -2,5 +2,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    project_flow_lib::run()
+    chrono_project_lib::run()
 }
