@@ -30,7 +30,11 @@
     "tauri:build:test": "tauri build --no-bundle --features shared-dev-data",
     "tauri:build:installer": "tauri build --bundles nsis",
     "tauri:build:installer:ci": "tauri build --bundles nsis --no-sign",
-    "tauri:build:installer:offline": "tauri build --bundles nsis --config src-tauri/tauri.offline.conf.json"
+    "tauri:build:installer:offline": "tauri build --bundles nsis --config src-tauri/tauri.offline.conf.json",
+    "artifacts:status": "pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/Manage-BuildArtifacts.ps1",
+    "artifacts:clean": "pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/Manage-BuildArtifacts.ps1 -Clean",
+    "audit:build": "pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/Build-Audit.ps1",
+    "audit:archive-current": "pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/Build-Audit.ps1 -SkipBuild"
   },
   "dependencies": {
     "@svar-ui/react-gantt": "2.7.1",

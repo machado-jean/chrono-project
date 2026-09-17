@@ -228,3 +228,21 @@ docs/                arquitetura, ambiente e decisões
 
 As atribuições e licenças das bibliotecas e bases de dados incorporadas ficam em
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+## Builds de auditoria e controle de cache
+
+Use `npm run audit:build` para compilar o executável de auditoria e arquivá-lo
+em `.local\audit-builds`. A rotina mantém somente os três builds mais recentes,
+cada um com `chrono-project.exe` e `build.json` contendo commit, versão e SHA-256.
+
+```powershell
+npm run audit:build
+npm run audit:archive-current
+npm run artifacts:status
+npm run artifacts:clean
+```
+
+`audit:archive-current` arquiva o executável já existente sem recompilar. O cache
+Cargo em `src-tauri\target` é preservado enquanto estiver abaixo de 20 GiB. Após
+arquivar um novo build, `audit:build` limpa esse cache automaticamente se o limite
+for atingido. A compilação seguinte à limpeza será completa e mais demorada.

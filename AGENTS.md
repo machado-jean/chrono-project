@@ -1991,3 +1991,15 @@ builds, empacotamento, publicação ou serviços de terceiros, o Codex deve:
 Essa é a conduta padrão do projeto para economizar tokens, processamento e
 consultas desnecessárias. Ela não se aplica quando uma espera ativa for
 explicitamente solicitada pelo usuário.
+
+---
+
+# 68. BUILDS DE AUDITORIA E LIMITE DE CACHE
+
+1. gerar builds manuais de auditoria com `npm run audit:build`;
+2. preservar somente os três builds mais recentes em `.local\audit-builds`;
+3. registrar versão, commit, data, tamanho e SHA-256 em `build.json`;
+4. considerar 20 GiB o limite do cache Cargo em `src-tauri\target`;
+5. arquivar o executável antes de qualquer limpeza automática do cache;
+6. não remover dados do usuário, releases publicadas ou artefatos históricos;
+7. avisar que a primeira compilação após `cargo clean` será mais demorada.
