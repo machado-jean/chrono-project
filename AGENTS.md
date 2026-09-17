@@ -1973,3 +1973,21 @@ correção
 O Codex deve evitar implementar funcionalidades em excesso.
 
 A meta é construir uma ferramenta pequena, confiável e excelente para o fluxo de planejamento definido neste documento.
+
+---
+
+# 67. ESPERAS LONGAS E ECONOMIA DE RECURSOS
+
+Quando uma etapa depender de processamento demorado ou externo, como CI,
+builds, empacotamento, publicação ou serviços de terceiros, o Codex deve:
+
+1. iniciar a etapa e fornecer ao usuário o link ou meio de acompanhar o status;
+2. interromper consultas repetitivas e qualquer acompanhamento contínuo;
+3. pedir ao usuário que verifique a conclusão da etapa;
+4. pausar o trabalho até que o usuário confirme que a etapa terminou;
+5. após a confirmação, fazer apenas uma consulta final para validar o resultado;
+6. continuar automaticamente apenas se a etapa tiver sido concluída com sucesso.
+
+Essa é a conduta padrão do projeto para economizar tokens, processamento e
+consultas desnecessárias. Ela não se aplica quando uma espera ativa for
+explicitamente solicitada pelo usuário.
