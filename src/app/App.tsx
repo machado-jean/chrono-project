@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 
+import chronoMark from "../assets/chrono-mark.png";
 import { ProjectHeader } from "../features/projects/ProjectHeader";
 import { ProjectActionsMenu } from "../features/projects/ProjectActionsMenu";
 import { CalendarSettings } from "../features/projects/CalendarSettings";
@@ -79,7 +80,7 @@ function App({ repository }: AppProps) {
               <WorkspaceHelpMenu />
             </WorkspaceMenuBar>
             <section className="center-state">
-              <span className="empty-illustration" aria-hidden="true">PF</span>
+              <img className="empty-illustration" src={chronoMark} alt="" />
               <h1>Organize seu primeiro projeto</h1>
               <p>Use o botão “+” ao lado de Projetos para criar um espaço de planejamento.</p>
             </section>

@@ -38,6 +38,8 @@ As Fases 0 a 6 estão concluídas e o Checkpoint Git 7 foi consolidado no commit
   feriados, foco de dependência e edição temporal segura;
 - sincronização imediata entre Tabela, Kanban e Gantt;
 - janela principal maximizada na inicialização;
+- identidade visual própria com relógio mecânico em forma de `C`, aplicada ao
+  executável e à interface;
 - barra lateral de projetos recolhível e ajuda contextual acessível na Tabela;
 - menu de contexto para arquivar, restaurar ou excluir projetos;
 - duplicação de tarefa isolada, árvore completa e projeto, sempre com novos UUIDs;
@@ -97,10 +99,12 @@ Documentação principal:
 - [relatórios PDF](docs/pdf-reports.md);
 - [instalação e manutenção no Windows](docs/installation-windows.md);
 - [processo de release e verificação obrigatória do CI](docs/release-process.md);
+- [identidade visual e uso do ícone](docs/branding.md);
 - [auditoria de UX e acessibilidade](docs/ux-accessibility.md);
 - [diretrizes e evidências WebView2](docs/webview2-testing.md);
 - [validação da atualização em VM](docs/vm-validation-record.md);
 - [preparação do próximo release](docs/releases/next.md);
+- [notas do Chrono Project v0.2.0](docs/releases/v0.2.0.md);
 - [decisões arquiteturais](docs/decisions/).
 
 ## Preparação

@@ -44,6 +44,10 @@ com WCAG.
   9 px; cores secundárias ganharam contraste e o modo de cores forçadas recebe
   contornos explícitos.
 - A preferência de redução de movimento continua respeitada.
+- O símbolo da marca é decorativo (`alt=""`); o nome permanece na barra nativa
+  da janela e a função de expandir a barra lateral possui nome acessível
+  **Mostrar projetos**. A remoção do placeholder `PF` não elimina informação
+  necessária para tecnologia assistiva.
 
 ## Evidências
 

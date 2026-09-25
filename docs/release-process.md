@@ -10,7 +10,13 @@ o release: a execução de CI associada à **tag** também precisa ficar verde.
 2. Executar todos os gates locais descritos em `docs/releases/next.md`.
 3. Validar manualmente a versão de teste com o banco compartilhado de
    desenvolvimento.
-4. Criar o commit somente após a aprovação dessa auditoria.
+4. Quando o release altera a identidade visual, executar o roteiro de
+   [`branding.md`](branding.md) e conferir o ícone no executável, barra de
+   tarefas, menu Iniciar, atalho, lista de aplicativos, instalador e
+   desinstalador.
+5. Registrar tamanhos e SHA-256 dos dois instaladores em
+   [`releases/v0.2.0.md`](releases/v0.2.0.md).
+6. Criar o commit somente após a aprovação dessa auditoria.
 
 ## Depois de publicar
 

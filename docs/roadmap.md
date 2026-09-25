@@ -54,7 +54,7 @@ Não usar percentuais subjetivos. O progresso deve ser demonstrado por entregáv
 | 6 — Portabilidade | Entregar exportação, importação e backup | Concluída | 7 | Round-trip preserva semanticamente o workspace |
 | 7 — Hardening e distribuição | Preparar o produto para uso real no Windows | Em andamento | 8 | Instalador e operação offline validados em máquina limpa |
 | 8 — Controle do plano | Baseline, desvios, prazos-limite e saúde | Concluída | 9 | O plano aprovado pode ser comparado ao cronograma corrente |
-| 9 — Identidade visual | Novo ícone profissional e aplicação consistente da marca | Planejada | 10 | Aplicativo, instaladores e artefatos exibem a identidade aprovada |
+| 9 — Identidade visual | Novo ícone profissional e aplicação consistente da marca | Em validação | 10 | Aplicativo, instaladores e artefatos exibem a identidade aprovada |
 | 10 — Análise do cronograma | Caminho crítico, folgas e explicabilidade | Planejada | 11 | O usuário identifica e entende as tarefas que controlam o término |
 | 11 — Progresso e marcos | Marcos e consolidação automática de progresso | Planejada | 12 | Progresso e eventos-chave são coerentes na hierarquia e nas views |
 | 12 — Produtividade | Visões salvas, edição em massa e histórico global | Planejada | 13 | Operações frequentes são rápidas, reversíveis e acessíveis |
@@ -285,7 +285,8 @@ Gantt e navegação completa por roda e barras independentes.
 
 ## Fase 9 — Identidade visual e ícone do aplicativo
 
-Estado: **Planejada**. Versão-alvo sugerida: `0.1.9`.
+Estado: **Implementada; validação de distribuição pendente**. Versão-alvo:
+`0.2.0`.
 
 ### Escopo
 
@@ -315,6 +316,10 @@ Estado: **Planejada**. Versão-alvo sugerida: `0.1.9`.
 
 O Chrono Project possui um ícone aprovado, reconhecível e consistente na interface,
 no Windows e nos artefatos de distribuição, sem regressão funcional.
+
+O símbolo, a interface e os derivados Tauri foram implementados em 24/09/2026.
+O encerramento da fase ainda depende da inspeção dos pontos de integração do
+Windows nos instaladores padrão e offline.
 
 ## Fase 10 — Análise e explicação do cronograma
 
@@ -1284,6 +1289,25 @@ matriz no host, na VM limpa e no CI Windows.
 - Instaladores NSIS padrão e offline foram gerados localmente. Assinaturas do
   updater e `latest.json` aguardam a chave privada externa ao repositório.
 - A Fase 8 foi encerrada. A Fase 9 não foi iniciada.
+- Commit: `não commitado`; nenhum push, tag ou release foi executado.
+
+### 24 de setembro de 2026 — Identidade visual pronta para release
+
+- Foi aprovado um relógio mecânico original em forma de `C`, com mostrador
+  azul-marinho, metal dourado, arco ciano e extensões em 12, 9 e 6 horas.
+- A escala recebeu marcadores principais proporcionais, quatro pautas menores
+  entre intervalos de cinco minutos e orientação radial coerente.
+- A profundidade visual passou a respeitar mostrador, escala, aros, filigranas,
+  pontes, rubis e ponteiros nessa ordem.
+- O conjunto de ícones do Tauri foi regenerado; a interface passou a usar o
+  símbolo no topo, no estado vazio e como controle da barra recolhida.
+- O marcador provisório `PF` e a repetição de **Chrono Project** na barra
+  lateral foram removidos.
+- ESLint, TypeScript, 140 testes e build Vite foram aprovados. A inspeção de 32
+  e 128 px confirmou o contorno do `C`.
+- ADR 024 e `docs/branding.md` registram decisão, uso, arquivos e critérios.
+- Executável, instaladores, atualização e integração Windows ainda precisam do
+  gate de distribuição antes do encerramento da fase.
 - Commit: `não commitado`; nenhum push, tag ou release foi executado.
 
 ## Regras permanentes de acompanhamento

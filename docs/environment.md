@@ -118,6 +118,24 @@ vulnerabilidades conhecidas nessa resolução.
 O identificador vigente é `io.github.machadojean.chronoproject`, definido com a
 identidade Chrono Project 0.2.0.
 
+## Validação local da identidade 0.2.0
+
+Em 24/09/2026, o símbolo aprovado foi salvo em
+`src/assets/chrono-mark.png` e usado para regenerar os PNGs, `icon.ico`,
+`icon.icns`, `StoreLogo.png` e tiles `Square*Logo.png` do Tauri. Os tamanhos de
+32 e 128 px foram inspecionados visualmente.
+
+Depois da atualização da barra lateral, passaram:
+
+```text
+npm run check    # ESLint, TypeScript e 140 testes
+npm run build    # build Vite de produção
+```
+
+Essa evidência não substitui o build Tauri, os instaladores, a assinatura do
+updater ou a inspeção do ícone nos pontos de integração do Windows. Esses gates
+permanecem pendentes em `docs/releases/next.md`.
+
 Instalação global:
 
 - Node: MSI oficial x64, instalação por máquina.

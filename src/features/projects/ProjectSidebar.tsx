@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type MouseEvent, type SyntheticEvent } from "react";
 
+import chronoMark from "../../assets/chrono-mark.png";
 import { PROJECT_STATUS_LABELS, type Project } from "../../domain/projects/project";
 
 interface ProjectSidebarProps {
@@ -88,12 +89,14 @@ export function ProjectSidebar({
   return (
     <aside className={`project-sidebar${collapsed ? " collapsed" : ""}`} aria-label="Projetos">
       {collapsed ? (
-        <button className="sidebar-expand-button" type="button" aria-label="Mostrar projetos" title="Mostrar projetos" onClick={onToggle}>›</button>
+        <button className="sidebar-expand-button brand-expand-button" type="button" aria-label="Mostrar projetos" title="Mostrar projetos" onClick={onToggle}>
+          <img src={chronoMark} alt="" />
+        </button>
       ) : (
         <>
       <div className="brand-block">
-        <span className="brand-mark" aria-hidden="true">PF</span>
-        <div><strong>Chrono Project</strong><span>Planejamento local</span></div>
+        <img className="brand-mark" src={chronoMark} alt="" />
+        <span className="brand-context">Planejamento local</span>
         <button className="sidebar-collapse-button" type="button" aria-label="Recolher projetos" title="Recolher projetos" onClick={onToggle}>‹</button>
       </div>
 
