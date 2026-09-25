@@ -4,7 +4,7 @@ Este é o registro vivo de execução do Chrono Project. Ele traduz o roadmap de
 
 `AGENTS.md` continua sendo a fonte de verdade para produto, arquitetura e regras operacionais. Este documento não substitui a especificação e não deve introduzir escopo incompatível com ela.
 
-Última atualização: **16 de setembro de 2026**.
+Última atualização: **25 de setembro de 2026**.
 
 ## Como manter este documento
 
@@ -31,10 +31,10 @@ Não usar percentuais subjetivos. O progresso deve ser demonstrado por entregáv
 
 | Item | Estado |
 | --- | --- |
-| Etapa do produto | Rebranding completo para Chrono Project 0.2.0 |
-| Fase ativa | Identidade, persistência, portabilidade e distribuição em validação |
-| Próxima fase | Publicar e validar a v0.2.0 após os gates locais |
-| Versão da aplicação | `0.2.0` |
+| Etapa do produto | Identidade Chrono Project consolidada para a versão 0.2.1 |
+| Fase ativa | Distribuição 0.2.1 gerada; validações manuais e publicação pendentes |
+| Próxima fase | Validar atualização/ícones no Windows e publicar a v0.2.1 |
+| Versão da aplicação | `0.2.1` |
 | Versão do schema SQLite | `5` |
 | Último commit de referência | `427599e` — `docs: consolidate post-MVP roadmap` |
 | Branch de trabalho | `main`; fechamento da Fase 8 ainda não commitado |
@@ -286,7 +286,7 @@ Gantt e navegação completa por roda e barras independentes.
 ## Fase 9 — Identidade visual e ícone do aplicativo
 
 Estado: **Implementada; validação de distribuição pendente**. Versão-alvo:
-`0.2.0`.
+`0.2.1`.
 
 ### Escopo
 
@@ -318,8 +318,10 @@ O Chrono Project possui um ícone aprovado, reconhecível e consistente na inter
 no Windows e nos artefatos de distribuição, sem regressão funcional.
 
 O símbolo, a interface e os derivados Tauri foram implementados em 24/09/2026.
-O encerramento da fase ainda depende da inspeção dos pontos de integração do
-Windows nos instaladores padrão e offline.
+Os executáveis e instaladores padrão/offline `0.2.1` foram gerados, assinados e
+validados localmente em 25/09/2026. O encerramento da fase ainda depende da
+atualização manual sobre `0.2.0` e da inspeção dos pontos de integração do
+Windows.
 
 ## Fase 10 — Análise e explicação do cronograma
 

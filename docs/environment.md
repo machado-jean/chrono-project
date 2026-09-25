@@ -136,6 +136,71 @@ Essa evidência não substitui o build Tauri, os instaladores, a assinatura do
 updater ou a inspeção do ícone nos pontos de integração do Windows. Esses gates
 permanecem pendentes em `docs/releases/next.md`.
 
+O executável de distribuição foi gerado em 24/09/2026, sem a feature
+`shared-dev-data`, em `src-tauri/target/release/chrono-project.exe`:
+
+| Versão | Tamanho | SHA-256 |
+| --- | ---: | --- |
+| `0.2.0` | 21.396.992 bytes | `629EB190F9DF7DCB034AEFBB8DED61476AEAF597AD0003238B7D34F85E6763A8` |
+
+A inspeção manual do executável e a geração dos novos instaladores permanecem
+separadas desse registro.
+
+Esse binário `0.2.0` foi produzido apenas para validar o pipeline local e foi
+substituído pelo candidato `0.2.1`. Ele não deve ser publicado nem reutilizado
+como artefato do novo release.
+
+## Validação local do candidato 0.2.1
+
+Em 25/09/2026, os gates executados para o candidato `0.2.1` produziram as
+seguintes durações observadas. Os tempos internos são os informados pelas
+ferramentas e servem somente para decidir se uma etapa futura requer pausa; não
+são metas de desempenho do produto.
+
+| Gate | Duração observada | Resultado |
+| --- | ---: | --- |
+| `npm ci` | 8 s | aprovado |
+| testes TypeScript/React | 21,10 s | 140 aprovados |
+| E2E da aplicação | 2,53 s | 1 aprovado |
+| compilação + testes Rust do E2E | 1 min 02 s | 37 aprovados |
+| testes de desempenho | 217 ms | 2 aprovados |
+| `cargo check --all-targets` | 34,94 s | aprovado |
+| `cargo test --all-targets` | 7,48 s | 37 aprovados |
+| Clippy com `-D warnings` | 4,54 s | aprovado |
+| build Vite | 775 ms | aprovado |
+| perfil Rust release do executável | 34,56 s | aprovado |
+| perfil Rust release do instalador padrão | 30,50 s | aprovado |
+| perfil Rust release do instalador offline | 30,48 s | aprovado |
+
+Executável `0.2.1` copiado para o staging:
+
+| Arquivo | Tamanho | SHA-256 |
+| --- | ---: | --- |
+| `chrono-project.exe` | 21.396.992 bytes | `05EB289518C638CA2D310716B255B5D8027A9D966F53A9A12BD2D61A6E8CE1E6` |
+| `Chrono-Project-Windows-x64-Setup.exe` | 7.296.987 bytes | `B294BA43A141187BF94072E473675A5F390B55F17A144454F8931390008A4516` |
+| `Chrono-Project-Windows-x64-Offline-Setup.exe` | 222.269.544 bytes | `99934312DD3CF727661486EDA5DD085818CC550E3223B1A8BFFD9F42127DEB5F` |
+
+As assinaturas dos instaladores padrão e offline foram geradas com sucesso e
+possuem 428 bytes cada.
+
+O conjunto foi finalizado em `.local/distribution/v0.2.1/`. A validação
+`PUBLISH_RELEASE.ps1 -VerifyOnly` aprovou versão, manifesto, hashes e assinaturas
+em 0,74 s. A retenção local preservou `v0.2.1`, `v0.2.0` e `v0.1.8` e removeu
+`v0.1.7`, liberando 0,25 GiB; o release removido permanece recuperável no
+GitHub.
+
+O instalador padrão `0.2.1` também foi executado manualmente com sucesso no
+Windows 11 x64 em 25/09/2026. O usuário confirmou a preservação dos dados da
+versão `0.2.0` e a presença correta do novo ícone nos pontos de integração do
+Windows verificados.
+
+Os tempos da tabela são durações internas reportadas pelas ferramentas, não o
+tempo total de parede de todos os comandos. Em particular, a compilação e os
+testes Rust do E2E levaram 1 min 02 s. Nos instaladores, os valores de 30,50 s e
+30,48 s representam somente o perfil Rust release; o NSIS e a espera pelo prompt
+de assinatura não emitiram uma duração total. Portanto, não há evidência para
+afirmar que todos os comandos completos ficaram abaixo de um minuto.
+
 Instalação global:
 
 - Node: MSI oficial x64, instalação por máquina.

@@ -3,6 +3,14 @@
 Este checklist complementa `AGENTS.md`. Publicar os arquivos no GitHub não encerra
 o release: a execução de CI associada à **tag** também precisa ficar verde.
 
+O procedimento operacional completo, incluindo executável, instaladores,
+assinaturas, staging, scripts e protocolo de espera, está em
+[`release-runbook.md`](release-runbook.md) e deve ser seguido integralmente.
+
+O agente prepara artefatos, documentação interna e conteúdo do GitHub Release.
+O usuário executa pessoalmente as duas etapas finais: commit/push e publicação
+por `PUBLISH_RELEASE.ps1`.
+
 ## Antes da tag
 
 1. Confirmar versão consistente em `package.json`, `Cargo.toml`, `Cargo.lock` e
@@ -15,7 +23,7 @@ o release: a execução de CI associada à **tag** também precisa ficar verde.
    tarefas, menu Iniciar, atalho, lista de aplicativos, instalador e
    desinstalador.
 5. Registrar tamanhos e SHA-256 dos dois instaladores em
-   [`releases/v0.2.0.md`](releases/v0.2.0.md).
+   [`releases/v0.2.1.md`](releases/v0.2.1.md).
 6. Criar o commit somente após a aprovação dessa auditoria.
 
 ## Depois de publicar
@@ -23,7 +31,7 @@ o release: a execução de CI associada à **tag** também precisa ficar verde.
 No PowerShell, execute:
 
 ```powershell
-.\scripts\Check-ReleaseCi.ps1 -Tag v0.2.0
+.\scripts\Check-ReleaseCi.ps1 -Tag v0.2.1
 ```
 
 O script espera o workflow `CI` da tag aparecer, acompanha a execução e termina

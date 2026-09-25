@@ -2003,3 +2003,87 @@ explicitamente solicitada pelo usuário.
 5. arquivar o executável antes de qualquer limpeza automática do cache;
 6. não remover dados do usuário, releases publicadas ou artefatos históricos;
 7. avisar que a primeira compilação após `cargo clean` será mais demorada.
+8. preservar somente os três releases versionados mais recentes em
+   `.local\distribution`, usando `npm run releases:status` para inspeção e
+   `npm run releases:clean` para aplicar a retenção;
+9. nunca remover automaticamente pastas `-staging` ou `-new` durante um build;
+10. manter cache verificado do WebView2 em `.local\tools\webview2` quando a
+    integração oficial permitir reutilização segura.
+
+---
+
+# 69. RUNBOOK OBRIGATÓRIO DE RELEASE
+
+Quando o usuário pedir para gerar, preparar ou publicar um novo release, o
+Codex deve ler e seguir integralmente:
+
+```text
+docs/release-runbook.md
+```
+
+Esse runbook é obrigatório e define:
+
+- limites entre geração local e publicação remota;
+- inspeção de Git e consistência de versão;
+- gates de qualidade;
+- geração do executável de distribuição;
+- instalador padrão e instalador offline;
+- assinatura do updater;
+- nomes e conteúdo da pasta de distribuição;
+- release notes, `latest.json`, hashes e registro de build;
+- `VERIFY_SIGNATURES.mjs`, `SIGN_AND_FINALIZE.ps1` e `PUBLISH_RELEASE.ps1`;
+- validação do CI de `main` e do CI da tag;
+- relatório final do release.
+
+## 69.1 Regra de pausa acima de um minuto
+
+Para toda etapa com duração prevista superior a um minuto, o Codex deve:
+
+1. iniciar a etapa em sessão persistente;
+2. informar o ID da sessão;
+3. fornecer um comando para o usuário acompanhar o status;
+4. explicar o sinal esperado de sucesso e prompts interativos possíveis;
+5. encerrar o turno imediatamente;
+6. não fazer polling nem continuar raciocínio ou outras etapas;
+7. aguardar o usuário confirmar que pode continuar;
+8. consultar o resultado uma única vez e só então avançar.
+
+Essa regra também vale para testes extensos, Cargo, Tauri, instaladores,
+downloads, assinatura, CI e publicação. Senhas e chaves nunca devem ser pedidas
+ou exibidas no chat.
+
+O comando de acompanhamento preferencial é o loop de 30 segundos documentado
+em `docs/release-runbook.md`. Ele deve mostrar somente processos relacionados,
+encerrar quando nenhum for encontrado e exibir que o processo terminou e precisa
+de validação do agente.
+
+O gate `npm run test:e2e` possui exceção operacional documentada no runbook:
+com cache aquecido e histórico próximo de um minuto, pode ser acompanhado até o
+fim sem pausa. Ao ultrapassar 90 segundos ou deixar de apresentar progresso,
+retomar o protocolo obrigatório de espera longa.
+
+## 69.2 Frases de autorização
+
+- **Gerar/preparar um release** autoriza somente trabalho local e artefatos.
+- **Publicar o release** autoriza tag e GitHub Release depois dos gates.
+- Commit e push continuam exigindo autorização explícita quando não fizerem
+  parte inequívoca do pedido.
+- Force-push, alteração de tag publicada ou substituição de release exigem
+  autorização específica, mesmo durante um fluxo de publicação.
+
+## 69.3 Handoff obrigatório ao usuário
+
+Antes das etapas finais, o Codex deve atualizar:
+
+- toda documentação interna do repositório;
+- as release notes destinadas à tela do GitHub;
+- hashes, manifesto, registro de build e scripts de verificação/publicação.
+
+As duas últimas etapas são executadas obrigatoriamente pelo usuário:
+
+1. revisar, criar o commit e fazer push;
+2. publicar o release com o `PUBLISH_RELEASE.ps1` preparado e validado.
+
+O Codex deve parar antes dessas ações, fornecer instruções exatas e aguardar a
+confirmação do usuário. Depois do push, pode verificar `origin/main` e o CI; após
+a publicação feita pelo usuário, pode verificar o CI da tag conforme o runbook.

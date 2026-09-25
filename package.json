@@ -1,7 +1,7 @@
 {
   "name": "chrono-project",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Local-first desktop project planning for Windows.",
   "type": "module",
   "packageManager": "npm@11.19.0",
@@ -33,6 +33,8 @@
     "tauri:build:installer:offline": "tauri build --bundles nsis --config src-tauri/tauri.offline.conf.json",
     "artifacts:status": "pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/Manage-BuildArtifacts.ps1",
     "artifacts:clean": "pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/Manage-BuildArtifacts.ps1 -Clean",
+    "releases:status": "pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/Manage-ReleaseArtifacts.ps1",
+    "releases:clean": "pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/Manage-ReleaseArtifacts.ps1 -Clean",
     "audit:build": "pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/Build-Audit.ps1",
     "audit:archive-current": "pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/Build-Audit.ps1 -SkipBuild"
   },

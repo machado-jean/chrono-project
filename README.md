@@ -104,7 +104,7 @@ Documentação principal:
 - [diretrizes e evidências WebView2](docs/webview2-testing.md);
 - [validação da atualização em VM](docs/vm-validation-record.md);
 - [preparação do próximo release](docs/releases/next.md);
-- [notas do Chrono Project v0.2.0](docs/releases/v0.2.0.md);
+- [notas do Chrono Project v0.2.1](docs/releases/v0.2.1.md);
 - [decisões arquiteturais](docs/decisions/).
 
 ## Preparação
@@ -244,9 +244,15 @@ npm run audit:build
 npm run audit:archive-current
 npm run artifacts:status
 npm run artifacts:clean
+npm run releases:status
+npm run releases:clean
 ```
 
 `audit:archive-current` arquiva o executável já existente sem recompilar. O cache
 Cargo em `src-tauri\target` é preservado enquanto estiver abaixo de 20 GiB. Após
 arquivar um novo build, `audit:build` limpa esse cache automaticamente se o limite
 for atingido. A compilação seguinte à limpeza será completa e mais demorada.
+
+Os comandos `releases:*` mantêm somente os três releases versionados mais
+recentes em `.local\distribution`. Pastas de staging não são removidas por
+padrão, protegendo builds e finalizações em andamento.
