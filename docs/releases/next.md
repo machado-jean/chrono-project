@@ -58,10 +58,12 @@ deve apagar ou recriar o banco do usuário.
 - [x] `RELEASE_NOTES.md`, `BUILD_RECORD.json`, `VERIFY_SIGNATURES.mjs`,
   `SIGN_AND_FINALIZE.ps1` e `PUBLISH_RELEASE.ps1` gerados e validados;
 - [x] documentação interna e texto externo do GitHub Release revisados;
-- [ ] commit e push executados pelo usuário;
-- [ ] CI de `main` aprovado;
-- [ ] publicação executada pelo usuário com `PUBLISH_RELEASE.ps1`;
-- [ ] tag `v0.2.1` ligada ao commit aprovado em `main`, sem CI duplicado.
+- [x] commit e push executados pelo usuário;
+- [x] CI de `main` aprovado para o commit publicado;
+- [x] publicação executada pelo usuário com `PUBLISH_RELEASE.ps1`;
+- [x] tag `v0.2.1` ligada ao commit aprovado em `main`;
+- [x] CI redundante da tag, iniciado ainda pela política anterior, concluído com
+  sucesso e registrado; gatilho corrigido no commit posterior `661e5b8`.
 
 ## Artefatos locais
 
