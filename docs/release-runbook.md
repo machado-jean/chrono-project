@@ -317,6 +317,13 @@ trocar a fonte do download nem desativar a verificação. Copiar o resultado par
 
 ## 10. Documentação antes da publicação
 
+Toda documentação versionada deve chegar ao commit final pronta para permanecer
+imutável durante a publicação. Release notes não podem conter `PENDENTE`, texto
+provisório, hashes ausentes ou campos reservados para preenchimento posterior.
+Se uma informação só passa a existir depois da criação da tag ou do GitHub
+Release, ela deve ser omitida do documento versionado e registrada nos
+artefatos/serviços de publicação, sem exigir novo commit.
+
 Atualizar:
 
 - `docs/releases/vX.Y.Z.md`: novidades, compatibilidade, instalação, validação,
@@ -354,6 +361,16 @@ conjuntos de documentação:
 
 O conteúdo interno e o externo devem descrever a mesma versão e os mesmos
 artefatos. Não entregar release notes genéricas ou desatualizadas.
+
+Antes do handoff para commit/push, pesquisar nas notas e documentos do release:
+
+```powershell
+rg -n 'PENDENTE|TODO|TBD|preencher depois|preencher após' docs/releases README.md
+```
+
+Qualquer ocorrência relacionada ao release corrente deve ser resolvida ou
+removida. Registros históricos não devem ser reescritos apenas por usarem um
+formato antigo.
 
 ## 11. Publicação remota
 

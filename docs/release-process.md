@@ -11,6 +11,11 @@ O agente prepara artefatos, documentação interna e conteúdo do GitHub Release
 O usuário executa pessoalmente as duas etapas finais: commit/push e publicação
 por `PUBLISH_RELEASE.ps1`.
 
+As release notes versionadas precisam estar completas antes desse commit, sem
+campos `PENDENTE` ou valores destinados a preenchimento pós-publicação. URLs e
+identificadores que só existirem depois da publicação devem permanecer no
+GitHub Release, no registro de build e no relatório final, sem novo commit.
+
 ## Antes da tag
 
 1. Confirmar versão consistente em `package.json`, `Cargo.toml`, `Cargo.lock` e

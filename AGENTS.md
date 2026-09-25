@@ -2092,3 +2092,21 @@ O Codex deve parar antes dessas ações, fornecer instruções exatas e aguardar
 confirmação do usuário. Depois do push, pode verificar `origin/main` e o CI; após
 a publicação feita pelo usuário, deve confirmar que a tag aponta para o mesmo
 commit aprovado em `main`, sem nova execução do quality gate.
+
+## 69.4 Release notes completas antes do commit
+
+As release notes e a documentação versionada do release devem estar completas
+antes do commit final. Não incluir campos `PENDENTE`, placeholders para hash,
+commit, URL, CI, data de publicação ou tabelas que precisem de preenchimento
+depois que a tag for criada.
+
+Informações conhecidas antes da publicação, como versão, funcionalidades,
+compatibilidade, nomes dos artefatos, tamanhos, hashes, resultados dos gates e
+instruções de instalação, devem ser preenchidas integralmente antes do handoff
+de commit e push.
+
+Informações que só existem depois da publicação, como URL definitiva do release,
+identificador da execução remota e horário efetivo, não devem criar obrigação de
+novo commit. Elas ficam registradas no GitHub Release, no `BUILD_RECORD.json`,
+na saída do publicador e no relatório final do agente. Não mover tag nem
+substituir assets publicados apenas para atualizar documentação.
