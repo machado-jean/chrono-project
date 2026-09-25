@@ -34,9 +34,10 @@ No PowerShell, execute:
 .\scripts\Check-ReleaseCi.ps1 -Tag v0.2.1
 ```
 
-O script espera o workflow `CI` da tag aparecer, acompanha a execução e termina
-com erro caso algum job falhe. O release somente pode ser registrado como
-validado quando o comando terminar com sucesso.
+O script resolve o commit apontado pela tag, localiza o workflow `CI` de `main`
+já aprovado para esse mesmo commit e confirma que a tag não disparou um CI
+redundante. O release somente pode ser registrado como validado quando o comando
+terminar com sucesso.
 
 Se houver falha, veja os trechos relevantes com:
 
@@ -44,14 +45,14 @@ Se houver falha, veja os trechos relevantes com:
 gh run view <ID_DA_EXECUCAO> --log-failed
 ```
 
-Não confundir as duas execuções que normalmente compartilham o mesmo commit:
-uma pertence a `main`; a outra, à tag. Ambas devem ser informadas, e a tag é o
-gate pós-publicação obrigatório.
+O workflow principal não responde a tags. Uma futura automação acionada por
+`v*` deve ficar em um workflow de release separado e não repetir o quality gate.
 
 ## Evidência mínima no registro
 
 - tag e commit;
-- URL da execução da tag;
-- conclusão do workflow;
+- URL da execução de `main` reutilizada;
+- confirmação de que a tag aponta para o mesmo commit aprovado;
+- confirmação de ausência de CI duplicado para a tag;
 - instaladores publicados e respectivos hashes;
 - resultado do teste de atualização a partir da versão anterior.

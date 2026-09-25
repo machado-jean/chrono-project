@@ -61,7 +61,7 @@ deve apagar ou recriar o banco do usuário.
 - [ ] commit e push executados pelo usuário;
 - [ ] CI de `main` aprovado;
 - [ ] publicação executada pelo usuário com `PUBLISH_RELEASE.ps1`;
-- [ ] CI disparado pela tag `v0.2.1` aprovado.
+- [ ] tag `v0.2.1` ligada ao commit aprovado em `main`, sem CI duplicado.
 
 ## Artefatos locais
 

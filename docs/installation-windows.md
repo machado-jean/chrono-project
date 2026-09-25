@@ -109,6 +109,6 @@ desenvolvimento.
 ## Gate pós-publicação
 
 Depois de criar a tag e o release, execute o verificador descrito em
-[`release-process.md`](release-process.md). Uma execução bem-sucedida em `main`
-não substitui a execução disparada pela tag; o release só está validado quando o
-CI da tag também termina com sucesso.
+[`release-process.md`](release-process.md). Ele confirma que a tag aponta para o
+mesmo commit aprovado pelo CI de `main` e que nenhuma execução redundante do
+quality gate foi criada para a tag.

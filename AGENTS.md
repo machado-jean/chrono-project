@@ -678,20 +678,23 @@ Dentro de cada checkpoint podem existir vários commits locais coerentes.
 
 ## 12.6 Verificação obrigatória após release
 
-Depois de publicar uma tag ou release, o trabalho de distribuição ainda não está
-concluído até que o workflow `CI` disparado pela própria tag termine com sucesso.
+O workflow principal `CI` deve executar somente em push para `main` e em pull
+requests cujo destino seja `main`. Tags não devem disparar novamente o mesmo
+quality gate para um commit já validado.
 
-O agente deve:
+Depois de publicar uma tag ou release, o agente deve:
 
-1. localizar a execução cuja branch/ref seja exatamente a tag publicada;
-2. aguardar sua conclusão;
-3. confirmar resultado `success`;
-4. em caso de falha, abrir os logs do job que falhou, registrar a causa e corrigir
-   antes de considerar o release validado;
-5. informar separadamente o resultado do CI de `main` e o resultado do CI da tag.
+1. resolver o commit exato apontado pela tag publicada;
+2. confirmar que esse commit possui uma execução do workflow `CI` de `main` com
+   resultado `success`;
+3. confirmar que a tag não disparou uma execução redundante do workflow `CI`;
+4. validar que o GitHub Release aponta para a mesma tag e commit;
+5. registrar a URL do CI de `main` reutilizado e a URL pública do release.
 
-Uma execução verde de `main` não substitui a verificação da tag. Nunca mover ou
-recriar uma tag já publicada para corrigir uma falha sem autorização explícita.
+Se futuramente a publicação for automatizada por GitHub Actions, usar um workflow
+dedicado `.github/workflows/release.yml`, acionado por tags `v*` e limitado às
+responsabilidades de release. Não duplicar nele o quality gate completo do CI.
+Nunca mover ou recriar uma tag já publicada sem autorização explícita.
 
 O GitHub versiona:
 
@@ -2032,7 +2035,8 @@ Esse runbook é obrigatório e define:
 - nomes e conteúdo da pasta de distribuição;
 - release notes, `latest.json`, hashes e registro de build;
 - `VERIFY_SIGNATURES.mjs`, `SIGN_AND_FINALIZE.ps1` e `PUBLISH_RELEASE.ps1`;
-- validação do CI de `main` e do CI da tag;
+- validação do CI de `main` e da correspondência entre tag, commit e release,
+  sem CI duplicado para a tag;
 - relatório final do release.
 
 ## 69.1 Regra de pausa acima de um minuto
@@ -2086,4 +2090,5 @@ As duas últimas etapas são executadas obrigatoriamente pelo usuário:
 
 O Codex deve parar antes dessas ações, fornecer instruções exatas e aguardar a
 confirmação do usuário. Depois do push, pode verificar `origin/main` e o CI; após
-a publicação feita pelo usuário, pode verificar o CI da tag conforme o runbook.
+a publicação feita pelo usuário, deve confirmar que a tag aponta para o mesmo
+commit aprovado em `main`, sem nova execução do quality gate.

@@ -1323,6 +1323,6 @@ matriz no host, na VM limpa e no CI Windows.
 - Atualizar o histórico na mesma entrega que altera o estado do roadmap.
 - Não apagar falhas ou decisões superadas; registrar a resolução em nova entrada.
 - Não executar push, merge, tag ou release sem autorização explícita.
-- Depois de uma publicação autorizada, verificar e informar separadamente o CI
-  de `main` e o CI da tag; o release só fica validado com a tag verde.
+- Depois de uma publicação autorizada, confirmar que a tag aponta para o commit
+  aprovado pelo CI de `main` e que ela não disparou o quality gate novamente.
 - Não avançar automaticamente para a fase seguinte após concluir um checkpoint.

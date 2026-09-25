@@ -2,7 +2,11 @@ name: CI
 
 on:
   push:
+    branches:
+      - main
   pull_request:
+    branches:
+      - main
 
 permissions:
   contents: read
@@ -26,6 +30,10 @@ jobs:
         with:
           node-version: 24.20.0
           cache: npm
+
+      - name: Install pinned Rust toolchain
+        shell: pwsh
+        run: rustup toolchain install 1.98.0-x86_64-pc-windows-msvc --profile minimal --component rustfmt --component clippy --target x86_64-pc-windows-msvc
 
       - name: Select pinned Rust toolchain
         shell: pwsh

@@ -116,7 +116,7 @@ Antes de cada comando, usar a mediana recente daquele mesmo gate como referênci
   turno somente se o processo continuar ativo após o retorno inicial;
 - mediana acima de 60 segundos, ou etapa sem histórico confiável: iniciar em
   sessão persistente, fornecer o monitor e pausar imediatamente;
-- instaladores padrão/offline, assinatura interativa, publicação e CI da tag
+- instaladores padrão/offline, assinatura interativa e publicação
   continuam sendo tratados como demorados independentemente do cache local.
 
 Exceção aprovada para o Chrono Project: o gate `npm run test:e2e` pode ser
@@ -372,21 +372,26 @@ Depois que o usuário confirmar commit e push:
 2. confirmar o CI de `main` do commit exato;
 3. orientar o usuário a executar `PUBLISH_RELEASE.ps1 -VerifyOnly`;
 4. após a validação, orientar o usuário a executar `PUBLISH_RELEASE.ps1`;
-5. o script deve publicar tag `vX.Y.Z` sem movê-la posteriormente;
-6. o script deve anexar executáveis, `.sig`, `latest.json` e
+5. o script deve aguardar por até cinco minutos o CI do commit aparecer e, se
+   estiver `queued` ou `in_progress`, acompanhar a mesma execução com
+   `gh run watch --exit-status`; somente `success` libera a publicação;
+6. timeout, falha ou cancelamento do CI devem encerrar o script antes da criação
+   da tag;
+7. o script deve publicar tag `vX.Y.Z` sem movê-la posteriormente;
+8. o script deve anexar executáveis, `.sig`, `latest.json` e
    `SHA256SUMS.txt` ao GitHub Release;
-7. o script deve usar `RELEASE_NOTES.md` como corpo da release;
-8. aplicar o protocolo de espera longa ao CI da tag;
-9. após confirmação do usuário, validar uma única vez com:
+9. o script deve usar `RELEASE_NOTES.md` como corpo da release;
+10. confirmar que a tag aponta para o mesmo commit aprovado pelo CI de `main`;
+11. confirmar que a tag não iniciou uma execução duplicada do workflow `CI` com:
 
    ```powershell
    .\scripts\Check-ReleaseCi.ps1 -Tag vX.Y.Z
    ```
 
-10. informar separadamente o CI de `main` e o CI da tag.
+12. informar a URL do CI de `main` reutilizado e a URL do release.
 
-Uma release não está concluída enquanto o CI da própria tag não terminar com
-`success`.
+O workflow principal `CI` não deve responder a tags. Se houver automação por tag,
+ela deve usar um workflow dedicado de release e não repetir o quality gate.
 
 ## 12. Relatório final
 
