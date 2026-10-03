@@ -23,10 +23,14 @@ As Fases 0 a 6 estão concluídas e o Checkpoint Git 7 foi consolidado no commit
 - calendário configurável com segunda a domingo, feriados e exceções;
 - calendário opcional **Todos os dias** para tarefas de fim de semana;
 - cálculo assistido entre início, fim e duração;
-- predecessoras Término para Início, lag, múltiplas relações e prevenção de ciclos;
+- predecessoras Término para Início, inclusive por tarefa-resumo, lag, múltiplas
+  relações e prevenção de ciclos combinados com a hierarquia;
 - propagação reativa de tarefas automáticas, para frente ou para trás, e aviso
   para conflitos manuais;
-- tarefas-resumo com datas derivadas;
+- tarefas-resumo com datas derivadas e tarefas manuais com trava explícita contra
+  arrasto ou reagendamento automático;
+- prévia de impacto ao relacionar resumos, trava em massa e atalho
+  `Ctrl+Shift+L` para tarefas selecionadas;
 - planos de referência nomeados e imutáveis, com histórico de revisões e
   exclusão confirmada sem impacto nas tarefas atuais;
 - datas planejadas versus atuais, desvio em dias úteis, prazo-limite e saúde;
@@ -34,7 +38,7 @@ As Fases 0 a 6 estão concluídas e o Checkpoint Git 7 foi consolidado no commit
 - filtros compartilhados por texto, status, prioridade, conclusão, datas e tag;
 - Kanban por status com drag-and-drop e campo **Status** acessível;
 - Gantt com hierarquia, progresso, dependências FS, ajuste automático de lag,
-  menu de contexto, desfazer/refazer, resumos, escalas, fins de semana,
+  menu de contexto, desfazer/refazer persistente por projeto, resumos, escalas, fins de semana,
   feriados, foco de dependência e edição temporal segura;
 - sincronização imediata entre Tabela, Kanban e Gantt;
 - janela principal maximizada na inicialização;
@@ -105,6 +109,7 @@ Documentação principal:
 - [validação da atualização em VM](docs/vm-validation-record.md);
 - [preparação do próximo release](docs/releases/next.md);
 - [notas do Chrono Project v0.2.1](docs/releases/v0.2.1.md);
+- [notas do Chrono Project v0.2.2](docs/releases/v0.2.2.md);
 - [decisões arquiteturais](docs/decisions/).
 
 ## Preparação

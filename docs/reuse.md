@@ -18,7 +18,8 @@ template não exclui nem altera tarefas anteriormente criadas com ele.
 ## Conteúdo de um template
 
 São preservados título, descrição, hierarquia, duração das folhas, prioridade,
-status inicial, tags e dependências FS internas com lag. Não são preservados
+status inicial, tags e dependências FS internas com lag, inclusive quando a
+predecessora é um resumo. Não são preservados
 código visual, responsável, observações, progresso, datas absolutas nem o
 calendário específico da tarefa. As tarefas aplicadas iniciam em modo `AUTO`,
 com progresso zero, e usam o calendário do projeto de destino.

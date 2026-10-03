@@ -199,6 +199,27 @@ async function workspaceSnapshot(page: Page): Promise<unknown> {
   });
 }
 
+async function schedulingSnapshot(page: Page): Promise<{
+  readonly dependencies: number;
+  readonly tasks: Readonly<Record<string, { readonly startDate: string | null; readonly endDate: string | null; readonly durationDays: number | null }>>;
+}> {
+  return await page.evaluate(async () => {
+    const bridge = Reflect.get(window, "__TAURI_INTERNALS__") as { invoke: (command: string) => Promise<unknown> };
+    const workspace = await bridge.invoke("load_workspace") as {
+      dependencies: unknown[];
+      tasks: { title: string; startDate: string | null; endDate: string | null; durationDays: number | null }[];
+    };
+    return {
+      dependencies: workspace.dependencies.length,
+      tasks: Object.fromEntries(workspace.tasks.map((task) => [task.title, {
+        startDate: task.startDate,
+        endDate: task.endDate,
+        durationDays: task.durationDays,
+      }])),
+    };
+  });
+}
+
 async function emulateWindowsScale(cdp: CDPSession, scale: number): Promise<void> {
   await cdp.send("Emulation.setDeviceMetricsOverride", {
     deviceScaleFactor: scale,
@@ -223,7 +244,12 @@ async function findByExactText(context: SearchContext, selector: string, text: s
 }
 
 async function waitForInputValue(locator: Locator, expected: string): Promise<void> {
-  await waitUntil(async () => await locator.inputValue() === expected, `o valor “${expected}”`);
+  let actual = "";
+  await waitUntil(async () => {
+    actual = await locator.inputValue();
+    if (actual !== expected) throw new Error(`Valor atual: “${actual}”.`);
+    return true;
+  }, `o valor “${expected}”`);
 }
 
 async function setValue(locator: Locator, value: string): Promise<void> {
@@ -266,8 +292,19 @@ async function scheduleTask(page: Page, title: string, startDate: string, durati
   const row = await taskRow(page, title);
   await setValue(row.locator('[aria-label="Início da tarefa"]'), startDate);
   await setValue(row.locator('[aria-label="Duração da tarefa"]'), String(duration));
-  await (await findByExactText(row, "button", "Salvar")).click();
-  await waitUntil(async () => (await row.innerText()).includes("Salva"), `o salvamento de “${title}”`);
+  const saveButton = await findByExactText(row, "button", "Salvar");
+  await saveButton.click();
+  await waitUntil(
+    async () => {
+      const buttonCount = await row.locator('button.save-row-button').count();
+      const status = await row.locator('[role="status"]').innerText();
+      if (buttonCount !== 0 || status !== "Salva") {
+        throw new Error(`Estado atual: status “${status}”, ${String(buttonCount)} botão(ões) Salvar.`);
+      }
+      return true;
+    },
+    `o salvamento de “${title}”`,
+  );
 }
 
 describe("fluxo mínimo do Chrono Project no Tauri real", () => {
@@ -329,10 +366,24 @@ describe("fluxo mínimo do Chrono Project no Tauri real", () => {
     await rowC.locator('[aria-label="Nova predecessora de Tarefa C"]').selectOption({ label: "2. Tarefa B" });
     await rowC.locator('[aria-label="Confirmar predecessora de Tarefa C"]').click();
     await waitUntil(async () => (await rowC.innerText()).includes("2. Tarefa B"), "a predecessora de Tarefa C");
+    await waitForInputValue(rowB.locator('[aria-label="Duração da tarefa"]'), "2");
 
     const rowA = await taskRow(page, "Tarefa A");
     await setValue(rowA.locator('[aria-label="Início da tarefa"]'), "2026-09-03");
-    await (await findByExactText(rowA, "button", "Salvar")).click();
+    // A edição válida é persistida automaticamente; o botão Salvar aparece
+    // somente enquanto existe rascunho ou para permitir nova tentativa.
+    await waitUntil(
+      async () => await rowA.locator('button.save-row-button').count() === 0 && (await rowA.locator('[role="status"]').innerText()) === "Salva",
+      "o salvamento automático de Tarefa A",
+    );
+    expect(await schedulingSnapshot(page)).toMatchObject({
+      dependencies: 2,
+      tasks: {
+        "Tarefa A": { startDate: "2026-09-03", endDate: "2026-09-04", durationDays: 2 },
+        "Tarefa B": { startDate: "2026-09-04", endDate: "2026-09-07", durationDays: 2 },
+        "Tarefa C": { startDate: "2026-09-07", endDate: "2026-09-07", durationDays: 1 },
+      },
+    });
     await waitForInputValue(rowB.locator('[aria-label="Início da tarefa"]'), "2026-09-04");
     await waitForInputValue(rowC.locator('[aria-label="Início da tarefa"]'), "2026-09-07");
 

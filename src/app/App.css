@@ -88,6 +88,14 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .project-context-menu button { min-height: 32px; padding: 7px 9px; text-align: left; color: #40546b; background: transparent; border: 0; border-radius: 5px; font-size: 12px; }
 .project-context-menu button:hover:not(:disabled) { color: #174ea6; background: #edf3fb; }
 .project-context-menu button.danger-menu-item { color: #b42318; }
+.app-context-menu { position: fixed; z-index: 320; display: grid; width: 260px; max-height: calc(100vh - 16px); padding: 7px; overflow-y: auto; color: #344054; background: #fff; border: 1px solid #cfd8e3; border-radius: 9px; box-shadow: 0 14px 34px rgb(15 23 42 / 24%); }
+.app-context-menu strong { padding: 7px 9px; overflow: hidden; color: #667085; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.app-context-menu button { min-height: 32px; padding: 7px 9px; text-align: left; color: #40546b; background: transparent; border: 0; border-radius: 5px; font-size: 12px; }
+.app-context-menu button:hover:not(:disabled), .app-context-menu button:focus-visible { color: #174ea6; background: #edf3fb; outline: 0; }
+.app-context-menu button:disabled { color: #9aa6b5; }
+.app-context-menu button.menu-separator { margin-top: 5px; border-top: 1px solid #e4e9ef; border-radius: 0 0 5px 5px; }
+.app-context-menu button.danger-menu-item { color: #b42318; }
+.app-context-menu button.danger-menu-item:hover:not(:disabled), .app-context-menu button.danger-menu-item:focus-visible { color: #981b12; background: #fff1f0; }
 
 .workspace-main { position: relative; min-width: 0; height: 100vh; overflow: auto; }
 .project-workspace { display: flex; min-height: 100%; flex-direction: column; }
@@ -162,11 +170,24 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .task-toolbar { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin-bottom: 12px; }
 .task-toolbar h2 { margin: 0; color: #273444; font-size: 15px; }
 .task-toolbar p { margin: 4px 0 0; color: #7b8794; font-size: 11px; }
+.bulk-task-actions { display: flex; align-items: center; gap: 6px; padding: 5px 7px; border: 1px solid #cbd4df; border-radius: 8px; background: #f8fafc; }
+.bulk-task-actions span { color: #526171; font-size: 11px; }
+.bulk-task-actions button { min-height: 30px; padding: 5px 8px; border: 1px solid #b8c4d1; border-radius: 6px; background: #fff; color: #1f2937; font-size: 11px; }
+.bulk-task-actions button:hover:not(:disabled) { border-color: #6b7f96; background: #eef3f8; }
 .quick-task-form { display: flex; align-items: center; gap: 7px; }
 .quick-task-form input, .quick-task-form select { min-height: 34px; padding: 7px 9px; background: #fff; border: 1px solid #cbd4df; border-radius: 7px; font-size: 12px; }
 .quick-task-form input { width: 230px; }
 .quick-task-form select { max-width: 180px; }
+.dependency-impact-dialog { width: min(680px, calc(100vw - 40px)); }
+.dependency-impact-list { display: grid; gap: 8px; max-height: 280px; margin: 4px 0 16px; padding: 0; overflow: auto; list-style: none; }
+.dependency-impact-list li { display: grid; grid-template-columns: minmax(140px, 1fr) auto auto auto; align-items: center; gap: 9px; padding: 9px 10px; border: 1px solid #d8e0e8; border-radius: 7px; background: #f8fafc; font-size: 12px; }
+.dependency-impact-list li span { color: #526171; }
+.table-scroll-shell { position: relative; min-width: 0; }
 .table-scroll { min-height: 340px; overflow: auto; background: #fff; border: 1px solid #dce2e9; border-radius: 9px; box-shadow: 0 1px 2px rgb(31 41 51 / 4%); }
+.table-scroll::-webkit-scrollbar:horizontal { height: 0; }
+.table-horizontal-scrollbar { position: sticky; z-index: 18; bottom: 0; height: 18px; overflow-x: auto; overflow-y: hidden; background: #f1f4f8; border: 1px solid #cdd6e1; border-top: 0; border-radius: 0 0 8px 8px; box-shadow: 0 -2px 8px rgb(31 41 51 / 8%); scrollbar-color: #8291a3 #e6ebf1; scrollbar-width: auto; }
+.table-horizontal-scrollbar > div { height: 1px; }
+.table-horizontal-scrollbar:focus-visible { outline: 2px solid #2563eb; outline-offset: 1px; }
 
 .task-table { width: 100%; min-width: 2000px; border-collapse: separate; border-spacing: 0; table-layout: fixed; }
 .task-table:has(.baseline-date-cell) { min-width: 2300px; }
@@ -200,6 +221,11 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .cell-input:hover, .cell-select:hover, .cell-input:focus, .cell-select:focus { background: #fff; border-color: #cbd4df; }
 .title-input { font-size: 12px; font-weight: 600; }
 .summary-badge { margin-left: 5px; padding: 2px 5px; color: #53657a; background: #e9eef4; border-radius: 4px; font-size: 8px; font-weight: 700; text-transform: uppercase; }
+.schedule-lock-button { display: inline-grid; width: 25px; min-width: 25px; height: 25px; margin-left: 5px; padding: 0; place-items: center; color: #506173; background: #f4f7fa; border: 1px solid #cbd5df; border-radius: 5px; font-size: 13px; }
+.schedule-lock-button.locked { color: #111827; background: #fff4d6; border-color: #d7a72f; }
+.schedule-lock-button:disabled { color: #8b98a7; background: #eef1f4; border-color: #d8dee5; }
+.detail-lock-button { display: inline-flex; min-height: 31px; align-items: center; justify-content: center; gap: 7px; color: #344054; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; }
+.detail-lock-button.locked { color: #6b4500; background: #fff8e7; border-color: #d7a72f; }
 .number-input, .duration-input { text-align: right; }
 .progress-editor { display: flex; align-items: center; color: #738091; font-size: 10px; }
 .date-input { min-width: 112px; }
@@ -248,11 +274,18 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .dependency-item input { width: 40px; padding: 2px; text-align: right; background: #fff; border: 1px solid #d1d9e2; border-radius: 3px; }
 .dependency-item button { padding: 2px 4px; color: #315d9e; background: transparent; border: 0; font-size: 8px; }
 .dependency-item .dependency-remove { color: #a13a32; font-size: 13px; }
-.dependency-add { display: grid; grid-template-columns: minmax(0, 1fr) 42px 58px; gap: 3px; }
+.dependency-add { display: grid; grid-template-columns: minmax(0, 1fr) 42px 28px; gap: 3px; }
 .dependency-add select, .dependency-add input, .dependency-add button { min-width: 0; min-height: 25px; padding: 3px 4px; background: #fff; border: 1px solid #d3dae3; border-radius: 4px; font-size: 9px; }
 .dependency-add input { text-align: right; }
-.dependency-add button { color: #fff; background: #3774d4; border-color: #2d63b8; font-weight: 700; }
+.dependency-add .dependency-add-button { padding: 0; color: #111827; background: #fff; border-color: #aeb9c6; font-size: 17px; font-weight: 750; line-height: 1; }
+.dependency-add .dependency-add-button:hover:not(:disabled) { color: #000; background: #edf3fb; border-color: #72859b; }
 .row-actions { text-align: center !important; }
+.task-more-button { width: 100%; min-height: 24px; padding: 0 5px; margin-bottom: 3px; color: #40546b; background: #fff; border: 1px solid #cbd5e1; border-radius: 5px; font-size: 15px; font-weight: 750; line-height: 1; }
+.task-more-button:hover:not(:disabled), .task-more-button[aria-expanded="true"] { color: #174ea6; background: #edf3fb; border-color: #a9b9cc; }
+.kanban-card-title > .kanban-card-actions { display: flex; min-width: auto; flex: 0 0 auto; align-items: center; gap: 5px; }
+.kanban-card-actions > span { padding: 2px 4px; color: #5d6d80; background: #e9eef4; border-radius: 4px; font-size: 7px; font-weight: 750; text-transform: uppercase; }
+.kanban-card-actions > button { display: grid; width: 24px; height: 24px; padding: 0; place-items: center; color: #52647a; background: transparent; border: 1px solid transparent; border-radius: 5px; font-size: 15px; font-weight: 750; line-height: 1; }
+.kanban-card-actions > button:hover:not(:disabled), .kanban-card-actions > button[aria-expanded="true"] { color: #174ea6; background: #edf3fb; border-color: #c7d3e0; }
 .row-order-buttons { display: flex; justify-content: center; margin-bottom: 3px; }
 .row-order-buttons button { width: 24px; min-height: 23px; padding: 1px; font-size: 11px; }
 .save-row-button, .delete-row-button { width: 100%; padding: 5px 6px; border-radius: 5px; font-size: 10px; }
@@ -260,6 +293,9 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .delete-row-button { margin-top: 4px; color: #9f2d25; background: transparent; border: 1px solid transparent; }
 .delete-row-button:hover { background: #fff4f2; border-color: #f1cbc7; }
 .saved-label { display: block; padding: 5px; color: #718096; font-size: 9px; }
+.saved-label.dirty { color: #8a5a00; }
+.saved-label.saving { color: #1d4ed8; }
+.saved-label.error { color: #b42318; font-weight: 700; }
 .empty-table { height: 240px; text-align: center !important; vertical-align: middle !important; }
 .empty-table strong, .empty-table span { display: block; }
 .empty-table strong { color: #445160; font-size: 13px; }
@@ -397,7 +433,6 @@ button.baseline-status.active { cursor: pointer; color: #175cd3; font-weight: 70
 .kanban-card-title > div { display: flex; min-width: 0; align-items: baseline; gap: 4px; }
 .kanban-outline-number { flex: 0 0 auto; color: #68788b; font-size: 10px; font-weight: 780; font-variant-numeric: tabular-nums; }
 .kanban-card-title strong { color: #2f3c4d; font-size: 11px; line-height: 1.35; }
-.kanban-card-title > span { padding: 2px 4px; color: #5d6d80; background: #e9eef4; border-radius: 4px; font-size: 7px; font-weight: 750; text-transform: uppercase; }
 .kanban-meta, .kanban-card-footer { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-top: 8px; color: #7c8998; font-size: 8px; }
 .priority { padding: 2px 5px; color: #53657a; background: #edf1f5; border-radius: 8px; font-weight: 700; }
 .priority-high { color: #9a4e12; background: #fff0d8; }
@@ -659,7 +694,7 @@ kbd { display: inline-block; min-width: 22px; padding: 2px 6px; color: #42526a; 
 .kanban-card-title strong { font-size: 12px; }
 .kanban-column > header span,
 .kanban-path,
-.kanban-card-title > span,
+.kanban-card-actions > span,
 .kanban-meta,
 .kanban-card-footer,
 .kanban-tags li,

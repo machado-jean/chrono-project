@@ -17,6 +17,7 @@ const ROOT_ID = "20000000-0000-4000-8000-000000000001";
 const FIRST_ID = "20000000-0000-4000-8000-000000000002";
 const SECOND_ID = "20000000-0000-4000-8000-000000000003";
 const EXTERNAL_ID = "20000000-0000-4000-8000-000000000004";
+const GRANDCHILD_ID = "20000000-0000-4000-8000-000000000005";
 
 const calendar: Calendar = {
   id: DEFAULT_CALENDAR_ID,
@@ -175,6 +176,53 @@ describe("reutilização de estruturas", () => {
       ["Modelo"],
       ["Modelo"],
     ]);
+  });
+
+  it("preserva resumo predecessor ao criar e aplicar template", () => {
+    const nestedTasks = [
+      task(ROOT_ID, "Entrega", null, 0),
+      task(FIRST_ID, "Bloco", ROOT_ID, 0),
+      task(GRANDCHILD_ID, "Última etapa", FIRST_ID, 0),
+      task(SECOND_ID, "Publicar bloco", ROOT_ID, 1),
+    ];
+    const nestedDependencies: readonly TaskDependency[] = [{
+      id: "40000000-0000-4000-8000-000000000003",
+      projectId: PROJECT_ID,
+      predecessorId: FIRST_ID,
+      successorId: SECOND_ID,
+      type: "FS",
+      lagDays: 1,
+      createdAt: NOW,
+      updatedAt: NOW,
+    }];
+    const bundle = createTemplateFromTaskTree({
+      name: "Entrega com resumo",
+      description: null,
+      rootTaskId: ROOT_ID,
+      tasks: nestedTasks,
+      dependencies: nestedDependencies,
+      idFactory: idFactory(),
+      timestamp: NOW,
+    });
+
+    const relation = bundle.dependencies[0];
+    const predecessor = bundle.items.find((item) => item.id === relation?.predecessorId);
+    const successor = bundle.items.find((item) => item.id === relation?.successorId);
+    expect(predecessor?.title).toBe("Bloco");
+    expect(successor?.title).toBe("Publicar bloco");
+
+    const applied = applyTaskTemplate({
+      bundle,
+      targetProject: project,
+      calendars: [calendar],
+      startDate: "2026-09-04",
+      rootPosition: 2,
+      idFactory: idFactory(),
+      timestamp: NOW,
+    });
+    const appliedRelation = applied.dependencies[0];
+    const appliedPredecessor = applied.tasks.find((candidate) => candidate.id === appliedRelation?.predecessorId);
+    expect(applied.tasks.some((candidate) => candidate.parentId === appliedPredecessor?.id)).toBe(true);
   });
 
   it("recusa criar template quando uma tarefa-folha não possui duração", () => {

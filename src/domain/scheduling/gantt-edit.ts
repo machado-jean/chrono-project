@@ -41,6 +41,9 @@ export function planGanttFsMove(
   dependencies: readonly TaskDependency[],
   tasks: readonly Task[],
 ): GanttFsMoveResult {
+  if (task.schedulingMode === "MANUAL") {
+    throw new Error("As datas estão travadas. Destrave o cadeado antes de mover a tarefa no Gantt.");
+  }
   if (task.startDate === null) throw new Error("A tarefa precisa de início para ser movida.");
   const requestedStartDate = addCalendarDays(task.startDate, differenceInCalendarDays);
   const requestedTask = applyGanttDateEdit(task, {
@@ -49,7 +52,7 @@ export function planGanttFsMove(
   }, calendar, { hasPredecessors: false, isSummary: false });
   if (requestedTask.startDate === null) throw new Error("A tarefa precisa de início para ser movida.");
   const incoming = dependencies.filter((dependency) => dependency.successorId === task.id);
-  if (task.schedulingMode === "MANUAL" || incoming.length === 0) {
+  if (incoming.length === 0) {
     return {
       task: requestedTask,
       dependencyUpdates: [],

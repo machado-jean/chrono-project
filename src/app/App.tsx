@@ -145,6 +145,9 @@ function App({ repository }: AppProps) {
               disabled={workspace.isSaving || workspace.selectedProject.isArchived}
               onCreate={workspace.createTask}
               onSave={workspace.saveTask}
+              onSetSchedulingMode={workspace.setTasksSchedulingMode}
+              onLoadGanttHistory={workspace.loadGanttHistory}
+              onSaveGanttHistory={workspace.saveGanttHistory}
               onMove={workspace.moveTask}
               onDelete={workspace.removeTaskTree}
               onCreateDependency={workspace.createDependency}

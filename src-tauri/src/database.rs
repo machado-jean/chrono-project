@@ -4,7 +4,7 @@ use tauri_plugin_sql::{Migration, MigrationKind};
 
 pub const PRODUCTION_DATABASE_URL: &str = "sqlite:chronoproject.sqlite";
 pub const DATABASE_FILENAME: &str = "chronoproject.sqlite";
-pub const DATABASE_SCHEMA_VERSION: i64 = 5;
+pub const DATABASE_SCHEMA_VERSION: i64 = 7;
 pub const SCHEDULING_MIGRATION_VERSION: i64 = 3;
 
 pub(crate) const INITIAL_SCHEMA: &str = include_str!("../migrations/0001_initial.sql");
@@ -12,6 +12,10 @@ pub(crate) const CORE_SCHEMA: &str = include_str!("../migrations/0002_core.sql")
 pub(crate) const SCHEDULING_SCHEMA: &str = include_str!("../migrations/0003_scheduling.sql");
 pub(crate) const REUSE_SCHEMA: &str = include_str!("../migrations/0004_reuse.sql");
 pub(crate) const PLAN_CONTROL_SCHEMA: &str = include_str!("../migrations/0005_plan_control.sql");
+pub(crate) const SUMMARY_PREDECESSORS_SCHEMA: &str =
+    include_str!("../migrations/0006_summary_predecessors.sql");
+pub(crate) const PERSISTENT_GANTT_HISTORY_SCHEMA: &str =
+    include_str!("../migrations/0007_persistent_gantt_history.sql");
 
 pub fn uses_shared_development_database() -> bool {
     !uses_e2e_database() && cfg!(any(debug_assertions, feature = "shared-dev-data"))
@@ -126,9 +130,21 @@ pub fn migrations() -> Vec<Migration> {
             kind: MigrationKind::Up,
         },
         Migration {
-            version: DATABASE_SCHEMA_VERSION,
+            version: 5,
             description: "add baselines and deadlines",
             sql: PLAN_CONTROL_SCHEMA,
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 6,
+            description: "allow summary task predecessors",
+            sql: SUMMARY_PREDECESSORS_SCHEMA,
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: DATABASE_SCHEMA_VERSION,
+            description: "persist gantt undo and redo history",
+            sql: PERSISTENT_GANTT_HISTORY_SCHEMA,
             kind: MigrationKind::Up,
         },
     ]
@@ -142,8 +158,9 @@ mod tests {
 
     use super::{
         database_path_for_mode, migrations, sqlite_url, CORE_SCHEMA, DATABASE_FILENAME,
-        DATABASE_SCHEMA_VERSION, INITIAL_SCHEMA, PLAN_CONTROL_SCHEMA, REUSE_SCHEMA,
-        SCHEDULING_MIGRATION_VERSION, SCHEDULING_SCHEMA,
+        DATABASE_SCHEMA_VERSION, INITIAL_SCHEMA, PERSISTENT_GANTT_HISTORY_SCHEMA,
+        PLAN_CONTROL_SCHEMA, REUSE_SCHEMA, SCHEDULING_MIGRATION_VERSION, SCHEDULING_SCHEMA,
+        SUMMARY_PREDECESSORS_SCHEMA,
     };
 
     #[test]
@@ -222,6 +239,14 @@ mod tests {
             .execute(&mut database)
             .await
             .expect("plan control migration should execute");
+        sqlx::raw_sql(SUMMARY_PREDECESSORS_SCHEMA)
+            .execute(&mut database)
+            .await
+            .expect("summary predecessor migration should execute");
+        sqlx::raw_sql(PERSISTENT_GANTT_HISTORY_SCHEMA)
+            .execute(&mut database)
+            .await
+            .expect("persistent Gantt history migration should execute");
 
         let schema_version: String =
             sqlx::query_scalar("SELECT value FROM app_metadata WHERE key = 'schema_version'")
@@ -437,6 +462,163 @@ mod tests {
         assert_eq!(version, "5");
     }
 
+    #[tokio::test]
+    async fn version_021_schema_five_upgrades_to_current_without_losing_data() {
+        let mut database = in_memory_database().await;
+        for schema in [
+            INITIAL_SCHEMA,
+            CORE_SCHEMA,
+            SCHEDULING_SCHEMA,
+            REUSE_SCHEMA,
+            PLAN_CONTROL_SCHEMA,
+        ] {
+            sqlx::raw_sql(schema)
+                .execute(&mut database)
+                .await
+                .expect("schema 5 should execute");
+        }
+        sqlx::query(
+            "INSERT INTO projects (id, name, status, calendar_id, position, is_archived, created_at, updated_at)
+             VALUES ('10000000-0000-4000-8000-000000000001', 'Preservado', 'ACTIVE',
+             '00000000-0000-4000-8000-000000000001', 0, 0,
+             '2026-10-02T12:00:00.000Z', '2026-10-02T12:00:00.000Z')",
+        )
+        .execute(&mut database)
+        .await
+        .expect("project should exist before migration");
+        sqlx::query(
+            "INSERT INTO tasks (id, project_id, title, status, priority, progress, scheduling_mode,
+             position, created_at, updated_at) VALUES
+             ('20000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000001',
+              'Origem', 'NOT_STARTED', 'NORMAL', 0, 'AUTO', 0,
+              '2026-10-02T12:00:00.000Z', '2026-10-02T12:00:00.000Z'),
+             ('20000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000001',
+              'Destino', 'NOT_STARTED', 'NORMAL', 0, 'AUTO', 1,
+              '2026-10-02T12:00:00.000Z', '2026-10-02T12:00:00.000Z')",
+        )
+        .execute(&mut database)
+        .await
+        .expect("tasks should exist before migration");
+        sqlx::query(
+            "INSERT INTO task_dependencies
+             (id, project_id, predecessor_id, successor_id, dependency_type, lag_days, created_at, updated_at)
+             VALUES ('40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000001',
+             '20000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000002',
+             'FS', 0, '2026-10-02T12:00:00.000Z', '2026-10-02T12:00:00.000Z')",
+        )
+        .execute(&mut database)
+        .await
+        .expect("leaf dependency should exist before migration");
+
+        sqlx::raw_sql(SUMMARY_PREDECESSORS_SCHEMA)
+            .execute(&mut database)
+            .await
+            .expect("summary predecessor migration should execute");
+        sqlx::query(
+            "INSERT INTO tasks (id, project_id, parent_id, title, status, priority, progress,
+             scheduling_mode, position, created_at, updated_at) VALUES
+             ('20000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000001',
+             '20000000-0000-4000-8000-000000000001', 'Filha', 'NOT_STARTED', 'NORMAL', 0,
+             'AUTO', 0, '2026-10-02T12:00:00.000Z', '2026-10-02T12:00:00.000Z')",
+        )
+        .execute(&mut database)
+        .await
+        .expect("dependency predecessor should be allowed to become summary");
+        sqlx::raw_sql(PERSISTENT_GANTT_HISTORY_SCHEMA)
+            .execute(&mut database)
+            .await
+            .expect("persistent history migration should execute");
+
+        let version: String =
+            sqlx::query_scalar("SELECT value FROM app_metadata WHERE key = 'schema_version'")
+                .fetch_one(&mut database)
+                .await
+                .expect("schema version should exist");
+        let dependency_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM task_dependencies")
+            .fetch_one(&mut database)
+            .await
+            .expect("dependency should remain");
+        let history_table_count: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'gantt_history_state'",
+        )
+        .fetch_one(&mut database)
+        .await
+        .expect("history table should be queryable");
+        assert_eq!(version, "7");
+        assert_eq!(dependency_count, 1);
+        assert_eq!(history_table_count, 1);
+    }
+
+    #[tokio::test]
+    #[ignore = "requires CHRONO_V021_DATABASE pointing to a local v0.2.1 database"]
+    async fn real_version_021_database_copy_upgrades_without_touching_source() {
+        let source = std::env::var_os("CHRONO_V021_DATABASE")
+            .map(std::path::PathBuf::from)
+            .expect("CHRONO_V021_DATABASE must point to the v0.2.1 database");
+        let original = std::fs::read(&source).expect("source database should be readable");
+        let copy = std::env::temp_dir().join(format!(
+            "chronoproject-v021-upgrade-{}.sqlite",
+            std::process::id()
+        ));
+        std::fs::copy(&source, &copy).expect("isolated database copy should be created");
+        let mut database = SqliteConnection::connect(&format!(
+            "sqlite:{}",
+            copy.to_string_lossy().replace('\\', "/")
+        ))
+        .await
+        .expect("database copy should open");
+        let source_version: String =
+            sqlx::query_scalar("SELECT value FROM app_metadata WHERE key = 'schema_version'")
+                .fetch_one(&mut database)
+                .await
+                .expect("source schema version should exist");
+        assert_eq!(
+            source_version, "5",
+            "the audit source must be an untouched v0.2.1 database"
+        );
+        let task_count_before: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM tasks")
+            .fetch_one(&mut database)
+            .await
+            .expect("tasks should be countable before upgrade");
+        let dependency_count_before: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM task_dependencies")
+                .fetch_one(&mut database)
+                .await
+                .expect("dependencies should be countable before upgrade");
+
+        sqlx::raw_sql(SUMMARY_PREDECESSORS_SCHEMA)
+            .execute(&mut database)
+            .await
+            .expect("schema 6 should apply to the copy");
+        sqlx::raw_sql(PERSISTENT_GANTT_HISTORY_SCHEMA)
+            .execute(&mut database)
+            .await
+            .expect("schema 7 should apply to the copy");
+        let integrity: String = sqlx::query_scalar("PRAGMA quick_check")
+            .fetch_one(&mut database)
+            .await
+            .expect("upgraded copy should pass quick_check");
+        let task_count_after: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM tasks")
+            .fetch_one(&mut database)
+            .await
+            .expect("tasks should be countable after upgrade");
+        let dependency_count_after: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM task_dependencies")
+                .fetch_one(&mut database)
+                .await
+                .expect("dependencies should be countable after upgrade");
+        database.close().await.expect("database copy should close");
+
+        assert_eq!(integrity, "ok");
+        assert_eq!(task_count_after, task_count_before);
+        assert_eq!(dependency_count_after, dependency_count_before);
+        assert_eq!(
+            std::fs::read(&source).expect("source should remain readable"),
+            original
+        );
+        std::fs::remove_file(copy).expect("isolated audit copy should be removed");
+    }
+
     #[test]
     fn migration_versions_are_unique_and_ordered() {
         let registered = migrations();
@@ -452,6 +634,8 @@ mod tests {
                 2,
                 SCHEDULING_MIGRATION_VERSION,
                 4,
+                5,
+                6,
                 DATABASE_SCHEMA_VERSION
             ]
         );

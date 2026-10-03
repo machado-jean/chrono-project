@@ -198,6 +198,23 @@ pub struct ScheduleChangeSetRecord {
     pub task_tree_ids_to_delete: Vec<String>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GanttHistoryStateRecord {
+    pub project_id: String,
+    pub undo_entries: serde_json::Value,
+    pub redo_entries: serde_json::Value,
+    pub updated_at: String,
+}
+
+#[derive(FromRow)]
+struct GanttHistoryRow {
+    project_id: String,
+    undo_json: String,
+    redo_json: String,
+    updated_at: String,
+}
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WorkspaceData {
@@ -886,6 +903,76 @@ pub async fn apply_schedule_changes(
     Ok(())
 }
 
+pub async fn load_gantt_history(
+    pool: &SqlitePool,
+    project_id: &str,
+) -> Result<GanttHistoryStateRecord, sqlx::Error> {
+    let row = sqlx::query_as::<_, GanttHistoryRow>(
+        "SELECT project_id, undo_json, redo_json, updated_at
+         FROM gantt_history_state WHERE project_id = ?",
+    )
+    .bind(project_id)
+    .fetch_optional(pool)
+    .await?;
+    match row {
+        Some(row) => Ok(GanttHistoryStateRecord {
+            project_id: row.project_id,
+            undo_entries: serde_json::from_str(&row.undo_json)
+                .map_err(|error| sqlx::Error::Decode(Box::new(error)))?,
+            redo_entries: serde_json::from_str(&row.redo_json)
+                .map_err(|error| sqlx::Error::Decode(Box::new(error)))?,
+            updated_at: row.updated_at,
+        }),
+        None => Ok(GanttHistoryStateRecord {
+            project_id: project_id.to_owned(),
+            undo_entries: serde_json::json!([]),
+            redo_entries: serde_json::json!([]),
+            updated_at: "1970-01-01T00:00:00.000Z".into(),
+        }),
+    }
+}
+
+pub async fn save_gantt_history(
+    pool: &SqlitePool,
+    state: &GanttHistoryStateRecord,
+) -> Result<(), sqlx::Error> {
+    let undo = state.undo_entries.as_array().ok_or_else(|| {
+        sqlx::Error::Protocol("O histórico de desfazer do Gantt deve ser uma lista.".into())
+    })?;
+    let redo = state.redo_entries.as_array().ok_or_else(|| {
+        sqlx::Error::Protocol("O histórico de refazer do Gantt deve ser uma lista.".into())
+    })?;
+    if undo.len() > 50 || redo.len() > 50 {
+        return Err(sqlx::Error::Protocol(
+            "O histórico do Gantt excedeu o limite de 50 operações.".into(),
+        ));
+    }
+    let undo_json =
+        serde_json::to_string(undo).map_err(|error| sqlx::Error::Encode(Box::new(error)))?;
+    let redo_json =
+        serde_json::to_string(redo).map_err(|error| sqlx::Error::Encode(Box::new(error)))?;
+    if undo_json.len() + redo_json.len() > 1_048_576 {
+        return Err(sqlx::Error::Protocol(
+            "O histórico do Gantt excedeu o limite de 1 MiB.".into(),
+        ));
+    }
+    sqlx::query(
+        "INSERT INTO gantt_history_state (project_id, undo_json, redo_json, updated_at)
+         VALUES (?, ?, ?, ?)
+         ON CONFLICT(project_id) DO UPDATE SET
+           undo_json = excluded.undo_json,
+           redo_json = excluded.redo_json,
+           updated_at = excluded.updated_at",
+    )
+    .bind(&state.project_id)
+    .bind(undo_json)
+    .bind(redo_json)
+    .bind(&state.updated_at)
+    .execute(pool)
+    .await?;
+    Ok(())
+}
+
 pub async fn reorder_tasks(pool: &SqlitePool, task_ids: &[String]) -> Result<(), sqlx::Error> {
     let mut transaction = pool.begin().await?;
     for (position, task_id) in task_ids.iter().enumerate() {
@@ -948,15 +1035,17 @@ mod tests {
 
     use super::{
         apply_schedule_changes, delete_project, delete_project_baselines, delete_task_tree,
-        delete_template, load_workspace, reorder_projects, reorder_tasks, save_baseline,
-        save_calendar, save_duplication_bundle, save_project, save_task, save_template_bundle,
-        BaselineBundleRecord, BaselineTaskRecord, CalendarExceptionRecord, CalendarRecord,
-        DependencyRecord, DuplicationBundleRecord, ProjectBaselineRecord, ProjectRecord,
-        ScheduleChangeSetRecord, TaskRecord, TaskTemplateBundleRecord,
-        TaskTemplateDependencyRecord, TaskTemplateItemRecord, TaskTemplateRecord,
+        delete_template, load_gantt_history, load_workspace, reorder_projects, reorder_tasks,
+        save_baseline, save_calendar, save_duplication_bundle, save_gantt_history, save_project,
+        save_task, save_template_bundle, BaselineBundleRecord, BaselineTaskRecord,
+        CalendarExceptionRecord, CalendarRecord, DependencyRecord, DuplicationBundleRecord,
+        GanttHistoryStateRecord, ProjectBaselineRecord, ProjectRecord, ScheduleChangeSetRecord,
+        TaskRecord, TaskTemplateBundleRecord, TaskTemplateDependencyRecord, TaskTemplateItemRecord,
+        TaskTemplateRecord,
     };
     use crate::database::{
-        CORE_SCHEMA, INITIAL_SCHEMA, PLAN_CONTROL_SCHEMA, REUSE_SCHEMA, SCHEDULING_SCHEMA,
+        CORE_SCHEMA, INITIAL_SCHEMA, PERSISTENT_GANTT_HISTORY_SCHEMA, PLAN_CONTROL_SCHEMA,
+        REUSE_SCHEMA, SCHEDULING_SCHEMA, SUMMARY_PREDECESSORS_SCHEMA,
     };
 
     const PROJECT_ID: &str = "10000000-0000-4000-8000-000000000001";
@@ -990,7 +1079,44 @@ mod tests {
             .execute(&pool)
             .await
             .expect("plan control migration should execute");
+        sqlx::raw_sql(SUMMARY_PREDECESSORS_SCHEMA)
+            .execute(&pool)
+            .await
+            .expect("summary predecessor migration should execute");
+        sqlx::raw_sql(PERSISTENT_GANTT_HISTORY_SCHEMA)
+            .execute(&pool)
+            .await
+            .expect("persistent Gantt history migration should execute");
         pool
+    }
+
+    #[tokio::test]
+    async fn persists_gantt_history_and_deletes_it_with_the_project() {
+        let pool = database().await;
+        save_project(&pool, &project())
+            .await
+            .expect("project should save");
+        let state = GanttHistoryStateRecord {
+            project_id: PROJECT_ID.into(),
+            undo_entries: serde_json::json!([{"label": "Cronograma"}]),
+            redo_entries: serde_json::json!([]),
+            updated_at: NOW.into(),
+        };
+        save_gantt_history(&pool, &state)
+            .await
+            .expect("history should save");
+        let loaded = load_gantt_history(&pool, PROJECT_ID)
+            .await
+            .expect("history should load");
+        assert_eq!(loaded.undo_entries, state.undo_entries);
+
+        delete_project(&pool, PROJECT_ID)
+            .await
+            .expect("project should delete");
+        let deleted = load_gantt_history(&pool, PROJECT_ID)
+            .await
+            .expect("empty history should load");
+        assert_eq!(deleted.undo_entries, serde_json::json!([]));
     }
 
     fn project() -> ProjectRecord {
@@ -1346,7 +1472,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn rejects_unsupported_dependency_type_and_summary_relations() {
+    async fn allows_summary_predecessor_and_rejects_summary_successor() {
         let pool = database().await;
         save_project(&pool, &project())
             .await
@@ -1382,7 +1508,39 @@ mod tests {
         save_task(&pool, &summary_child)
             .await
             .expect("child should make predecessor a summary task");
-        let summary_result = apply_schedule_changes(
+        apply_schedule_changes(
+            &pool,
+            &ScheduleChangeSetRecord {
+                calendars_to_save: vec![],
+                tasks: vec![],
+                dependencies_to_save: vec![dependency()],
+                dependency_ids_to_delete: vec![],
+                task_tree_ids_to_delete: vec![],
+            },
+        )
+        .await
+        .expect("summary predecessor should save");
+
+        let workspace = load_workspace(&pool).await.expect("workspace should load");
+        assert_eq!(workspace.dependencies.len(), 1);
+
+        apply_schedule_changes(
+            &pool,
+            &ScheduleChangeSetRecord {
+                calendars_to_save: vec![],
+                tasks: vec![],
+                dependencies_to_save: vec![],
+                dependency_ids_to_delete: vec![dependency().id],
+                task_tree_ids_to_delete: vec![],
+            },
+        )
+        .await
+        .expect("dependency should be removable");
+        let successor_child = task("20000000-0000-4000-8000-000000000003", Some(CHILD_ID));
+        save_task(&pool, &successor_child)
+            .await
+            .expect("successor should become a summary while it has no dependency");
+        let summary_successor_result = apply_schedule_changes(
             &pool,
             &ScheduleChangeSetRecord {
                 calendars_to_save: vec![],
@@ -1393,7 +1551,7 @@ mod tests {
             },
         )
         .await;
-        assert!(summary_result.is_err());
+        assert!(summary_successor_result.is_err());
 
         let workspace = load_workspace(&pool).await.expect("workspace should load");
         assert!(workspace.dependencies.is_empty());

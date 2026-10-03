@@ -30,6 +30,7 @@ import type {
   WorkspaceRepository,
   WorkspaceSnapshot,
 } from "../../src/repositories/workspace-repository";
+import type { GanttHistoryState } from "../../src/domain/history/gantt-history";
 
 const ganttHarness = vi.hoisted(() => ({
   api: {
@@ -63,6 +64,7 @@ const defaultCalendar: Calendar = {
 };
 
 class JourneyRepository implements WorkspaceRepository {
+  private readonly ganttHistory = new Map<string, GanttHistoryState>();
   calendars: Calendar[] = [defaultCalendar];
   projects: Project[] = [];
   tasks: Task[] = [];
@@ -135,6 +137,15 @@ class JourneyRepository implements WorkspaceRepository {
     this.dependencies = this.dependencies.filter(({ id }) => !changes.dependencyIdsToDelete.includes(id));
     for (const dependency of changes.dependenciesToSave) this.upsert(this.dependencies, dependency);
     for (const task of changes.tasks) this.upsert(this.tasks, task);
+  }
+
+  loadGanttHistory(projectId: string): Promise<GanttHistoryState> {
+    return Promise.resolve(this.ganttHistory.get(projectId) ?? { undoEntries: [], redoEntries: [] });
+  }
+
+  saveGanttHistory(projectId: string, state: GanttHistoryState): Promise<void> {
+    this.ganttHistory.set(projectId, state);
+    return Promise.resolve();
   }
 
   deleteTaskTree(taskId: string): Promise<void> {

@@ -25,7 +25,11 @@ import { applyScheduleEdit } from "../../domain/scheduling/schedule-edit";
 import { applyGanttDateEdit, planGanttFsMove, type GanttDateEditMode } from "../../domain/scheduling/gantt-edit";
 import type { TaskDependency } from "../../domain/scheduling/dependency";
 import {
-  SCHEDULING_MODE_LABELS,
+  EMPTY_GANTT_HISTORY,
+  type GanttHistoryEntry,
+  type GanttHistoryState,
+} from "../../domain/history/gantt-history";
+import {
   TASK_STATUS_LABELS,
   type Task,
 } from "../../domain/tasks/task";
@@ -42,6 +46,7 @@ import {
 type GanttScale = "DAY" | "WEEK" | "MONTH";
 
 interface TaskGanttProps {
+  readonly projectId: string;
   readonly tasks: readonly Task[];
   readonly allProjectTasks: readonly Task[];
   readonly calendars: readonly Calendar[];
@@ -50,6 +55,8 @@ interface TaskGanttProps {
   readonly baselineTasks: readonly BaselineTask[];
   readonly disabled: boolean;
   readonly onSave: (task: Task, dependencyUpdates?: readonly TaskDependency[]) => Promise<boolean>;
+  readonly onLoadHistory: (projectId: string) => Promise<GanttHistoryState>;
+  readonly onSaveHistory: (projectId: string, state: GanttHistoryState) => Promise<void>;
   readonly onCreateDependency: (input: {
     readonly predecessorId: string;
     readonly successorId: string;
@@ -64,14 +71,6 @@ interface GanttContextMenuState {
   readonly taskId: string | null;
   readonly dependencyId: string | null;
   readonly addPredecessor: boolean;
-}
-
-interface GanttHistoryEntry {
-  readonly label: string;
-  readonly beforeTask: Task;
-  readonly afterTask: Task;
-  readonly beforeDependencies: readonly TaskDependency[];
-  readonly afterDependencies: readonly TaskDependency[];
 }
 
 interface GanttVirtualScrollState {
@@ -167,6 +166,7 @@ function displayDate(date: string): string {
 }
 
 export function TaskGantt({
+  projectId,
   tasks,
   allProjectTasks,
   calendars,
@@ -175,6 +175,8 @@ export function TaskGantt({
   baselineTasks,
   disabled,
   onSave,
+  onLoadHistory,
+  onSaveHistory,
   onCreateDependency,
   onDeleteDependency,
 }: TaskGanttProps) {
@@ -190,6 +192,7 @@ export function TaskGantt({
   const [ganttRevision, setGanttRevision] = useState(0);
   const undoStack = useRef<GanttHistoryEntry[]>([]);
   const redoStack = useRef<GanttHistoryEntry[]>([]);
+  const historySaveQueue = useRef<Promise<void>>(Promise.resolve());
   const contextMenuRef = useRef<HTMLDivElement>(null);
   const chartShellRef = useRef<HTMLDivElement>(null);
   const verticalOffsetRef = useRef(0);
@@ -250,7 +253,6 @@ export function TaskGantt({
       candidate.id !== contextTask.id &&
       candidate.endDate !== null &&
       candidate.endDate < contextStartDate &&
-      !summaryIds.has(candidate.id) &&
       !dependencies.some((dependency) =>
         dependency.predecessorId === candidate.id && dependency.successorId === contextTask.id))
       .sort((left, right) =>
@@ -464,6 +466,26 @@ export function TaskGantt({
     }
   };
 
+  const toggleContextTaskLock = async (): Promise<void> => {
+    if (contextTask === null || summaryIds.has(contextTask.id)) return;
+    setContextMenu(null);
+    setSavingVisualEdit(true);
+    setLocalError(null);
+    const locked = contextTask.schedulingMode === "MANUAL";
+    try {
+      if (await onSave({ ...contextTask, schedulingMode: locked ? "AUTO" : "MANUAL" })) {
+        setAnnouncement(`${contextTask.title}: datas ${locked ? "destravadas para agendamento automático" : "travadas contra arrasto e reagendamento automático"}.`);
+      } else {
+        setLocalError("Não foi possível alterar a trava de datas.");
+      }
+    } catch (error) {
+      setLocalError(error instanceof Error ? error.message : "Não foi possível alterar a trava de datas.");
+    } finally {
+      setSavingVisualEdit(false);
+      resetGanttProjection();
+    }
+  };
+
   const selectTask = useCallback((taskId: string | null): void => {
     const task = tasks.find((candidate) => candidate.id === taskId);
     setSelectedTaskId(task?.id ?? null);
@@ -485,11 +507,52 @@ export function TaskGantt({
     setGanttRevision((revision) => revision + 1);
   }, []);
 
+  const persistHistory = useCallback((): void => {
+    const state = {
+      undoEntries: undoStack.current.slice(-50),
+      redoEntries: redoStack.current.slice(-50),
+    };
+    historySaveQueue.current = historySaveQueue.current
+      .catch(() => undefined)
+      .then(() => onSaveHistory(projectId, state))
+      .catch((error: unknown) => {
+        setLocalError(error instanceof Error
+          ? `A alteração foi aplicada, mas o histórico não pôde ser persistido: ${error.message}`
+          : "A alteração foi aplicada, mas o histórico não pôde ser persistido.");
+      });
+  }, [onSaveHistory, projectId]);
+
+  useEffect(() => {
+    let active = true;
+    undoStack.current = [];
+    redoStack.current = [];
+    void onLoadHistory(projectId)
+      .then((history) => {
+        if (!active) return;
+        undoStack.current = [...history.undoEntries];
+        redoStack.current = [...history.redoEntries];
+        setHistoryState((current) => ({
+          canUndo: undoStack.current.length > 0,
+          canRedo: redoStack.current.length > 0,
+          revision: current.revision + 1,
+        }));
+      })
+      .catch(() => {
+        if (!active) return;
+        undoStack.current = [...EMPTY_GANTT_HISTORY.undoEntries];
+        redoStack.current = [...EMPTY_GANTT_HISTORY.redoEntries];
+        setLocalError("Não foi possível carregar o histórico persistente do Gantt.");
+      });
+    return () => { active = false; };
+  }, [onLoadHistory, projectId]);
+
   const recordHistory = useCallback((entry: GanttHistoryEntry): void => {
     undoStack.current.push(entry);
+    if (undoStack.current.length > 50) undoStack.current.shift();
     redoStack.current = [];
     setHistoryState((current) => ({ canUndo: true, canRedo: false, revision: current.revision + 1 }));
-  }, []);
+    persistHistory();
+  }, [persistHistory]);
 
   const saveVisualTaskEdit = useCallback(async (
     input: TMethodsConfig["update-task"],
@@ -540,6 +603,11 @@ export function TaskGantt({
           ? "END"
           : null;
     if (mode === null || input.diff === undefined) {
+      resetGanttProjection();
+      return;
+    }
+    if (task.schedulingMode === "MANUAL") {
+      setLocalError(`${task.title} está com as datas travadas. Destrave o cadeado antes de arrastar ou redimensionar.`);
       resetGanttProjection();
       return;
     }
@@ -620,6 +688,7 @@ export function TaskGantt({
     try {
       if (await onSave(taskToSave, dependenciesToSave)) {
         destination.push(entry);
+        persistHistory();
         setAnnouncement(`${entry.label}: ${direction === "UNDO" ? "desfeito" : "refeito"}.`);
       } else {
         source.push(entry);
@@ -637,7 +706,7 @@ export function TaskGantt({
       setSavingVisualEdit(false);
       resetGanttProjection();
     }
-  }, [disabled, onSave, resetGanttProjection, savingVisualEdit]);
+  }, [disabled, onSave, persistHistory, resetGanttProjection, savingVisualEdit]);
 
   useEffect(() => {
     const handleHistoryShortcut = (event: KeyboardEvent): void => {
@@ -666,8 +735,8 @@ export function TaskGantt({
       resetGanttProjection();
       return;
     }
-    if (summaryIds.has(predecessorId) || summaryIds.has(successorId)) {
-      setLocalError("Crie dependências entre tarefas executáveis, não entre tarefas-resumo.");
+    if (summaryIds.has(successorId)) {
+      setLocalError("Uma tarefa-resumo não pode ser sucessora porque suas datas são derivadas.");
       resetGanttProjection();
       return;
     }
@@ -769,6 +838,7 @@ export function TaskGantt({
         <span><i className="legend-weekend" /> Final de semana</span>
         <span><i className="legend-holiday" /> Feriado</span>
         <span><i className="legend-link" /> Dependência FS</span>
+        <span>🔒 Datas travadas</span>
       </div>
       <p className="gantt-scroll-hint">
         Use a roda do mouse para percorrer as atividades e a barra inferior para navegar pelas datas.
@@ -892,6 +962,9 @@ export function TaskGantt({
               )}
               {contextTask === null || summaryIds.has(contextTask.id) ? null : (
                 <>
+                  <button type="button" onClick={() => { void toggleContextTaskLock(); }}>
+                    {contextTask.schedulingMode === "MANUAL" ? "Destravar datas" : "Travar datas"}
+                  </button>
                   <button
                     type="button"
                     onClick={() => { setContextMenu((current) => current === null ? null : { ...current, addPredecessor: true }); }}
@@ -941,7 +1014,7 @@ export function TaskGantt({
               <>
                 <dl>
                   <div><dt>Status</dt><dd>{TASK_STATUS_LABELS[selectedTask.status]}</dd></div>
-                  <div><dt>Modo</dt><dd>{SCHEDULING_MODE_LABELS[selectedTask.schedulingMode]}</dd></div>
+                  <div><dt>Datas</dt><dd>{selectedTask.schedulingMode === "MANUAL" ? "🔒 Travadas" : "🔓 Automáticas"}</dd></div>
                   <div><dt>Progresso</dt><dd>{String(selectedTask.progress)}%</dd></div>
                 </dl>
                 <form className="gantt-schedule-form" onSubmit={(event) => { void saveSchedule(event); }}>
@@ -968,6 +1041,8 @@ export function TaskGantt({
                   </label>
                   {isSummary ? (
                     <p className="gantt-summary-note">Datas de tarefas-resumo são derivadas das subtarefas.</p>
+                  ) : selectedTask.schedulingMode === "MANUAL" ? (
+                    <p className="gantt-summary-note">🔒 Datas travadas: o arrasto está bloqueado. Use valores exatos aqui ou destrave pelo menu de contexto.</p>
                   ) : selectedHasPredecessors ? (
                     <p className="gantt-summary-note">A data inicial segue as predecessoras. Mover a barra ajusta automaticamente o lag FS; a duração continua editável.</p>
                   ) : (

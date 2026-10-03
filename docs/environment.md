@@ -541,3 +541,45 @@ fmt/check/Clippy e auditoria npm aprovados. O harness diagnóstico não obteve a
 porta CDP do WebView2 em cinco cenários. Conforme o ADR 019, esse teste continua
 não bloqueante; a janela real e sua rolagem integral foram verificadas
 separadamente.
+
+## Validação local do candidato 0.2.2
+
+O candidato 0.2.2 foi reproduzido em Windows 11 x64 com Node.js 24.20.0,
+npm 11.19.0, Rust/Cargo 1.98.0 e Tauri CLI 2.11.4. `npm audit fix` atualizou
+três dependências transitivas; a auditoria final não encontrou vulnerabilidades.
+Nenhuma ferramenta global foi instalada ou atualizada.
+
+Tempos observados nesta máquina, usados apenas como referência operacional:
+
+| Gate | Tempo observado |
+| --- | ---: |
+| `npm ci` | 8,6 s |
+| `npm run check` final | 25,9 s |
+| jornada E2E da aplicação + testes Rust em cache | 5,7 s |
+| testes de desempenho | 1,0 s |
+| `cargo check --all-targets` | 6,0 s |
+| `cargo test --all-targets` | 8,2 s |
+| Clippy com `-D warnings` | 5,1 s |
+| auditoria isolada do banco 0.2.1 | 0,8 s |
+| build do executável sem bundle | 45,2 s |
+| compilação Rust do instalador padrão | 32,9 s |
+| compilação Rust do instalador offline | 31,8 s |
+
+O E2E Tauri/WebView2 aprovou cinco cenários reais. A etapa completa ultrapassou
+um minuto por incluir preparação e build, embora os testes tenham consumido
+18,1 s. Os builds NSIS exigiram somente Enter no prompt da chave sem passphrase.
+
+Artefatos locais validados em `.local/distribution/v0.2.2-staging/`:
+
+| Arquivo | Tamanho | SHA-256 |
+| --- | ---: | --- |
+| `chrono-project.exe` | 21.526.016 bytes | `47946256BDECB1ABC17EBB5F8E8F92771051A9D40DCBE73E6E1A042CDA4EFF0E` |
+| `Chrono-Project-Windows-x64-Setup.exe` | 7.319.198 bytes | `B20C8370C09713723E689493C8C0CDA42EAE3BFCBDA366EF612D3A31E5A5D9FD` |
+| `Chrono-Project-Windows-x64-Offline-Setup.exe` | 222.348.571 bytes | `7C7DFC02CF84A52B805A67306D608FF6655DC10F98B75906FED9E1D7A05CC126` |
+
+As assinaturas, `latest.json`, `BUILD_RECORD.json` e `SHA256SUMS.txt` foram
+regenerados e aprovados por `PUBLISH_RELEASE.ps1 -VerifyOnly`. O instalador
+padrão atualizou a instalação local em 1,32 s; a aplicação abriu e encerrou com
+código 0. Antes da abertura, o banco de 188.416 bytes foi copiado para
+`.local/backups/chronoproject-before-v0.2.2-install-20261003-104157.sqlite`.
+Depois das migrations, o banco preservado passou a 200.704 bytes.

@@ -3,7 +3,7 @@ import { addWorkingDays, endDateForDuration } from "../calendars/working-calenda
 import { DomainValidationError } from "../shared/validation";
 import type { Task } from "../tasks/task";
 import type { TaskDependency } from "./dependency";
-import { affectedTaskIds, topologicalSort, validateGraph } from "./graph";
+import { affectedTaskIds, schedulingGraphEdges, topologicalSort, validateGraph } from "./graph";
 import { recalculateSummaryTasks } from "./summary";
 
 export type SchedulingConflictKind = "MANUAL_CONSTRAINT" | "UNSCHEDULED_AUTO";
@@ -68,19 +68,29 @@ export function calculateEarliestStart(
 
 export function rescheduleAffectedTasks(input: ScheduleInput): ScheduleResult {
   const dependencies = validateGraph(input.tasks, input.dependencies);
+  const graphEdges = schedulingGraphEdges(input.tasks, dependencies);
   const orderedTaskIds = topologicalSort(
     input.tasks.map(({ id }) => id),
-    dependencies,
+    graphEdges,
   );
-  const affected = affectedTaskIds(input.changedTaskIds, dependencies);
+  const affected = affectedTaskIds(input.changedTaskIds, graphEdges);
   const tasksById = new Map(input.tasks.map((task) => [task.id, task]));
   const calendarForTask = calendarResolver(input.calendars, input.projectCalendarId);
   const conflicts: SchedulingConflict[] = [];
+  const summaryIds = new Set(
+    input.tasks.flatMap((task) => task.parentId === null ? [] : [task.parentId]),
+  );
 
   for (const taskId of orderedTaskIds) {
     if (!affected.has(taskId)) continue;
     const task = tasksById.get(taskId);
     if (task === undefined) continue;
+    if (summaryIds.has(taskId)) {
+      for (const recalculated of recalculateSummaryTasks([...tasksById.values()], calendarForTask)) {
+        if (summaryIds.has(recalculated.id)) tasksById.set(recalculated.id, recalculated);
+      }
+      continue;
+    }
     const earliestStart = calculateEarliestStart(
       task,
       tasksById,

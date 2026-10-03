@@ -351,20 +351,70 @@ describe("scheduler FS", () => {
     ).toThrow("predecessora dela mesma");
   });
 
-  it("rejeita dependência entre projetos e em tarefa-resumo", () => {
+  it("permite resumo como predecessora, mas rejeita resumo como sucessora", () => {
     const summary = task(A);
     const child = task(B, { parentId: A });
-    expect(() =>
-      validateGraph([summary, child, task(C)], [
-        dependency("40000000-0000-4000-8000-000000000001", A, C),
-      ]),
-    ).toThrow("Tarefas-resumo");
+    expect(validateGraph([summary, child, task(C)], [
+      dependency("40000000-0000-4000-8000-000000000001", A, C),
+    ])).toHaveLength(1);
+
+    expect(() => validateGraph([summary, child, task(C)], [
+      dependency("40000000-0000-4000-8000-000000000001", C, A),
+    ])).toThrow(/não pode ser sucessora/);
+
+    expect(() => validateGraph([summary, child, task(C)], [
+      dependency("40000000-0000-4000-8000-000000000001", A, B),
+    ])).toThrow(/hierarquia criam um ciclo/);
 
     expect(() =>
       validateGraph([task(A), task(B, { projectId: OTHER_PROJECT_ID })], [
         dependency("40000000-0000-4000-8000-000000000001", A, B),
       ]),
     ).toThrow("mesmo projeto");
+  });
+
+  it("propaga o fim do resumo sem alterar quem depende diretamente da folha anterior", () => {
+    const summary = task(A, { startDate: null, endDate: null, durationDays: null });
+    const lastExistingChild = task(B, {
+      parentId: A,
+      startDate: "2026-08-28",
+      endDate: "2026-08-31",
+      durationDays: 2,
+    });
+    const summarySuccessor = task(C, { position: 1 });
+    const leafSuccessor = task(D, {
+      position: 2,
+      startDate: "2026-08-31",
+      endDate: "2026-08-31",
+    });
+    const newChild = task(E, {
+      parentId: A,
+      position: 1,
+      startDate: "2026-09-01",
+      endDate: "2026-09-04",
+      durationDays: 4,
+    });
+    const result = schedule(
+      [summary, lastExistingChild, summarySuccessor, leafSuccessor, newChild],
+      [
+        dependency("40000000-0000-4000-8000-000000000001", A, C),
+        dependency("40000000-0000-4000-8000-000000000002", B, D),
+      ],
+      [E],
+    );
+
+    expect(result.tasks.find(({ id }) => id === A)?.endDate).toBe("2026-09-04");
+    expect(result.tasks.find(({ id }) => id === C)?.startDate).toBe("2026-09-04");
+    expect(result.tasks.find(({ id }) => id === D)?.startDate).toBe("2026-08-31");
+  });
+
+  it("rejeita ciclo que combina resumo, sucessora e descendente", () => {
+    const summary = task(A, { startDate: null, endDate: null, durationDays: null });
+    const child = task(B, { parentId: A });
+    expect(() => validateGraph([summary, child, task(C)], [
+      dependency("40000000-0000-4000-8000-000000000001", A, C),
+      dependency("40000000-0000-4000-8000-000000000002", C, B),
+    ])).toThrow(/hierarquia criam um ciclo/);
   });
 
   it("recalcula tarefa-resumo a partir dos descendentes", () => {

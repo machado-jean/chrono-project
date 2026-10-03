@@ -3,8 +3,9 @@
 ## Estado
 
 Aceita em 27 de agosto de 2026, revisada em 28 de agosto de 2026 após auditoria
-manual da propagação regressiva e revisada em 13 de setembro de 2026 para
-permitir a transição no mesmo dia.
+manual da propagação regressiva, revisada em 13 de setembro de 2026 para
+permitir a transição no mesmo dia e complementada pelo ADR 025 em 2 de outubro
+de 2026 para permitir tarefas-resumo como predecessoras.
 
 ## Contexto
 
@@ -20,7 +21,8 @@ calendário efetivo da sucessora. Lag zero permite que a sucessora comece no
 mesmo dia do fim da predecessora; lag `1` seleciona o próximo dia útil e os
 valores seguintes acrescentam dias úteis.
 
-Dependências são aceitas apenas entre tarefas-folha do mesmo projeto. O domínio
+Dependências são aceitas entre tarefas do mesmo projeto. A sucessora deve ser
+uma tarefa-folha; a predecessora pode ser folha ou resumo conforme o ADR 025. O domínio
 rejeita auto-dependência, duplicidade e ciclo antes da persistência. O banco
 repete as invariantes estruturais que podem ser expressas em constraints e
 triggers.
@@ -44,7 +46,8 @@ ou outra âncora, o domínio não possui uma data anterior correta para inferir.
 - o resultado é determinístico e fácil de explicar;
 - múltiplas predecessoras usam a restrição mais tardia;
 - relações entre projetos e demais tipos de dependência ficam para trabalho futuro;
-- tarefas-resumo derivam datas dos descendentes e não participam diretamente do grafo;
+- tarefas-resumo derivam datas dos descendentes e podem alimentar sucessoras,
+  mas nunca receber uma relação de entrada;
 - toda propagação precisa ser persistida em uma transação única;
 - tarefas automáticas com relação não preservam folgas implícitas; use lag ou
   modo manual conforme a intenção.

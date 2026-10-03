@@ -2,7 +2,7 @@
 
 ## Versão atual
 
-O schema atual é a versão **5**.
+O schema atual é a versão **7**.
 
 | Migration | Conteúdo |
 | --- | --- |
@@ -11,6 +11,8 @@ O schema atual é a versão **5**.
 | `0003_scheduling.sql` | exceções, calendário por tarefa e dependências FS; versão 3 |
 | `0004_reuse.sql` | templates, itens, tags e dependências internas; versão 4 |
 | `0005_plan_control.sql` | prazo-limite, linhas de base e fotografias de tarefas; versão 5 |
+| `0006_summary_predecessors.sql` | resumo como predecessora e novos triggers de integridade; versão 6 |
+| `0007_persistent_gantt_history.sql` | pilhas persistentes de desfazer/refazer do Gantt por projeto; versão 7 |
 
 As tabelas usam modo `STRICT`. Chaves externas são habilitadas em todas as conexões. Migrations são crescentes e não devem ser alteradas depois de publicadas.
 
@@ -86,8 +88,8 @@ Integridade em profundidade:
 - chaves estrangeiras compostas `(project_id, task_id)` impedem relações entre projetos;
 - `CHECK` impede auto-dependência;
 - índice único impede duplicar a mesma relação;
-- triggers impedem dependências em tarefas-resumo;
-- triggers impedem transformar em resumo uma tarefa que participa de dependências;
+- triggers permitem tarefa-resumo como predecessora e impedem resumo como sucessora;
+- triggers impedem transformar em resumo somente uma tarefa que recebe dependência;
 - domínio TypeScript rejeita relações ausentes, duplicadas e ciclos antes da escrita;
 - exclusão de tarefa/projeto limpa relações por cascade.
 
@@ -99,7 +101,8 @@ convertidos em projetos ocultos:
 - `task_templates`: identidade, nome, descrição e timestamps;
 - `task_template_items`: árvore, duração, prioridade, status inicial e posição;
 - `task_template_tags`: associação normalizada com `tags`;
-- `task_template_dependencies`: relações FS e lag entre itens-folha do mesmo template.
+- `task_template_dependencies`: relações FS e lag com folha no lado sucessor e
+  folha ou resumo no lado predecessor.
 
 O banco reforça UUIDs próprios, pai no mesmo template, ausência de
 auto-dependência e relações únicas. O domínio TypeScript complementa essas
@@ -122,12 +125,21 @@ Ao excluir o plano de referência de um projeto, todas as suas revisões e
 fotografias são removidas por cascade em uma única operação. Projetos, tarefas e
 o cronograma corrente não são alterados.
 
+## Histórico de edição do Gantt
+
+`gantt_history_state` mantém, por projeto, as pilhas JSON de desfazer e refazer
+das edições temporais do Gantt. A chave estrangeira usa cascade na exclusão do
+projeto. Cada pilha é validada na fronteira nativa, limitada às 50 revisões mais
+recentes e o payload total é limitado a 1 MiB. Esse estado auxilia a edição
+local; não substitui tarefas, dependências ou linhas de base como dados de
+negócio e não é uma trilha de auditoria multiusuário.
+
 ## Integridade e evolução
 
 - `projects.calendar_id` e `tasks.calendar_id` usam `ON DELETE RESTRICT`;
 - calendário e exceções usam cascade controlado;
 - índices atendem calendário, hierarquia, ordenação, filtros e travessia por predecessor/sucessor;
-- banco novo, sequência de migrations e upgrades preservando dados até a versão 5 são testados;
+- banco novo, sequência de migrations e upgrades preservando dados até a versão 7 são testados;
 - a única variante conhecida do checksum da migration 3 recebe reparo
   conservador antes da abertura: schema e integridade são validados, uma cópia
   SQLite é criada e somente `_sqlx_migrations.checksum` é atualizado;

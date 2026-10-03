@@ -2,7 +2,12 @@ import { DomainValidationError } from "../shared/validation";
 import type { Task } from "../tasks/task";
 import { validateTaskDependency, type TaskDependency } from "./dependency";
 
-function adjacency(taskIds: readonly string[], dependencies: readonly TaskDependency[]) {
+export interface SchedulingGraphEdge {
+  readonly predecessorId: string;
+  readonly successorId: string;
+}
+
+function adjacency(taskIds: readonly string[], dependencies: readonly SchedulingGraphEdge[]) {
   const successors = new Map(taskIds.map((taskId) => [taskId, [] as string[]]));
   for (const dependency of dependencies) {
     successors.get(dependency.predecessorId)?.push(dependency.successorId);
@@ -12,7 +17,7 @@ function adjacency(taskIds: readonly string[], dependencies: readonly TaskDepend
 
 export function detectCycle(
   taskIds: readonly string[],
-  dependencies: readonly TaskDependency[],
+  dependencies: readonly SchedulingGraphEdge[],
 ): readonly string[] | null {
   const successors = adjacency(taskIds, dependencies);
   const visited = new Set<string>();
@@ -47,7 +52,7 @@ export function detectCycle(
 
 export function topologicalSort(
   taskIds: readonly string[],
-  dependencies: readonly TaskDependency[],
+  dependencies: readonly SchedulingGraphEdge[],
 ): readonly string[] {
   const successors = adjacency(taskIds, dependencies);
   const indegree = new Map(taskIds.map((taskId) => [taskId, 0]));
@@ -98,13 +103,13 @@ export function validateGraph(
 
   const cycle = detectCycle(
     tasks.map(({ id }) => id),
-    normalized,
+    schedulingGraphEdges(tasks, normalized),
   );
   if (cycle !== null) {
     throw new DomainValidationError(
       "dependency_cycle",
       "dependencies",
-      "As dependências criam um ciclo entre tarefas.",
+      "As dependências e a hierarquia criam um ciclo entre tarefas.",
     );
   }
   return normalized;
@@ -112,7 +117,7 @@ export function validateGraph(
 
 export function affectedTaskIds(
   changedTaskIds: readonly string[],
-  dependencies: readonly TaskDependency[],
+  dependencies: readonly SchedulingGraphEdge[],
 ): ReadonlySet<string> {
   const successors = adjacency(
     [...new Set(dependencies.flatMap(({ predecessorId, successorId }) => [predecessorId, successorId]))],
@@ -131,4 +136,16 @@ export function affectedTaskIds(
     }
   }
   return affected;
+}
+
+export function schedulingGraphEdges(
+  tasks: readonly Task[],
+  dependencies: readonly TaskDependency[],
+): readonly SchedulingGraphEdge[] {
+  const hierarchyEdges = tasks.flatMap((task) =>
+    task.parentId === null
+      ? []
+      : [{ predecessorId: task.id, successorId: task.parentId }],
+  );
+  return [...dependencies, ...hierarchyEdges];
 }

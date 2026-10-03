@@ -41,9 +41,52 @@ A V1 permite no máximo quatro níveis, contando a tarefa-raiz. A interface deix
 de oferecer uma tarefa do quarto nível como pai, e domínio, templates e
 importação repetem a validação para que o limite não possa ser contornado.
 Ao criar a primeira subtarefa de uma tarefa que participa de uma dependência FS,
-a interface solicita uma decisão explícita: transferir as relações para a nova
-folha ou removê-las. A opção recomendada preserva os UUIDs e o lag e grava a
-conversão inteira em uma transação.
+a interface solicita uma decisão explícita: manter as relações de saída no novo
+resumo, transferir as relações para a nova folha ou removê-las. Manter só é
+oferecido quando a tarefa não recebe uma dependência, pois resumos não podem ser
+sucessores. A decisão preserva UUIDs e lag e grava a conversão inteira em uma
+transação. Acrescentar outra subtarefa a um resumo existente mantém suas
+relações de saída e não altera relações ligadas diretamente às folhas.
+
+## Tabela
+
+A confirmação de uma nova predecessora usa um botão compacto `+`; seu nome
+acessível preserva o contexto da tarefa e o tooltip informa **Adicionar
+predecessora**. Uma barra horizontal sincronizada permanece na base visível da
+área da Tabela, sem exigir que o usuário percorra todas as tarefas para alcançar
+as colunas finais.
+
+O clique direito fora dos campos editáveis abre ações para detalhes, subtarefa,
+predecessora, duplicação, template e exclusão. O botão **Mais ações** oferece o
+mesmo menu por teclado. Dentro de `input`, `textarea` e `select`, o menu nativo
+continua disponível para copiar, colar e demais comandos do sistema.
+
+O cadeado da linha representa a política de datas: aberto em tarefas `AUTO` e
+fechado em tarefas `MANUAL`. A mesma ação aparece nos detalhes e no menu de
+contexto. Travar impede deslocamento pelo scheduler e gestos temporais no Gantt,
+mas preserva a edição exata dos campos de data. Tarefas-resumo mantêm modo e
+datas derivados e, por isso, não expõem essa alternância.
+
+Com uma ou mais tarefas-folha selecionadas, a barra de ações permite travar ou
+destravar todas em uma única transação. `Ctrl+Shift+L` alterna o mesmo estado e
+é ignorado enquanto o foco está em um campo editável. Ao adicionar ou remover
+uma predecessora-resumo, a Tabela apresenta primeiro as datas que serão
+alteradas e só confirma a operação mediante decisão explícita.
+
+### Salvamento automático na Tabela
+
+Seletores e datas completas são persistidos assim que a alteração é confirmada.
+Campos de texto e numéricos usam debounce de 700 ms e são salvos imediatamente
+ao perder foco. Ao trocar de visualização, a linha captura o último rascunho
+válido antes de ser desmontada; a navegação não fica bloqueada pela escrita.
+
+Cada tarefa possui sua própria fila de gravação. Se uma segunda edição ocorrer
+enquanto a primeira está em curso, ela é executada depois e somente a revisão
+mais recente pode limpar o estado local. A linha apresenta **Alterada**,
+**Salvando…**, **Salva** ou **Erro ao salvar**. Em caso de falha, o conteúdo
+digitado permanece visível e o botão **Salvar** funciona como tentativa manual.
+Rascunhos inválidos não são enviados silenciosamente pelo autosave; o botão
+manual continua disponível para apresentar a validação detalhada.
 
 
 ## Kanban
@@ -56,6 +99,9 @@ validada, persistida e refletida imediatamente em todas as views.
 Cada cartão informa caminho hierárquico, prioridade, datas, progresso,
 predecessoras, responsável e tags quando disponíveis. Tarefas-resumo aparecem
 identificadas, mas continuam sendo a mesma `Task` derivada pelo scheduler.
+O clique direito ou o botão **Mais ações** abre comandos contextuais para mudar
+de status, duplicar e excluir. O menu reutiliza o padrão da Tabela, fecha com
+`Esc` e mantém o seletor **Status** como alternativa permanente.
 
 ## Gantt
 
@@ -100,12 +146,20 @@ realce.
 
 Os gestos do renderer são interceptados e submetidos ao domínio: mover ajusta
 datas ou lag FS, a borda direita altera duração e o marcador altera conclusão.
-O menu de contexto permite criar ou excluir dependências FS. Tarefas-resumo
-mantêm datas derivadas; a seleção de relação não oculta as demais linhas.
+O menu de contexto permite travar datas e criar ou excluir dependências FS.
+Uma tarefa-resumo pode ser origem da ligação, mas nunca destino. Tarefas `MANUAL`
+bloqueiam movimento e redimensionamento com uma explicação; tarefas-resumo
+mantêm datas derivadas e a seleção de relação não oculta as demais linhas.
 O painel **Inspecionar tarefa** permite
 alterar início e duração apenas quando isso é seguro; tarefas-resumo exibem a
 explicação de que suas datas são derivadas. O salvamento usa o scheduler do
 Chrono Project e nunca o mecanismo de agendamento da biblioteca.
+
+Desfazer e refazer no Gantt preservam até 50 edições temporais por projeto no
+SQLite. As pilhas sobrevivem à troca de view e à reabertura da aplicação; uma
+nova edição após desfazer limpa a pilha de refazer. O escopo inclui datas,
+duração, progresso e alterações de lag produzidas pelos gestos do Gantt, não
+operações estruturais como excluir tarefas ou importar workspaces.
 
 ## Controle do plano de referência
 

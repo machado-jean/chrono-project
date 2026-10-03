@@ -34,6 +34,7 @@ import type {
   WorkspaceRepository,
   WorkspaceSnapshot,
 } from "../../../src/repositories/workspace-repository";
+import type { GanttHistoryState } from "../../../src/domain/history/gantt-history";
 
 const ganttHarness = vi.hoisted(() => {
   let selectionListener: ((event: { readonly id: string }) => void) | null = null;
@@ -212,6 +213,7 @@ class MemoryWorkspaceRepository implements WorkspaceRepository {
   readonly templateItems: TaskTemplateItem[];
   readonly templateDependencies: TaskTemplateDependency[];
   readonly appliedScheduleChanges: ScheduleChangeSet[] = [];
+  private readonly ganttHistory = new Map<string, GanttHistoryState>();
   importPreview: ImportPackagePreview | null = null;
   restorePreview: ImportPackagePreview | null = null;
   lastImportSelection: ImportSelection | null = null;
@@ -331,6 +333,15 @@ class MemoryWorkspaceRepository implements WorkspaceRepository {
       else this.dependencies[index] = dependency;
     }
     for (const task of changes.tasks) await this.saveTask(task);
+  }
+
+  loadGanttHistory(projectId: string): Promise<GanttHistoryState> {
+    return Promise.resolve(this.ganttHistory.get(projectId) ?? { undoEntries: [], redoEntries: [] });
+  }
+
+  saveGanttHistory(projectId: string, state: GanttHistoryState): Promise<void> {
+    this.ganttHistory.set(projectId, state);
+    return Promise.resolve();
   }
 
   deleteTaskTree(taskId: string): Promise<void> {
@@ -572,6 +583,122 @@ describe("aplicação Chrono Project", () => {
     });
   });
 
+  it("salva texto ao sair do campo sem exigir o botão Salvar", async () => {
+    const repository = new MemoryWorkspaceRepository({ projects: [project()], tasks: [task()] });
+    render(<App repository={repository} />);
+
+    const title = await screen.findByLabelText("Título da tarefa");
+    fireEvent.change(title, { target: { value: "Escopo salvo automaticamente" } });
+    expect(screen.getByRole("status")).toHaveTextContent("Alterada");
+    fireEvent.blur(title);
+
+    await waitFor(() => {
+      expect(repository.tasks[0]?.title).toBe("Escopo salvo automaticamente");
+      expect(screen.getByRole("status")).toHaveTextContent("Salva");
+    });
+  });
+
+  it("salva texto após uma pausa curta mesmo quando o campo continua em foco", async () => {
+    const repository = new MemoryWorkspaceRepository({ projects: [project()], tasks: [task()] });
+    render(<App repository={repository} />);
+
+    fireEvent.change(await screen.findByLabelText("Responsável pela tarefa"), {
+      target: { value: "Planejamento" },
+    });
+
+    await waitFor(() => {
+      expect(repository.tasks[0]?.assignee).toBe("Planejamento");
+    }, { timeout: 2_000 });
+  });
+
+  it("salva seleções e datas válidas assim que a alteração é confirmada", async () => {
+    const repository = new MemoryWorkspaceRepository({
+      projects: [project()],
+      tasks: [scheduledTask(TASK_ID, "Preparar operação", "2026-08-28")],
+    });
+    render(<App repository={repository} />);
+
+    fireEvent.change(await screen.findByLabelText("Prioridade da tarefa"), {
+      target: { value: "HIGH" },
+    });
+    await waitFor(() => { expect(repository.tasks[0]?.priority).toBe("HIGH"); });
+
+    fireEvent.change(screen.getByLabelText("Prazo-limite da tarefa"), {
+      target: { value: "2026-09-04" },
+    });
+    await waitFor(() => { expect(repository.tasks[0]?.deadlineDate).toBe("2026-09-04"); });
+  });
+
+  it("salva a edição pendente antes de desmontar a tabela ao trocar de visualização", async () => {
+    const repository = new MemoryWorkspaceRepository({ projects: [project()], tasks: [task()] });
+    render(<App repository={repository} />);
+
+    fireEvent.change(await screen.findByLabelText("Responsável pela tarefa"), {
+      target: { value: "Equipe de implantação" },
+    });
+    fireEvent.click(screen.getByRole("tab", { name: "Kanban" }));
+
+    expect(await screen.findByRole("heading", { name: "Quadro Kanban" })).toBeVisible();
+    await waitFor(() => {
+      expect(repository.tasks[0]?.assignee).toBe("Equipe de implantação");
+    });
+  });
+
+  it("serializa salvamentos rápidos e preserva a edição mais recente", async () => {
+    const repository = new MemoryWorkspaceRepository({ projects: [project()], tasks: [task()] });
+    const persistChanges = repository.applyScheduleChanges.bind(repository);
+    let releaseFirstSave!: () => void;
+    const firstSaveGate = new Promise<void>((resolve) => { releaseFirstSave = resolve; });
+    let saveCount = 0;
+    vi.spyOn(repository, "applyScheduleChanges").mockImplementation(async (changes) => {
+      saveCount += 1;
+      if (saveCount === 1) await firstSaveGate;
+      await persistChanges(changes);
+    });
+    render(<App repository={repository} />);
+
+    const title = await screen.findByLabelText("Título da tarefa");
+    fireEvent.change(title, { target: { value: "Primeira edição" } });
+    fireEvent.blur(title);
+    await waitFor(() => { expect(saveCount).toBe(1); });
+
+    fireEvent.change(title, { target: { value: "Edição definitiva" } });
+    fireEvent.blur(title);
+    releaseFirstSave();
+
+    await waitFor(() => {
+      expect(saveCount).toBe(2);
+      expect(repository.tasks[0]?.title).toBe("Edição definitiva");
+    });
+  });
+
+  it("mantém a edição local e permite tentar novamente após falha", async () => {
+    const repository = new MemoryWorkspaceRepository({ projects: [project()], tasks: [task()] });
+    const persistChanges = repository.applyScheduleChanges.bind(repository);
+    let shouldFail = true;
+    vi.spyOn(repository, "applyScheduleChanges").mockImplementation(async (changes) => {
+      if (shouldFail) {
+        shouldFail = false;
+        throw new Error("Falha de escrita simulada.");
+      }
+      await persistChanges(changes);
+    });
+    render(<App repository={repository} />);
+
+    const title = await screen.findByLabelText("Título da tarefa");
+    fireEvent.change(title, { target: { value: "Edição preservada" } });
+    fireEvent.blur(title);
+
+    expect(await screen.findByText("Erro ao salvar")).toBeVisible();
+    expect(title).toHaveValue("Edição preservada");
+    fireEvent.click(screen.getByRole("button", { name: "Salvar" }));
+
+    await waitFor(() => {
+      expect(repository.tasks[0]?.title).toBe("Edição preservada");
+      expect(screen.getByRole("status")).toHaveTextContent("Salva");
+    });
+  });
+
   it("carrega uma tarefa persistida", async () => {
     render(<App repository={new MemoryWorkspaceRepository({ projects: [project()], tasks: [task()] })} />);
 
@@ -703,6 +830,25 @@ describe("aplicação Chrono Project", () => {
     });
   });
 
+  it("ignora um ano parcial na data sem derrubar a tabela", async () => {
+    const scheduled = scheduledTask(TASK_ID, "Preparar operação", "2026-08-28");
+    const repository = new MemoryWorkspaceRepository({ projects: [project()], tasks: [scheduled] });
+    render(<App repository={repository} />);
+
+    const startDate = await screen.findByLabelText("Início da tarefa");
+    fireEvent.change(startDate, { target: { value: "0002-08-28" } });
+
+    expect(screen.getByRole("heading", { name: "Tabela de tarefas" })).toBeVisible();
+    expect(screen.queryByText("Não foi possível exibir a tabela de tarefas.")).not.toBeInTheDocument();
+    expect(repository.tasks[0]?.startDate).toBe("2026-08-28");
+
+    fireEvent.blur(startDate);
+    expect(startDate).toHaveValue("2026-08-28");
+
+    fireEvent.change(startDate, { target: { value: "2027-08-30" } });
+    expect(startDate).toHaveValue("2027-08-30");
+  });
+
   it("cria predecessora TI com lag zero no mesmo dia do fim", async () => {
     const predecessor = scheduledTask(TASK_ID, "Predecessora", "2026-08-28");
     const successor = scheduledTask(SECOND_TASK_ID, "Sucessora", "2026-08-28", { position: 1 });
@@ -722,8 +868,73 @@ describe("aplicação Chrono Project", () => {
       expect(repository.tasks.find(({ id }) => id === successor.id)?.startDate).toBe("2026-08-28");
       expect(repository.tasks.find(({ id }) => id === successor.id)?.endDate).toBe("2026-08-28");
     });
-    expect(screen.getByLabelText("Confirmar predecessora de Sucessora")).toHaveTextContent("Adicionar");
+    expect(screen.getByLabelText("Confirmar predecessora de Sucessora")).toHaveTextContent("+");
     expect(await screen.findByText("1. Predecessora", { selector: ".dependency-item span" })).toBeVisible();
+  });
+
+  it("oferece confirmação compacta e menu de contexto próprio na tarefa", async () => {
+    const first = scheduledTask(TASK_ID, "Preparar operação", "2026-08-28");
+    const second = scheduledTask(SECOND_TASK_ID, "Executar operação", "2026-08-31", { position: 1 });
+    const repository = new MemoryWorkspaceRepository({
+      projects: [project()],
+      tasks: [first, second],
+    });
+    render(<App repository={repository} />);
+
+    const secondRow = (await screen.findByDisplayValue("Executar operação")).closest("tr");
+    expect(secondRow).not.toBeNull();
+    const addPredecessor = within(secondRow as HTMLElement).getByTitle("Adicionar predecessora");
+    expect(addPredecessor).toHaveTextContent("+");
+
+    fireEvent.contextMenu(secondRow as HTMLElement, { clientX: 320, clientY: 240 });
+    const menu = screen.getByRole("menu", { name: "Ações de Executar operação" });
+    expect(within(menu).getByRole("menuitem", { name: "Abrir detalhes" })).toBeVisible();
+    expect(within(menu).getByRole("menuitem", { name: "Adicionar subtarefa" })).toBeVisible();
+    expect(within(menu).getByRole("menuitem", { name: "Adicionar predecessora" })).toBeVisible();
+    expect(within(menu).getByRole("menuitem", { name: "Duplicar tarefa" })).toBeVisible();
+    expect(within(menu).getByRole("menuitem", { name: "Salvar como template" })).toBeVisible();
+    expect(within(menu).getByRole("menuitem", { name: "Excluir tarefa…" })).toBeVisible();
+
+    fireEvent.click(within(menu).getByRole("menuitem", { name: "Adicionar predecessora" }));
+    expect(within(secondRow as HTMLElement).getByLabelText("Nova predecessora de Executar operação")).toHaveFocus();
+
+    const titleInput = within(secondRow as HTMLElement).getByLabelText("Título da tarefa");
+    fireEvent.contextMenu(titleInput);
+    expect(screen.queryByRole("menu", { name: "Ações de Executar operação" })).not.toBeInTheDocument();
+
+    const moreActions = within(secondRow as HTMLElement).getByRole("button", { name: "Mais ações para Executar operação" });
+    fireEvent.click(moreActions);
+    expect(within(screen.getByRole("menu", { name: "Ações de Executar operação" })).getByRole("menuitem", { name: "Abrir detalhes" })).toHaveFocus();
+    fireEvent.keyDown(screen.getByRole("menu", { name: "Ações de Executar operação" }), { key: "Escape" });
+    expect(moreActions).toHaveFocus();
+
+    fireEvent.click(screen.getByRole("tab", { name: "Kanban" }));
+    const kanbanCard = (await screen.findByText("Executar operação", { selector: ".kanban-card-title strong" })).closest("article");
+    expect(kanbanCard).not.toBeNull();
+    fireEvent.contextMenu(kanbanCard as HTMLElement, { clientX: 420, clientY: 260 });
+    const kanbanMenu = screen.getByRole("menu", { name: "Ações de Executar operação" });
+    expect(within(kanbanMenu).getByRole("menuitem", { name: "Mover para Em andamento" })).toBeVisible();
+    expect(within(kanbanMenu).getByRole("menuitem", { name: "Duplicar tarefa" })).toBeVisible();
+    expect(within(kanbanMenu).getByRole("menuitem", { name: "Excluir tarefa…" })).toBeVisible();
+
+    fireEvent.click(within(kanbanMenu).getByRole("menuitem", { name: "Duplicar tarefa" }));
+    await waitFor(() => { expect(repository.tasks).toHaveLength(3); });
+  });
+
+  it("sincroniza a barra horizontal sempre disponível com a tabela", async () => {
+    render(<App repository={new MemoryWorkspaceRepository({ projects: [project()], tasks: [task()] })} />);
+
+    const table = await screen.findByRole("table", { name: /Tarefas do projeto/ });
+    const tableScroll = table.parentElement as HTMLDivElement;
+    const horizontalScroll = screen.getByRole("region", { name: "Rolagem horizontal da tabela" });
+
+    horizontalScroll.scrollLeft = 240;
+    fireEvent.scroll(horizontalScroll);
+    expect(tableScroll.scrollLeft).toBe(240);
+
+    tableScroll.scrollLeft = 80;
+    fireEvent.scroll(tableScroll);
+    expect(horizontalScroll.scrollLeft).toBe(80);
   });
 
   it("preenche o cronograma de uma nova tarefa ao adicionar predecessora", async () => {
@@ -1026,6 +1237,123 @@ describe("aplicação Chrono Project", () => {
     expect(screen.getByText("Datas derivadas")).toBeVisible();
   });
 
+  it("trava e destrava datas pelo cadeado sem perder o cronograma", async () => {
+    const scheduled = scheduledTask(TASK_ID, "Atividade controlada", "2026-09-01");
+    const repository = new MemoryWorkspaceRepository({ projects: [project()], tasks: [scheduled] });
+    render(<App repository={repository} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Travar datas de Atividade controlada" }));
+    await waitFor(() => {
+      expect(repository.tasks[0]?.schedulingMode).toBe("MANUAL");
+      expect(screen.getByRole("button", { name: "Destravar datas de Atividade controlada" })).toHaveAttribute("aria-pressed", "true");
+    });
+    expect(repository.tasks[0]?.startDate).toBe("2026-09-01");
+
+    fireEvent.click(screen.getByRole("button", { name: "Destravar datas de Atividade controlada" }));
+    await waitFor(() => { expect(repository.tasks[0]?.schedulingMode).toBe("AUTO"); });
+  });
+
+  it("trava tarefas selecionadas em massa e alterna pelo atalho", async () => {
+    const repository = new MemoryWorkspaceRepository({
+      projects: [project()],
+      tasks: [
+        scheduledTask(TASK_ID, "Primeira selecionada", "2026-09-01"),
+        scheduledTask(SECOND_TASK_ID, "Segunda selecionada", "2026-09-02", { position: 1 }),
+      ],
+    });
+    render(<App repository={repository} />);
+
+    fireEvent.click(await screen.findByRole("checkbox", { name: "Selecionar Primeira selecionada" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Selecionar Segunda selecionada" }));
+    const actions = screen.getByRole("group", { name: "Ações nas tarefas selecionadas" });
+    fireEvent.click(within(actions).getByRole("button", { name: /Travar datas/ }));
+    await waitFor(() => {
+      expect(repository.tasks.every(({ schedulingMode }) => schedulingMode === "MANUAL")).toBe(true);
+    });
+
+    fireEvent.keyDown(document, { key: "L", ctrlKey: true, shiftKey: true });
+    await waitFor(() => {
+      expect(repository.tasks.every(({ schedulingMode }) => schedulingMode === "AUTO")).toBe(true);
+    });
+  });
+
+  it("permite escolher uma tarefa-resumo como predecessora de uma folha", async () => {
+    const summary = task();
+    const child = scheduledTask(SECOND_TASK_ID, "Última etapa do resumo", "2026-09-01", {
+      parentId: summary.id,
+    });
+    const successor = scheduledTask(THIRD_TASK_ID, "Sucessora do resumo", "2026-09-02", {
+      position: 1,
+    });
+    const repository = new MemoryWorkspaceRepository({
+      projects: [project()],
+      tasks: [summary, child, successor],
+    });
+    render(<App repository={repository} />);
+
+    const predecessor = await screen.findByLabelText("Nova predecessora de Sucessora do resumo");
+    fireEvent.change(predecessor, { target: { value: summary.id } });
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar predecessora de Sucessora do resumo" }));
+
+    const preview = await screen.findByRole("dialog", { name: "Prévia do impacto no cronograma" });
+    expect(preview).toHaveTextContent("tarefa-resumo como predecessora");
+    fireEvent.click(within(preview).getByRole("button", { name: "Adicionar predecessora" }));
+
+    await waitFor(() => {
+      expect(repository.dependencies).toHaveLength(1);
+      expect(repository.dependencies[0]?.predecessorId).toBe(summary.id);
+      expect(repository.dependencies[0]?.successorId).toBe(successor.id);
+    });
+  });
+
+  it("mostra a prévia antes de remover uma predecessora-resumo", async () => {
+    const summary = scheduledTask(TASK_ID, "Resumo fornecedor", "2026-09-01");
+    const child = scheduledTask(SECOND_TASK_ID, "Entrega final", "2026-09-01", {
+      parentId: summary.id,
+    });
+    const successor = scheduledTask(THIRD_TASK_ID, "Receber entrega", "2026-09-02", {
+      position: 1,
+    });
+    const relation = dependency(summary.id, successor.id);
+    const repository = new MemoryWorkspaceRepository({
+      projects: [project()], tasks: [summary, child, successor], dependencies: [relation],
+    });
+    render(<App repository={repository} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: /Remover predecessora.*Resumo fornecedor/ }));
+    const preview = screen.getByRole("dialog", { name: "Prévia do impacto no cronograma" });
+    expect(preview).toHaveTextContent("Remover");
+    fireEvent.click(within(preview).getByRole("button", { name: "Remover predecessora" }));
+    await waitFor(() => { expect(repository.dependencies).toHaveLength(0); });
+  });
+
+  it("mantém a dependência do resumo ao adicionar outra subtarefa", async () => {
+    const summary = task();
+    const child = scheduledTask(SECOND_TASK_ID, "Etapa 1.5", "2026-09-01", {
+      parentId: summary.id,
+    });
+    const successor = scheduledTask(THIRD_TASK_ID, "Etapa 2.1", "2026-09-02", { position: 1 });
+    const relation = dependency(summary.id, successor.id);
+    const repository = new MemoryWorkspaceRepository({
+      projects: [project()],
+      tasks: [summary, child, successor],
+      dependencies: [relation],
+    });
+    render(<App repository={repository} />);
+
+    const summaryRow = (await screen.findByDisplayValue("Preparar operação")).closest("tr");
+    expect(summaryRow).not.toBeNull();
+    fireEvent.click(within(summaryRow as HTMLElement).getByRole("button", { name: "+ Subtarefa" }));
+    fireEvent.change(screen.getByPlaceholderText("Nova subtarefa"), { target: { value: "Etapa 1.6" } });
+    fireEvent.click(screen.getByRole("button", { name: "Adicionar" }));
+
+    await waitFor(() => { expect(repository.tasks.some(({ title }) => title === "Etapa 1.6")).toBe(true); });
+    expect(screen.queryByRole("dialog", { name: "Transformar em tarefa-resumo?" })).not.toBeInTheDocument();
+    expect(repository.dependencies).toEqual([
+      expect.objectContaining({ predecessorId: summary.id, successorId: successor.id }),
+    ]);
+  });
+
   it("altera status no Kanban e reflete a mesma tarefa na Tabela", async () => {
     const repository = new MemoryWorkspaceRepository({
       projects: [project()],
@@ -1216,6 +1544,26 @@ describe("aplicação Chrono Project", () => {
     });
   });
 
+  it("impede arrastar no Gantt quando o cadeado de datas está fechado", async () => {
+    const scheduled = scheduledTask(TASK_ID, "Planejar entrega", "2026-08-28", {
+      schedulingMode: "MANUAL",
+    });
+    const repository = new MemoryWorkspaceRepository({ projects: [project()], tasks: [scheduled] });
+    render(<App repository={repository} />);
+    fireEvent.click(await screen.findByRole("tab", { name: "Gantt" }));
+    await screen.findByTestId("svar-gantt");
+    await waitFor(() => { expect(ganttHarness.hasInterceptor("update-task")).toBe(true); });
+
+    ganttHarness.intercept("update-task", {
+      id: TASK_ID,
+      task: { start: new Date(2026, 7, 28), end: new Date(2026, 7, 29) },
+      diff: 3,
+    });
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/datas travadas/i);
+    expect(repository.tasks[0]?.startDate).toBe("2026-08-28");
+  });
+
   it("salva o percentual arrastado no Gantt", async () => {
     const scheduled = scheduledTask(TASK_ID, "Planejar entrega", "2026-08-28", { progress: 20 });
     const repository = new MemoryWorkspaceRepository({ projects: [project()], tasks: [scheduled] });
@@ -1232,6 +1580,28 @@ describe("aplicação Chrono Project", () => {
 
     await waitFor(() => { expect(repository.tasks[0]?.progress).toBe(65); });
     expect(await screen.findByRole("status")).toHaveTextContent("conclusão atualizada para 65%");
+  });
+
+  it("recarrega o histórico persistente do Gantt depois de trocar de view", async () => {
+    const scheduled = scheduledTask(TASK_ID, "Planejar entrega", "2026-08-28", { progress: 20 });
+    const repository = new MemoryWorkspaceRepository({ projects: [project()], tasks: [scheduled] });
+    render(<App repository={repository} />);
+    fireEvent.click(await screen.findByRole("tab", { name: "Gantt" }));
+    await screen.findByTestId("svar-gantt");
+    await waitFor(() => { expect(ganttHarness.hasInterceptor("update-task")).toBe(true); });
+    ganttHarness.intercept("update-task", {
+      id: TASK_ID,
+      task: { progress: 65 },
+      inProgress: false,
+    });
+    await waitFor(() => { expect(repository.tasks[0]?.progress).toBe(65); });
+
+    fireEvent.click(screen.getByRole("tab", { name: "Tabela" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Gantt" }));
+    const undo = await screen.findByRole("button", { name: "Desfazer" });
+    await waitFor(() => { expect(undo).toBeEnabled(); });
+    fireEvent.click(undo);
+    await waitFor(() => { expect(repository.tasks[0]?.progress).toBe(20); });
   });
 
   it("não persiste como edição do usuário o recálculo interno de uma tarefa-resumo", async () => {
@@ -1603,6 +1973,31 @@ describe("aplicação Chrono Project", () => {
     expect(child).toBeDefined();
     expect(repository.dependencies[0]?.predecessorId).toBe(child?.id);
     expect(repository.dependencies[0]?.successorId).toBe(successor.id);
+  });
+
+  it("permite manter uma dependência de saída ao transformar a predecessora em resumo", async () => {
+    const predecessor = scheduledTask(TASK_ID, "Planejamento", "2026-09-10");
+    const successor = scheduledTask(SECOND_TASK_ID, "Execução", "2026-09-11", { position: 1 });
+    const relation = dependency(predecessor.id, successor.id);
+    const repository = new MemoryWorkspaceRepository({
+      projects: [project()],
+      tasks: [predecessor, successor],
+      dependencies: [relation],
+    });
+    render(<App repository={repository} />);
+
+    const predecessorRow = (await screen.findByDisplayValue("Planejamento")).closest("tr");
+    expect(predecessorRow).not.toBeNull();
+    fireEvent.click(within(predecessorRow as HTMLElement).getByRole("button", { name: "+ Subtarefa" }));
+    fireEvent.change(screen.getByPlaceholderText("Nova subtarefa"), { target: { value: "Detalhar plano" } });
+    fireEvent.click(screen.getByRole("button", { name: "Adicionar" }));
+    const dialog = screen.getByRole("dialog", { name: "Transformar em tarefa-resumo?" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Manter no novo resumo" }));
+
+    await waitFor(() => { expect(repository.tasks).toHaveLength(3); });
+    expect(repository.dependencies).toEqual([
+      expect.objectContaining({ predecessorId: predecessor.id, successorId: successor.id }),
+    ]);
   });
 
   it("registra plano de referência, mantém histórico e salva prazo-limite na mesma tarefa", async () => {

@@ -63,16 +63,18 @@ permanece em um campo informativo próprio. Isso preserva finais de semana e
 feriados dentro da extensão visual exata da barra.
 
 Relações existentes podem ser destacadas por seletor ou clique no hitbox oficial
-da linha. Uma nova ligação visual aceita somente FS com lag zero e tarefas
-executáveis do mesmo projeto; auto-dependência, resumo, duplicidade e ciclo são
+da linha. Uma nova ligação visual aceita somente FS com lag zero no mesmo
+projeto. A sucessora precisa ser uma tarefa-folha; a predecessora pode ser folha
+ou resumo. Auto-dependência, duplicidade e ciclos combinados com a hierarquia são
 rejeitados antes da persistência. O menu de contexto oferece criação e remoção;
 a Tabela continua disponível para edição detalhada. As demais linhas permanecem
 visíveis e selecionáveis quando uma relação recebe destaque.
 
-Tarefas livres podem ser movidas ou redimensionadas. Em tarefa com predecessora,
+Tarefas `AUTO` livres podem ser movidas ou redimensionadas. Em tarefa com predecessora,
 o movimento completo ajusta automaticamente o lag FS não negativo; a borda
 inicial permanece protegida. A borda final muda a duração, e o scheduler
-propaga o novo fim aos sucessores. Resumos não são
+propaga o novo fim aos sucessores. O cadeado fechado bloqueia esses gestos em
+tarefas `MANUAL`, sem impedir edição exata pelo inspetor. Resumos não são
 editáveis. O inspetor permanece a alternativa operável por teclado.
 
 Finais de semana e feriados são destacados pelo calendário do Chrono Project. Não

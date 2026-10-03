@@ -9,6 +9,7 @@ import {
 } from "../domain/planning/baseline";
 import { validateTaskDependency } from "../domain/scheduling/dependency";
 import { validateTask } from "../domain/tasks/task";
+import { parseGanttHistoryState, type GanttHistoryState } from "../domain/history/gantt-history";
 import {
   validateTaskTemplateBundle,
   validateTaskTemplateDependency,
@@ -116,6 +117,23 @@ export class TauriWorkspaceRepository implements WorkspaceRepository {
         dependenciesToSave: changes.dependenciesToSave,
         dependencyIdsToDelete: changes.dependencyIdsToDelete,
         taskTreeIdsToDelete: changes.taskTreeIdsToDelete,
+      },
+    });
+  }
+
+  async loadGanttHistory(projectId: string): Promise<GanttHistoryState> {
+    const state = await invoke("load_gantt_history", { projectId });
+    return parseGanttHistoryState(state);
+  }
+
+  async saveGanttHistory(projectId: string, state: GanttHistoryState): Promise<void> {
+    const parsed = parseGanttHistoryState(state);
+    await invoke("save_gantt_history", {
+      state: {
+        projectId,
+        undoEntries: parsed.undoEntries,
+        redoEntries: parsed.redoEntries,
+        updatedAt: new Date().toISOString(),
       },
     });
   }

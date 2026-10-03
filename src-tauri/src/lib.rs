@@ -37,6 +37,8 @@ pub fn run() {
             commands::delete_project_baselines,
             commands::reorder_tasks,
             commands::apply_schedule_changes,
+            commands::load_gantt_history,
+            commands::save_gantt_history,
             commands::delete_task_tree,
             commands::save_duplication_bundle,
             commands::save_template_bundle,

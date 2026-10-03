@@ -77,14 +77,12 @@ export function validateTaskDependency(
     );
   }
 
-  const summaryTaskId = [predecessor.id, successor.id].find((taskId) =>
-    tasks.some((task) => task.parentId === taskId),
-  );
-  if (summaryTaskId !== undefined) {
+  const successorIsSummary = tasks.some((task) => task.parentId === successor.id);
+  if (successorIsSummary) {
     throw new DomainValidationError(
-      "summary_dependency",
-      "predecessorId",
-      "Tarefas-resumo não podem possuir dependências; relacione suas subtarefas.",
+      "summary_successor_dependency",
+      "successorId",
+      "Uma tarefa-resumo não pode ser sucessora porque suas datas são derivadas das subtarefas.",
     );
   }
 

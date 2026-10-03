@@ -28,7 +28,7 @@ GitHub Release, no registro de build e no relatório final, sem novo commit.
    tarefas, menu Iniciar, atalho, lista de aplicativos, instalador e
    desinstalador.
 5. Registrar tamanhos e SHA-256 dos dois instaladores em
-   [`releases/v0.2.1.md`](releases/v0.2.1.md).
+   [`releases/v0.2.2.md`](releases/v0.2.2.md).
 6. Criar o commit somente após a aprovação dessa auditoria.
 
 ## Depois de publicar
@@ -36,7 +36,7 @@ GitHub Release, no registro de build e no relatório final, sem novo commit.
 No PowerShell, execute:
 
 ```powershell
-.\scripts\Check-ReleaseCi.ps1 -Tag v0.2.1
+.\scripts\Check-ReleaseCi.ps1 -Tag v0.2.2
 ```
 
 O script resolve o commit apontado pela tag, localiza o workflow `CI` de `main`

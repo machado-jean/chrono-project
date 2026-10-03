@@ -8,8 +8,9 @@ use tauri_plugin_sql::{DbInstances, DbPool};
 use crate::{
     database,
     persistence::{
-        self, BaselineBundleRecord, CalendarRecord, DuplicationBundleRecord, ProjectRecord,
-        ScheduleChangeSetRecord, TaskRecord, TaskTemplateBundleRecord, WorkspaceData,
+        self, BaselineBundleRecord, CalendarRecord, DuplicationBundleRecord,
+        GanttHistoryStateRecord, ProjectRecord, ScheduleChangeSetRecord, TaskRecord,
+        TaskTemplateBundleRecord, WorkspaceData,
     },
     portability::{
         self, BackupResult, ExportResult, ImportPackagePreview, ImportResult, ImportSelection,
@@ -138,6 +139,28 @@ pub async fn apply_schedule_changes(
     persistence::apply_schedule_changes(&pool, &changes)
         .await
         .map_err(|error| format!("Não foi possível atualizar o cronograma: {error}"))
+}
+
+#[tauri::command]
+pub async fn load_gantt_history(
+    db_instances: State<'_, DbInstances>,
+    project_id: String,
+) -> Result<GanttHistoryStateRecord, String> {
+    let pool = sqlite_pool(&db_instances).await?;
+    persistence::load_gantt_history(&pool, &project_id)
+        .await
+        .map_err(|error| format!("Não foi possível carregar o histórico do Gantt: {error}"))
+}
+
+#[tauri::command]
+pub async fn save_gantt_history(
+    db_instances: State<'_, DbInstances>,
+    state: GanttHistoryStateRecord,
+) -> Result<(), String> {
+    let pool = sqlite_pool(&db_instances).await?;
+    persistence::save_gantt_history(&pool, &state)
+        .await
+        .map_err(|error| format!("Não foi possível salvar o histórico do Gantt: {error}"))
 }
 
 #[tauri::command]

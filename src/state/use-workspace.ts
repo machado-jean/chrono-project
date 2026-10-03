@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import {
   DEFAULT_CALENDAR_ID,
@@ -48,6 +48,7 @@ import type {
   TaskTemplateItem,
 } from "../domain/templates/template";
 import type { WorkspaceRepository } from "../repositories/workspace-repository";
+import type { GanttHistoryState } from "../domain/history/gantt-history";
 
 interface CreateProjectInput {
   readonly name: string;
@@ -57,7 +58,7 @@ interface CreateProjectInput {
 interface CreateTaskInput {
   readonly title: string;
   readonly parentId: string | null;
-  readonly parentDependencyPolicy?: "TRANSFER" | "REMOVE";
+  readonly parentDependencyPolicy?: "KEEP" | "TRANSFER" | "REMOVE";
 }
 
 interface DependencyInput {
@@ -110,6 +111,12 @@ export interface WorkspaceController {
     task: Task,
     dependencyUpdates?: readonly TaskDependency[],
   ) => Promise<boolean>;
+  readonly setTasksSchedulingMode: (
+    taskIds: readonly string[],
+    schedulingMode: SchedulingMode,
+  ) => Promise<boolean>;
+  readonly loadGanttHistory: (projectId: string) => Promise<GanttHistoryState>;
+  readonly saveGanttHistory: (projectId: string, state: GanttHistoryState) => Promise<void>;
   readonly moveTask: (taskId: string, direction: MoveDirection) => Promise<boolean>;
   readonly removeTaskTree: (taskId: string) => Promise<boolean>;
   readonly createDependency: (input: DependencyInput) => Promise<TaskDependency | null>;
@@ -246,6 +253,16 @@ export function useWorkspace(repository: WorkspaceRepository): WorkspaceControll
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reloadVersion, setReloadVersion] = useState(0);
+  const calendarsRef = useRef(calendars);
+  const projectsRef = useRef(projects);
+  const tasksRef = useRef(tasks);
+  const dependenciesRef = useRef(dependencies);
+  const mutationQueueRef = useRef<Promise<void>>(Promise.resolve());
+
+  useLayoutEffect(() => { calendarsRef.current = calendars; }, [calendars]);
+  useLayoutEffect(() => { projectsRef.current = projects; }, [projects]);
+  useLayoutEffect(() => { tasksRef.current = tasks; }, [tasks]);
+  useLayoutEffect(() => { dependenciesRef.current = dependencies; }, [dependencies]);
 
   useEffect(() => {
     let active = true;
@@ -292,6 +309,10 @@ export function useWorkspace(repository: WorkspaceRepository): WorkspaceControll
         // A desmontagem pode ocorrer enquanto a transação assíncrona está em andamento.
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         if (!active) return;
+        calendarsRef.current = snapshot.calendars;
+        projectsRef.current = snapshot.projects;
+        tasksRef.current = reconciledTasks;
+        dependenciesRef.current = snapshot.dependencies;
         setCalendars(snapshot.calendars);
         setProjects(snapshot.projects);
         setTasks(reconciledTasks);
@@ -321,17 +342,26 @@ export function useWorkspace(repository: WorkspaceRepository): WorkspaceControll
     };
   }, [repository, reloadVersion]);
 
-  const runMutation = useCallback(async <T,>(mutation: () => Promise<T>): Promise<T | null> => {
-    setIsSaving(true);
-    setError(null);
-    try {
-      return await mutation();
-    } catch (mutationError) {
-      setError(errorMessage(mutationError));
-      return null;
-    } finally {
-      setIsSaving(false);
-    }
+  const runMutation = useCallback(async <T,>(
+    mutation: () => Promise<T>,
+    options: { readonly blocking?: boolean } = {},
+  ): Promise<T | null> => {
+    const execute = async (): Promise<T | null> => {
+      const blocking = options.blocking ?? true;
+      if (blocking) setIsSaving(true);
+      setError(null);
+      try {
+        return await mutation();
+      } catch (mutationError) {
+        setError(errorMessage(mutationError));
+        return null;
+      } finally {
+        if (blocking) setIsSaving(false);
+      }
+    };
+    const queued = mutationQueueRef.current.then(execute, execute);
+    mutationQueueRef.current = queued.then(() => undefined, () => undefined);
+    return await queued;
   }, []);
 
   const createProject = useCallback(
@@ -608,12 +638,27 @@ export function useWorkspace(repository: WorkspaceRepository): WorkspaceControll
                 .filter((dependency) => dependency.predecessorId === input.parentId || dependency.successorId === input.parentId)
                 .map((dependency) => dependency.id),
         );
-        if (parentDependencyIds.size > 0 && input.parentDependencyPolicy === undefined) {
+        const parentAlreadySummary = input.parentId !== null && projectTasks.some(
+          (task) => task.parentId === input.parentId,
+        );
+        const parentDependencyPolicy = input.parentDependencyPolicy
+          ?? (parentAlreadySummary ? "KEEP" : undefined);
+        if (parentDependencyIds.size > 0 && parentDependencyPolicy === undefined) {
           throw new Error("Escolha como tratar as dependências da tarefa-pai.");
         }
+        const parentHasIncomingDependency = projectDependencies.some(
+          (dependency) => parentDependencyIds.has(dependency.id) && dependency.successorId === input.parentId,
+        );
+        if (parentDependencyPolicy === "KEEP" && parentHasIncomingDependency) {
+          throw new Error("Uma tarefa-resumo não pode manter dependências em que ela é sucessora.");
+        }
+        const mutatedParentDependencyIds = parentDependencyPolicy === "KEEP"
+          ? new Set<string>()
+          : parentDependencyIds;
         const nextProjectDependencies = projectDependencies.flatMap((dependency) => {
           if (!parentDependencyIds.has(dependency.id)) return [dependency];
-          if (input.parentDependencyPolicy === "REMOVE") return [];
+          if (parentDependencyPolicy === "KEEP") return [dependency];
+          if (parentDependencyPolicy === "REMOVE") return [];
           return [{
             ...dependency,
             predecessorId: dependency.predecessorId === input.parentId ? createdTask.id : dependency.predecessorId,
@@ -635,14 +680,14 @@ export function useWorkspace(repository: WorkspaceRepository): WorkspaceControll
         await repository.applyScheduleChanges({
           calendarsToSave: [],
           tasks: persistedTasks.filter((task) => persistIds.has(task.id)),
-          dependenciesToSave: nextProjectDependencies.filter((dependency) => parentDependencyIds.has(dependency.id)),
-          dependencyIdsToDelete: [...parentDependencyIds],
+          dependenciesToSave: nextProjectDependencies.filter((dependency) => mutatedParentDependencyIds.has(dependency.id)),
+          dependencyIdsToDelete: [...mutatedParentDependencyIds],
           taskTreeIdsToDelete: [],
         });
         setTasks((current) => replaceTasks(current, persistedTasks));
         setDependencies((current) => current
-          .filter((dependency) => !parentDependencyIds.has(dependency.id))
-          .concat(nextProjectDependencies.filter((dependency) => parentDependencyIds.has(dependency.id))));
+          .filter((dependency) => !mutatedParentDependencyIds.has(dependency.id))
+          .concat(nextProjectDependencies.filter((dependency) => mutatedParentDependencyIds.has(dependency.id))));
         setSchedulingConflicts((current) =>
           replaceProjectConflicts(
             current,
@@ -663,17 +708,21 @@ export function useWorkspace(repository: WorkspaceRepository): WorkspaceControll
       dependencyUpdates: readonly TaskDependency[] = [],
     ): Promise<boolean> => {
       const result = await runMutation(async () => {
-        const project = projects.find((candidate) => candidate.id === task.projectId);
+        const currentProjects = projectsRef.current;
+        const currentCalendars = calendarsRef.current;
+        const currentTasks = tasksRef.current;
+        const currentDependencies = dependenciesRef.current;
+        const project = currentProjects.find((candidate) => candidate.id === task.projectId);
         if (project === undefined) throw new Error("O projeto da tarefa não existe.");
-        if (!calendars.some((calendar) => calendar.id === (task.calendarId ?? project.calendarId))) {
+        if (!currentCalendars.some((calendar) => calendar.id === (task.calendarId ?? project.calendarId))) {
           throw new Error("O calendário usado pela tarefa não existe.");
         }
-        assertValidParentAssignment(tasks, task.id, task.projectId, task.parentId);
-        const previous = tasks.find((candidate) => candidate.id === task.id);
+        assertValidParentAssignment(currentTasks, task.id, task.projectId, task.parentId);
+        const previous = currentTasks.find((candidate) => candidate.id === task.id);
         const movedToAnotherParent = previous !== undefined && previous.parentId !== task.parentId;
         const position = movedToAnotherParent
           ? nextPosition(
-              tasks.filter(
+              currentTasks.filter(
                 (candidate) =>
                   candidate.id !== task.id &&
                   candidate.projectId === task.projectId &&
@@ -683,10 +732,10 @@ export function useWorkspace(repository: WorkspaceRepository): WorkspaceControll
           : task.position;
         const updatedAt = nowUtc();
         const validated = validateTask({ ...task, position, updatedAt });
-        const projectTasks = tasks
+        const projectTasks = currentTasks
           .filter((candidate) => candidate.projectId === task.projectId)
           .map((candidate) => (candidate.id === validated.id ? validated : candidate));
-        const existingProjectDependencies = dependencies.filter(
+        const existingProjectDependencies = currentDependencies.filter(
           (dependency) => dependency.projectId === task.projectId,
         );
         const dependencyUpdateIds = new Set<string>();
@@ -720,7 +769,7 @@ export function useWorkspace(repository: WorkspaceRepository): WorkspaceControll
         const scheduled = rescheduleAffectedTasks({
           tasks: projectTasks,
           dependencies: projectDependencies,
-          calendars,
+          calendars: currentCalendars,
           projectCalendarId: project.calendarId,
           changedTaskIds: [
             validated.id,
@@ -736,16 +785,79 @@ export function useWorkspace(repository: WorkspaceRepository): WorkspaceControll
           dependencyIdsToDelete: [],
           taskTreeIdsToDelete: [],
         });
-        setTasks((current) => replaceTasks(current, persistedTasks));
+        const replacements = persistedTasks.filter((candidate) => persistIds.has(candidate.id));
+        const nextTasks = replaceTasks(tasksRef.current, replacements);
+        tasksRef.current = nextTasks;
+        setTasks(nextTasks);
         if (validatedDependencyUpdates.length > 0) {
-          setDependencies((current) =>
-            current.map((dependency) => updatesById.get(dependency.id) ?? dependency),
+          const nextDependencies = dependenciesRef.current.map(
+            (dependency) => updatesById.get(dependency.id) ?? dependency,
           );
+          dependenciesRef.current = nextDependencies;
+          setDependencies(nextDependencies);
         }
         setSchedulingConflicts((current) =>
           replaceProjectConflicts(
             current,
             new Set(persistedTasks.map(({ id }) => id)),
+            projectSchedulingConflicts(project, persistedTasks, projectDependencies, currentCalendars),
+          ),
+        );
+        return true;
+      }, { blocking: false });
+      return result ?? false;
+    },
+    [repository, runMutation],
+  );
+
+  const setTasksSchedulingMode = useCallback(
+    async (taskIds: readonly string[], schedulingMode: SchedulingMode): Promise<boolean> => {
+      const result = await runMutation(async () => {
+        if (taskIds.length === 0) return false;
+        const uniqueIds = new Set(taskIds);
+        const selectedTasks = tasks.filter((task) => uniqueIds.has(task.id));
+        if (selectedTasks.length !== uniqueIds.size) {
+          throw new Error("Uma das tarefas selecionadas não existe mais.");
+        }
+        const projectId = selectedTasks[0]?.projectId;
+        const project = projects.find((candidate) => candidate.id === projectId);
+        if (project === undefined || selectedTasks.some((task) => task.projectId !== project.id)) {
+          throw new Error("A trava em massa só pode ser aplicada dentro do mesmo projeto.");
+        }
+        const summaryIds = new Set(
+          tasks.flatMap((task) => task.parentId === null ? [] : [task.parentId]),
+        );
+        if (selectedTasks.some((task) => summaryIds.has(task.id))) {
+          throw new Error("Tarefas-resumo têm datas derivadas e não podem ser travadas manualmente.");
+        }
+        const updatedAt = nowUtc();
+        const projectTasks = tasks
+          .filter((task) => task.projectId === project.id)
+          .map((task) => uniqueIds.has(task.id)
+            ? validateTask({ ...task, schedulingMode, updatedAt })
+            : task);
+        const projectDependencies = dependencies.filter(
+          (dependency) => dependency.projectId === project.id,
+        );
+        const scheduled = rescheduleAffectedTasks({
+          tasks: projectTasks,
+          dependencies: projectDependencies,
+          calendars,
+          projectCalendarId: project.calendarId,
+          changedTaskIds: [...uniqueIds],
+        });
+        const persistIds = new Set([...uniqueIds, ...scheduled.changedTaskIds]);
+        const persistedTasks = stampedScheduledTasks(scheduled.tasks, persistIds, updatedAt);
+        const replacements = persistedTasks.filter((task) => persistIds.has(task.id));
+        await repository.applyScheduleChanges({
+          calendarsToSave: [], tasks: replacements, dependenciesToSave: [],
+          dependencyIdsToDelete: [], taskTreeIdsToDelete: [],
+        });
+        setTasks((current) => replaceTasks(current, replacements));
+        setSchedulingConflicts((current) =>
+          replaceProjectConflicts(
+            current,
+            new Set(projectTasks.map(({ id }) => id)),
             projectSchedulingConflicts(project, persistedTasks, projectDependencies, calendars),
           ),
         );
@@ -754,6 +866,16 @@ export function useWorkspace(repository: WorkspaceRepository): WorkspaceControll
       return result ?? false;
     },
     [calendars, dependencies, projects, repository, runMutation, tasks],
+  );
+
+  const loadGanttHistory = useCallback(
+    (projectId: string) => repository.loadGanttHistory(projectId),
+    [repository],
+  );
+
+  const saveGanttHistory = useCallback(
+    (projectId: string, state: GanttHistoryState) => repository.saveGanttHistory(projectId, state),
+    [repository],
   );
 
   const moveTask = useCallback(
@@ -854,9 +976,12 @@ export function useWorkspace(repository: WorkspaceRepository): WorkspaceControll
       dependency: TaskDependency,
       nextDependencies: readonly TaskDependency[],
     ): Promise<boolean> => {
-      const project = projects.find((candidate) => candidate.id === dependency.projectId);
+      const currentProjects = projectsRef.current;
+      const currentTasks = tasksRef.current;
+      const currentCalendars = calendarsRef.current;
+      const project = currentProjects.find((candidate) => candidate.id === dependency.projectId);
       if (project === undefined) throw new Error("O projeto da dependência não existe.");
-      const projectTasks = tasks.filter((task) => task.projectId === dependency.projectId);
+      const projectTasks = currentTasks.filter((task) => task.projectId === dependency.projectId);
       const projectDependencies = nextDependencies.filter(
         (candidate) => candidate.projectId === dependency.projectId,
       );
@@ -864,7 +989,7 @@ export function useWorkspace(repository: WorkspaceRepository): WorkspaceControll
       const scheduled = rescheduleAffectedTasks({
         tasks: projectTasks,
         dependencies: projectDependencies,
-        calendars,
+        calendars: currentCalendars,
         projectCalendarId: project.calendarId,
         changedTaskIds: [dependency.successorId],
       });
@@ -881,24 +1006,32 @@ export function useWorkspace(repository: WorkspaceRepository): WorkspaceControll
         dependencyIdsToDelete: [],
         taskTreeIdsToDelete: [],
       });
-      setTasks((current) => replaceTasks(current, persistedTasks));
-      setDependencies(nextDependencies.map((item) => (item.id === dependency.id ? { ...dependency, updatedAt } : item)));
+      const nextTasks = replaceTasks(tasksRef.current, persistedTasks);
+      const persistedDependencies = nextDependencies.map((item) =>
+        item.id === dependency.id ? { ...dependency, updatedAt } : item,
+      );
+      tasksRef.current = nextTasks;
+      dependenciesRef.current = persistedDependencies;
+      setTasks(nextTasks);
+      setDependencies(persistedDependencies);
       setSchedulingConflicts((current) =>
         replaceProjectConflicts(
           current,
           new Set(persistedTasks.map(({ id }) => id)),
-          projectSchedulingConflicts(project, persistedTasks, projectDependencies, calendars),
+          projectSchedulingConflicts(project, persistedTasks, projectDependencies, currentCalendars),
         ),
       );
       return true;
     },
-    [calendars, projects, repository, tasks],
+    [repository],
   );
 
   const createDependency = useCallback(
     async (input: DependencyInput): Promise<TaskDependency | null> =>
       runMutation(async () => {
-        const successor = tasks.find((task) => task.id === input.successorId);
+        const currentTasks = tasksRef.current;
+        const currentDependencies = dependenciesRef.current;
+        const successor = currentTasks.find((task) => task.id === input.successorId);
         if (successor === undefined) throw new Error("A tarefa sucessora não existe.");
         const createdAt = nowUtc();
         const dependency = validateTaskDependency(
@@ -912,13 +1045,13 @@ export function useWorkspace(repository: WorkspaceRepository): WorkspaceControll
             createdAt,
             updatedAt: createdAt,
           },
-          tasks,
+          currentTasks,
         );
-        const nextDependencies = [...dependencies, dependency];
+        const nextDependencies = [...currentDependencies, dependency];
         await persistDependency(dependency, nextDependencies);
         return dependency;
       }),
-    [dependencies, persistDependency, runMutation, tasks],
+    [persistDependency, runMutation],
   );
 
   const saveDependency = useCallback(
@@ -1235,6 +1368,9 @@ export function useWorkspace(repository: WorkspaceRepository): WorkspaceControll
     removeProjectBaselines,
     createTask,
     saveTask,
+    setTasksSchedulingMode,
+    loadGanttHistory,
+    saveGanttHistory,
     moveTask,
     removeTaskTree,
     createDependency,

@@ -1,83 +1,67 @@
-# Chrono Project v0.2.1 — candidato a release
+# Chrono Project v0.2.2 — candidato a release
 
-A versão `0.2.1` consolida a nova identidade visual do Chrono Project e a
-adequação da barra lateral. Não altera o schema SQLite, o formato portátil nem
-as regras de scheduling.
+A versão `0.2.2` melhora a segurança das edições, a produtividade na Tabela e
+a previsibilidade do scheduling, além de persistir o histórico do Gantt.
 
 ## Escopo
 
-- símbolo original de relógio mecânico aberto em forma de `C`;
-- conjunto Tauri/Windows regenerado a partir de `src/assets/chrono-mark.png`;
-- ícone aplicado à interface, ao executável e aos instaladores;
-- remoção do marcador provisório `PF`;
-- remoção da repetição de `Chrono Project` na barra lateral;
-- navegação recolhida com o novo símbolo;
-- política de retenção dos três releases locais mais recentes;
-- runbook permanente para releases reproduzíveis e acompanháveis.
-
-As especificações visuais estão em [`docs/branding.md`](../branding.md), e a
-decisão está registrada no [ADR 024](../decisions/024-mechanical-clock-icon.md).
+- salvamento automático de campos válidos, com fila e recuperação de falha;
+- correção da condição de corrida entre autosave e alterações consecutivas no
+  grafo de dependências;
+- campos de data protegidos contra anos parciais ou inválidos;
+- barra horizontal da Tabela permanentemente acessível;
+- menus de contexto próprios na Tabela, Kanban e Gantt;
+- trava de datas individual ou em massa, com `Ctrl+Shift+L`;
+- tarefa-resumo aceita como predecessora, mas não como sucessora;
+- prévia das datas afetadas antes de alterar uma predecessora-resumo;
+- histórico persistente de até 50 revisões de desfazer/refazer do Gantt.
 
 ## Compatibilidade
 
-Esta é uma atualização direta sobre `0.2.0`. O schema SQLite permanece na
-versão 5 e o formato `.chronoproject` permanece na versão 1. A atualização não
-deve apagar ou recriar o banco do usuário.
+- atualização direta sobre `0.2.1`;
+- schema SQLite atualizado da versão 5 para 7 pelas migrations aditivas
+  `0006_summary_predecessors.sql` e `0007_persistent_gantt_history.sql`;
+- banco da versão 0.2.1 validado por upgrade de uma cópia, sem alteração do
+  arquivo de origem;
+- formato `.chronoproject` permanece na versão 1 e aceita schemas 4 a 7;
+- dados continuam locais e a aplicação permanece compatível com Windows 11 x64.
 
-## Evidência já concluída
+## Gates locais concluídos
 
-- [x] símbolo e composição visual aprovados;
-- [x] ícones Tauri/Windows regenerados;
-- [x] marcador `PF` e título duplicado removidos da interface;
-- [x] versões `0.2.1` alinhadas em npm, Cargo e Tauri;
-- [x] política de retenção de artefatos locais aplicada;
-- [x] processo operacional documentado em
-  [`release-runbook.md`](../release-runbook.md).
-
-## Gates locais e artefatos pendentes
-
-- [x] instalação reproduzível com `npm ci`;
+- [x] versões `0.2.2` alinhadas em npm, Cargo e Tauri;
 - [x] ESLint e typecheck TypeScript;
-- [x] 140 testes TypeScript/React;
-- [x] build Vite de produção;
-- [x] testes de desempenho com 1.000 e 10.000 tarefas;
-- [x] `cargo fmt`, `cargo check`, 37 testes Rust e Clippy;
+- [x] 161 testes TypeScript/React;
+- [x] 39 testes Rust e auditoria isolada do banco real `0.2.1`;
+- [x] `cargo fmt`, `cargo check` e Clippy com `-D warnings`;
 - [x] jornada E2E da aplicação;
-- [x] round-trip `.chronoproject` e preservação do schema 5;
-- [x] executável de distribuição `0.2.1` gerado e versionado corretamente;
-- [x] instalador padrão assinado e copiado para o staging;
-- [x] instalador offline assinado e copiado para o staging;
-- [x] instalação manual do pacote padrão `0.2.1` concluída com sucesso no
-  Windows 11 x64;
-- [x] quatro pautas intermediárias entre marcas de cinco minutos conferidas na
-  arte aprovada;
-- [x] ícone conferido nos pontos de integração do Windows, incluindo janela,
-  barra de tarefas e menu Iniciar;
-- [x] atualização manual de `0.2.0` para `0.2.1` preservando os dados;
-- [x] assinaturas, `latest.json`, tamanhos e SHA-256 registrados;
-- [x] `RELEASE_NOTES.md`, `BUILD_RECORD.json`, `VERIFY_SIGNATURES.mjs`,
-  `SIGN_AND_FINALIZE.ps1` e `PUBLISH_RELEASE.ps1` gerados e validados;
-- [x] documentação interna e texto externo do GitHub Release revisados;
-- [x] commit e push executados pelo usuário;
-- [x] CI de `main` aprovado para o commit publicado;
-- [x] publicação executada pelo usuário com `PUBLISH_RELEASE.ps1`;
-- [x] tag `v0.2.1` ligada ao commit aprovado em `main`;
-- [x] CI redundante da tag, iniciado ainda pela política anterior, concluído com
-  sucesso e registrado; gatilho corrigido no commit posterior `661e5b8`.
+- [x] cinco cenários Tauri/WebView2 aprovados em duas execuções consecutivas;
+- [x] testes de desempenho com 1.000 e 10.000 tarefas;
+- [x] build Vite de produção;
+- [x] gates reproduzidos após o alinhamento final da versão;
+- [x] executável de distribuição gerado;
+- [x] instalador padrão assinado;
+- [x] instalador offline assinado;
+- [x] artefatos, hashes e scripts finais validados;
+- [x] instalação sobre `0.2.1`, abertura e migração do banco local validadas;
+- [ ] commit e push executados pelo usuário;
+- [ ] CI de `main` aprovado para o commit final;
+- [ ] publicação executada pelo usuário com `PUBLISH_RELEASE.ps1`.
 
-## Artefatos locais
+## Destino local
 
-Os artefatos finais devem ser preparados em:
+Os artefatos foram preparados e validados em
+`.local/distribution/v0.2.2-staging/` e promovidos para
+`.local/distribution/v0.2.2/` após o teste local de instalação e atualização.
+Commit, push e publicação permanecem como etapas obrigatórias do usuário.
 
-```text
-.local/distribution/v0.2.1/
-```
+## Artefatos validados
 
-O staging foi promovido para a pasta final depois que as assinaturas e o script
-`PUBLISH_RELEASE.ps1 -VerifyOnly` foram aprovados. Nenhum artefato `0.2.0` foi
-renomeado ou reutilizado; os binários foram recompilados com os manifests
-`0.2.1`.
+| Arquivo | Tamanho | SHA-256 |
+| --- | ---: | --- |
+| `chrono-project.exe` | 21.526.016 bytes | `47946256BDECB1ABC17EBB5F8E8F92771051A9D40DCBE73E6E1A042CDA4EFF0E` |
+| `Chrono-Project-Windows-x64-Setup.exe` | 7.319.198 bytes | `B20C8370C09713723E689493C8C0CDA42EAE3BFCBDA366EF612D3A31E5A5D9FD` |
+| `Chrono-Project-Windows-x64-Offline-Setup.exe` | 222.348.571 bytes | `7C7DFC02CF84A52B805A67306D608FF6655DC10F98B75906FED9E1D7A05CC126` |
 
-As notas destinadas ao GitHub Release estão em
-[`v0.2.1.md`](v0.2.1.md). O usuário executará obrigatoriamente as duas últimas
-etapas: commit/push e publicação pelo script preparado.
+As assinaturas dos dois instaladores têm 428 bytes e foram aprovadas contra a
+chave pública incorporada. `latest.json`, `BUILD_RECORD.json` e
+`SHA256SUMS.txt` também foram regenerados e verificados.

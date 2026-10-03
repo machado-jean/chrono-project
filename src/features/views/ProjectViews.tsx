@@ -6,6 +6,8 @@ import type { BaselineTask, ProjectBaseline } from "../../domain/planning/baseli
 import type { TaskDependency } from "../../domain/scheduling/dependency";
 import type { SchedulingConflict } from "../../domain/scheduling/scheduler";
 import type { Task } from "../../domain/tasks/task";
+import type { SchedulingMode } from "../../domain/tasks/task";
+import type { GanttHistoryState } from "../../domain/history/gantt-history";
 import { TaskKanban } from "../kanban/TaskKanban";
 import { ProjectPdfExport } from "../reporting/ProjectPdfExport";
 import { ProjectBaselineControl } from "../planning/ProjectBaselineControl";
@@ -38,11 +40,14 @@ interface ProjectViewsProps {
   readonly activeBaseline: ProjectBaseline | null;
   readonly activeBaselineTasks: readonly BaselineTask[];
   readonly disabled: boolean;
-  readonly onCreate: (input: { readonly title: string; readonly parentId: string | null; readonly parentDependencyPolicy?: "TRANSFER" | "REMOVE" }) => Promise<Task | null>;
+  readonly onCreate: (input: { readonly title: string; readonly parentId: string | null; readonly parentDependencyPolicy?: "KEEP" | "TRANSFER" | "REMOVE" }) => Promise<Task | null>;
   readonly onSave: (
     task: Task,
     dependencyUpdates?: readonly TaskDependency[],
   ) => Promise<boolean>;
+  readonly onSetSchedulingMode: (taskIds: readonly string[], mode: SchedulingMode) => Promise<boolean>;
+  readonly onLoadGanttHistory: (projectId: string) => Promise<GanttHistoryState>;
+  readonly onSaveGanttHistory: (projectId: string, state: GanttHistoryState) => Promise<void>;
   readonly onMove: (taskId: string, direction: "up" | "down") => Promise<boolean>;
   readonly onDelete: (taskId: string) => Promise<boolean>;
   readonly onCreateDependency: (input: {
@@ -81,6 +86,9 @@ export function ProjectViews({
   disabled,
   onCreate,
   onSave,
+  onSetSchedulingMode,
+  onLoadGanttHistory,
+  onSaveGanttHistory,
   onMove,
   onDelete,
   onCreateDependency,
@@ -185,38 +193,46 @@ export function ProjectViews({
         aria-labelledby={`view-tab-${activeView.toLocaleLowerCase()}`}
       >
         {activeView === "TABLE" ? (
-          <TaskTable
-            tasks={tasks}
-            {...(filtersActive ? { visibleTaskIds } : {})}
-            calendars={calendars}
-            projectCalendarId={projectCalendarId}
-            dependencies={dependencies}
-            conflicts={conflicts}
-            baselineTasks={activeBaselineTasks}
-            disabled={disabled}
-            onCreate={onCreate}
-            onSave={(task, updates) => onSave(task, updates)}
-            onMove={onMove}
-            onDelete={onDelete}
-            onCreateDependency={onCreateDependency}
-            onDeleteDependency={onDeleteDependency}
-            onDuplicate={onDuplicateTask}
-            onCreateTemplate={onCreateTemplate}
-          />
+          <ViewErrorBoundary viewName="a tabela de tarefas">
+            <TaskTable
+              tasks={tasks}
+              {...(filtersActive ? { visibleTaskIds } : {})}
+              calendars={calendars}
+              projectCalendarId={projectCalendarId}
+              dependencies={dependencies}
+              conflicts={conflicts}
+              baselineTasks={activeBaselineTasks}
+              disabled={disabled}
+              onCreate={onCreate}
+              onSave={(task, updates) => onSave(task, updates)}
+              onSetSchedulingMode={onSetSchedulingMode}
+              onMove={onMove}
+              onDelete={onDelete}
+              onCreateDependency={onCreateDependency}
+              onDeleteDependency={onDeleteDependency}
+              onDuplicate={onDuplicateTask}
+              onCreateTemplate={onCreateTemplate}
+            />
+          </ViewErrorBoundary>
         ) : null}
         {activeView === "KANBAN" ? (
-          <TaskKanban
-            tasks={matchingTasks}
-            allProjectTasks={tasks}
-            dependencies={dependencies}
-            disabled={disabled}
-            onSave={onSave}
-          />
+          <ViewErrorBoundary viewName="o quadro Kanban">
+            <TaskKanban
+              tasks={matchingTasks}
+              allProjectTasks={tasks}
+              dependencies={dependencies}
+              disabled={disabled}
+              onSave={onSave}
+              onDuplicate={onDuplicateTask}
+              onDelete={onDelete}
+            />
+          </ViewErrorBoundary>
         ) : null}
         {activeView === "GANTT" ? (
           <ViewErrorBoundary viewName="o gráfico de Gantt">
             <Suspense fallback={<div className="view-loading" role="status">Carregando o gráfico de Gantt…</div>}>
               <TaskGantt
+                key={project.id}
                 tasks={ganttTasks}
                 allProjectTasks={tasks}
                 calendars={calendars}
@@ -224,7 +240,10 @@ export function ProjectViews({
                 dependencies={dependencies}
                 baselineTasks={activeBaselineTasks}
                 disabled={disabled}
+                projectId={project.id}
                 onSave={onSave}
+                onLoadHistory={onLoadGanttHistory}
+                onSaveHistory={onSaveGanttHistory}
                 onCreateDependency={onCreateDependency}
                 onDeleteDependency={onDeleteDependency}
               />

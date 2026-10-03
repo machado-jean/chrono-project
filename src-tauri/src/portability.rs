@@ -17,7 +17,10 @@ use uuid::Uuid;
 use zip::{write::SimpleFileOptions, CompressionMethod, ZipArchive, ZipWriter};
 
 use crate::{
-    database::{DATABASE_SCHEMA_VERSION, PLAN_CONTROL_SCHEMA},
+    database::{
+        DATABASE_SCHEMA_VERSION, PERSISTENT_GANTT_HISTORY_SCHEMA, PLAN_CONTROL_SCHEMA,
+        SUMMARY_PREDECESSORS_SCHEMA,
+    },
     persistence::{
         self, BaselineBundleRecord, BaselineTaskRecord, CalendarRecord, DependencyRecord,
         ProjectBaselineRecord, ProjectRecord, TaskRecord, TaskTemplateBundleRecord, WorkspaceData,
@@ -1007,7 +1010,11 @@ async fn load_validated_database(path: &Path) -> PortabilityResult<WorkspaceData
             .fetch_one(&mut connection)
             .await
             .map_err(|error| format!("Banco sem schema reconhecido: {error}"))?;
-    if version != "4" && version != DATABASE_SCHEMA_VERSION.to_string() {
+    if version != "4"
+        && version != "5"
+        && version != "6"
+        && version != DATABASE_SCHEMA_VERSION.to_string()
+    {
         return Err(format!(
             "Schema {version} não é compatível com schema {DATABASE_SCHEMA_VERSION}."
         ));
@@ -1016,15 +1023,15 @@ async fn load_validated_database(path: &Path) -> PortabilityResult<WorkspaceData
         .close()
         .await
         .map_err(|error| error.to_string())?;
-    if version == "4" {
-        return load_upgraded_schema_four_copy(path).await;
+    if version == "4" || version == "5" || version == "6" {
+        return load_upgraded_legacy_copy(path, &version).await;
     }
     load_workspace_read_only(path).await
 }
 
-async fn load_upgraded_schema_four_copy(path: &Path) -> PortabilityResult<WorkspaceData> {
+async fn load_upgraded_legacy_copy(path: &Path, version: &str) -> PortabilityResult<WorkspaceData> {
     let upgraded_path = std::env::temp_dir().join(format!(
-        "chronoproject-schema4-upgrade-{}.sqlite",
+        "chronoproject-schema-upgrade-{}.sqlite",
         Uuid::new_v4()
     ));
     fs::copy(path, &upgraded_path)
@@ -1038,11 +1045,27 @@ async fn load_upgraded_schema_four_copy(path: &Path) -> PortabilityResult<Worksp
         let writable = SqlitePool::connect_with(options)
             .await
             .map_err(|error| format!("Falha ao abrir pacote antigo para upgrade: {error}"))?;
-        sqlx::raw_sql(PLAN_CONTROL_SCHEMA)
+        if version == "4" {
+            sqlx::raw_sql(PLAN_CONTROL_SCHEMA)
+                .execute(&writable)
+                .await
+                .map_err(|error| {
+                    format!("Falha ao atualizar pacote antigo para o schema 5: {error}")
+                })?;
+        }
+        if version == "4" || version == "5" {
+            sqlx::raw_sql(SUMMARY_PREDECESSORS_SCHEMA)
+                .execute(&writable)
+                .await
+                .map_err(|error| {
+                    format!("Falha ao atualizar pacote antigo para o schema 6: {error}")
+                })?;
+        }
+        sqlx::raw_sql(PERSISTENT_GANTT_HISTORY_SCHEMA)
             .execute(&writable)
             .await
             .map_err(|error| {
-                format!("Falha ao atualizar pacote antigo para o schema 5: {error}")
+                format!("Falha ao atualizar pacote antigo para o schema 7: {error}")
             })?;
         writable.close().await;
         load_workspace_read_only(&upgraded_path).await
@@ -1596,7 +1619,8 @@ mod tests {
     };
     use crate::{
         database::{
-            CORE_SCHEMA, INITIAL_SCHEMA, PLAN_CONTROL_SCHEMA, REUSE_SCHEMA, SCHEDULING_SCHEMA,
+            CORE_SCHEMA, INITIAL_SCHEMA, PERSISTENT_GANTT_HISTORY_SCHEMA, PLAN_CONTROL_SCHEMA,
+            REUSE_SCHEMA, SCHEDULING_SCHEMA, SUMMARY_PREDECESSORS_SCHEMA,
         },
         persistence::{
             self, BaselineBundleRecord, BaselineTaskRecord, DependencyRecord,
@@ -1663,6 +1687,8 @@ mod tests {
             SCHEDULING_SCHEMA,
             REUSE_SCHEMA,
             PLAN_CONTROL_SCHEMA,
+            SUMMARY_PREDECESSORS_SCHEMA,
+            PERSISTENT_GANTT_HISTORY_SCHEMA,
         ] {
             sqlx::raw_sql(migration)
                 .execute(&pool)

@@ -70,12 +70,18 @@ Consequências práticas:
 Dependências são permitidas somente:
 
 - entre tarefas do mesmo projeto;
-- entre tarefas-folha, sem subtarefas;
+- com tarefa-folha no lado sucessor;
+- com tarefa-folha ou tarefa-resumo no lado predecessor;
 - sem auto-dependência;
 - sem relação duplicada;
 - quando o grafo permanece acíclico.
 
-Ao criar uma subtarefa, uma tarefa passa a ser resumo e, portanto, não pode manter dependências. Domínio e SQLite aplicam a mesma restrição. Dependências entre projetos permanecem explicitamente fora do escopo desta fase.
+Ao criar a primeira subtarefa, uma folha passa a ser resumo. Relações de saída
+podem permanecer no novo resumo, ser transferidas à nova subtarefa ou ser
+removidas. Relações de entrada não podem permanecer porque resumo não pode ser
+sucessor. Ao adicionar outras subtarefas a um resumo existente, suas relações de
+saída são mantidas. Domínio e SQLite aplicam a mesma política. Dependências entre
+projetos permanecem explicitamente fora do escopo desta fase.
 
 ## Propagação e modos
 
@@ -98,6 +104,8 @@ mantida porque não existe outra âncora temporal que indique até onde antecipa
 Para tarefa `MANUAL`:
 
 - datas nunca são deslocadas pelo scheduler;
+- o cadeado aparece fechado e bloqueia arrasto ou redimensionamento no Gantt;
+- valores exatos ainda podem ser editados nos campos da Tabela ou do inspetor;
 - se uma predecessora declarada exigir início posterior, é apresentado um conflito informativo com a data mínima;
 - tarefas distintas que apenas coincidem na mesma data não geram conflito;
 - sem dependência declarada, não existe restrição a verificar.
@@ -113,7 +121,11 @@ início = menor início dos descendentes agendados
 fim    = maior fim dos descendentes agendados
 ```
 
-A duração é a quantidade inclusiva de dias úteis no intervalo, conforme o calendário da tarefa-resumo. Início, fim, duração, modo, calendário e predecessoras ficam bloqueados na linha de resumo. As relações devem ser criadas entre as subtarefas.
+A duração é a quantidade inclusiva de dias úteis no intervalo, conforme o
+calendário da tarefa-resumo. Início, fim, duração, modo, calendário e relações
+de entrada ficam bloqueados na linha de resumo. O resumo pode ser escolhido
+como predecessora de uma tarefa-folha. A ordenação combina arestas de hierarquia
+e FS para recalcular o resumo antes de propagar seu término.
 
 ## Transação
 
@@ -148,7 +160,7 @@ tarefas `MANUAL` não são alteradas e seus avisos são reconstruídos.
 | antecipação AUTO, cadeia regressiva, predecessora remanescente e última relação removida | testes de scheduler e UI |
 | tarefa MANUAL e conflito informativo | testes de scheduler e UI |
 | ciclo, auto-dependência, relação duplicada | testes de scheduler/domínio |
-| mesma origem de projeto e tarefas-folha | testes de scheduler e constraints SQLite |
+| mesma origem de projeto, resumo predecessor e folha sucessora | testes de scheduler e constraints SQLite |
 | resumo | testes de scheduler e UI |
 | resultado múltiplo e rollback transacional | testes TypeScript e Rust |
 | datas não úteis explícitas | testes de scheduler e UI |
@@ -205,8 +217,8 @@ O Gantt é uma superfície de comando, não uma segunda fonte de cronograma:
   primeira data FS válida e informa a limitação;
 - ao ampliar o fim, os sucessores `AUTO` são propagados para frente; ao reduzir,
   são antecipados quando a restrição FS permitir;
-- tarefa `MANUAL` continua sujeita à política do scheduler e recebe conflito em
-  vez de deslocamento automático;
+- tarefa com cadeado fechado (`MANUAL`) recebe conflito em vez de deslocamento
+  automático e não aceita arrasto ou redimensionamento;
 - tarefa-resumo nunca aceita edição temporal direta;
 - o marcador interno da barra altera a conclusão entre 0% e 100% sem executar
   recálculo temporal;

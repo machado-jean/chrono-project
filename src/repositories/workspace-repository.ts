@@ -3,6 +3,7 @@ import type { Project } from "../domain/projects/project";
 import type { BaselineBundle, BaselineTask, ProjectBaseline } from "../domain/planning/baseline";
 import type { TaskDependency } from "../domain/scheduling/dependency";
 import type { Task } from "../domain/tasks/task";
+import type { GanttHistoryState } from "../domain/history/gantt-history";
 import type {
   TaskTemplate,
   TaskTemplateBundle,
@@ -108,6 +109,8 @@ export interface WorkspaceRepository {
   deleteProjectBaselines(projectId: string): Promise<void>;
   reorderTasks(taskIds: readonly string[]): Promise<void>;
   applyScheduleChanges(changes: ScheduleChangeSet): Promise<void>;
+  loadGanttHistory(projectId: string): Promise<GanttHistoryState>;
+  saveGanttHistory(projectId: string, state: GanttHistoryState): Promise<void>;
   deleteTaskTree(taskId: string): Promise<void>;
   saveDuplicationBundle(bundle: DuplicationBundle): Promise<void>;
   saveTemplateBundle(bundle: TaskTemplateBundle): Promise<void>;

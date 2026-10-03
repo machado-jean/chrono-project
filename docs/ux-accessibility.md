@@ -17,6 +17,15 @@ com WCAG.
 - O projeto selecionado expõe `aria-current="page"`.
 - A Tabela possui legenda acessível e os botões de hierarquia e detalhes
   expõem o estado aberto por `aria-expanded`.
+- A barra horizontal sincronizada da Tabela pode receber foco e permanece
+  disponível sem percorrer a lista até a última tarefa.
+- Tabela e Kanban oferecem menus de tarefa por clique direito e por botão
+  acessível. Setas, `Home`, `End` e `Esc` controlam o menu e o foco retorna ao
+  acionador; campos editáveis preservam o menu nativo para copiar e colar.
+- Cada linha da Tabela expõe o estado do salvamento automático em uma região de
+  status textual, sem depender apenas da cor: **Alterada**, **Salvando…**,
+  **Salva** ou **Erro ao salvar**. O botão **Salvar** permanece disponível para
+  nova tentativa e uso por teclado enquanto houver alteração local.
 - A ajuda do código visual pode receber foco e está associada à sua explicação.
 - A contagem dos filtros anuncia alterações de forma não interruptiva.
 - As abas Tabela, Kanban e Gantt preservam navegação por setas, `Home` e `End`.
@@ -34,12 +43,18 @@ com WCAG.
 - O Gantt mantém o inspetor nativo como alternativa aos gestos. Em tarefas
   automáticas, mover a barra ajusta o lag FS; a borda esquerda permanece
   protegida, a direita altera a duração e tarefas-resumo não têm edição direta.
+  Tarefas manuais anunciam **Datas travadas**, bloqueiam os gestos e continuam
+  editáveis por valores exatos no inspetor.
 - Feedback visível e região de status anunciam gravação, limites FS e quantidade
   de lags alterados. Botões **Desfazer**/**Refazer** complementam `Ctrl+Z` e
   `Ctrl+Y` fora de campos de formulário.
+- A seleção em massa oferece botões nomeados para travar e destravar datas;
+  `Ctrl+Shift+L` fornece o mesmo comando fora de campos editáveis.
+- Relações com tarefa-resumo abrem uma prévia modal do impacto, com foco preso,
+  cancelamento por `Esc` e datas anteriores/novas apresentadas em texto.
 - O menu de contexto do Gantt é o fluxo principal para adicionar predecessora
-  FS e excluir uma relação. A lista mostra somente tarefas executáveis que
-  terminam antes da sucessora; `Esc` fecha esse menu.
+  FS e excluir uma relação. A lista aceita folhas e resumos como origem, mantém
+  somente folhas como destino e `Esc` fecha esse menu.
 - Textos operacionais e auxiliares deixaram de depender de tamanhos entre 7 e
   9 px; cores secundárias ganharam contraste e o modo de cores forçadas recebe
   contornos explícitos.

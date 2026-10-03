@@ -234,11 +234,11 @@ export function validateTaskTemplateBundle(bundle: TaskTemplateBundle): TaskTemp
         "Os dois itens da dependência devem existir no template.",
       );
     }
-    if (summaryIds.has(dependency.predecessorId) || summaryIds.has(dependency.successorId)) {
+    if (summaryIds.has(dependency.successorId)) {
       throw new DomainValidationError(
-        "template_summary_dependency",
-        "predecessorId",
-        "Dependências de template devem relacionar tarefas-folha.",
+        "template_summary_successor_dependency",
+        "successorId",
+        "Uma tarefa-resumo do template não pode ser sucessora.",
       );
     }
     const relationKey = `${dependency.predecessorId}:${dependency.successorId}:${dependency.type}`;
@@ -253,6 +253,10 @@ export function validateTaskTemplateBundle(bundle: TaskTemplateBundle): TaskTemp
     successors.get(dependency.predecessorId)?.push(dependency.successorId);
   }
 
+  for (const item of items) {
+    if (item.parentId !== null) successors.get(item.id)?.push(item.parentId);
+  }
+
   const visited = new Set<string>();
   const active = new Set<string>();
   const visit = (itemId: string): void => {
@@ -260,7 +264,7 @@ export function validateTaskTemplateBundle(bundle: TaskTemplateBundle): TaskTemp
       throw new DomainValidationError(
         "template_dependency_cycle",
         "dependencies",
-        "As dependências do template criam um ciclo.",
+        "As dependências e a hierarquia do template criam um ciclo.",
       );
     }
     if (visited.has(itemId)) return;

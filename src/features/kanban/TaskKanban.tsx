@@ -1,5 +1,6 @@
-import { useMemo, useState, type PointerEvent } from "react";
+import { useCallback, useMemo, useRef, useState, type MouseEvent, type PointerEvent } from "react";
 
+import { ContextMenu, type ContextMenuItem } from "../../components/ContextMenu";
 import type { TaskDependency } from "../../domain/scheduling/dependency";
 import {
   buildTaskOutlineNumbers,
@@ -20,6 +21,8 @@ interface TaskKanbanProps {
   readonly dependencies: readonly TaskDependency[];
   readonly disabled: boolean;
   readonly onSave: (task: Task) => Promise<boolean>;
+  readonly onDuplicate: (taskId: string, includeDescendants: boolean) => Promise<Task | null>;
+  readonly onDelete: (taskId: string) => Promise<boolean>;
 }
 
 function taskPath(
@@ -59,12 +62,20 @@ export function TaskKanban({
   dependencies,
   disabled,
   onSave,
+  onDuplicate,
+  onDelete,
 }: TaskKanbanProps) {
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
   const [dropTargetStatus, setDropTargetStatus] = useState<TaskStatus | null>(null);
   const [savingTaskId, setSavingTaskId] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState("");
   const [localError, setLocalError] = useState<string | null>(null);
+  const [contextMenu, setContextMenu] = useState<{
+    readonly task: Task;
+    readonly x: number;
+    readonly y: number;
+  } | null>(null);
+  const contextMenuButtonRef = useRef<HTMLButtonElement>(null);
   const tasksById = useMemo(
     () => new Map(allProjectTasks.map((task) => [task.id, task])),
     [allProjectTasks],
@@ -115,6 +126,50 @@ export function TaskKanban({
     if (task !== undefined) void changeStatus(task, status);
   };
 
+  const closeContextMenu = useCallback((): void => { setContextMenu(null); }, []);
+
+  const openContextMenu = (event: MouseEvent<HTMLElement>, task: Task): void => {
+    if (event.target instanceof Element && event.target.closest("input, textarea, select, [contenteditable='true']") !== null) return;
+    event.preventDefault();
+    setContextMenu({ task, x: event.clientX, y: event.clientY });
+  };
+
+  const contextMenuItems: readonly ContextMenuItem[] = contextMenu === null ? [] : [
+    ...TASK_STATUSES
+      .filter((status) => status !== contextMenu.task.status)
+      .map((status) => ({
+        id: `status-${status}`,
+        label: `Mover para ${TASK_STATUS_LABELS[status]}`,
+        disabled: disabled || savingTaskId === contextMenu.task.id,
+        onSelect: () => { void changeStatus(contextMenu.task, status); },
+      } satisfies ContextMenuItem)),
+    {
+      id: "duplicate",
+      label: "Duplicar tarefa",
+      separatorBefore: true,
+      disabled,
+      onSelect: () => { void onDuplicate(contextMenu.task.id, false); },
+    },
+    ...(summaryIds.has(contextMenu.task.id) ? [{
+      id: "duplicate-tree",
+      label: "Duplicar tarefa e subtarefas",
+      disabled,
+      onSelect: () => { void onDuplicate(contextMenu.task.id, true); },
+    } satisfies ContextMenuItem] : []),
+    {
+      id: "delete",
+      label: "Excluir tarefa…",
+      danger: true,
+      separatorBefore: true,
+      disabled,
+      onSelect: () => {
+        if (window.confirm(`Excluir “${contextMenu.task.title}” e todas as suas subtarefas? Esta ação não pode ser desfeita.`)) {
+          void onDelete(contextMenu.task.id);
+        }
+      },
+    },
+  ];
+
   return (
     <section className="kanban-section" aria-labelledby="kanban-title">
       <header className="view-heading">
@@ -162,6 +217,7 @@ export function TaskKanban({
                         key={task.id}
                         className={`kanban-card${draggedTaskId === task.id ? " dragging" : ""}`}
                         aria-busy={isSaving}
+                        onContextMenu={(event) => { openContextMenu(event, task); }}
                       >
                         {path === null ? null : <span className="kanban-path">{path}</span>}
                         <div className="kanban-card-title">
@@ -199,7 +255,21 @@ export function TaskKanban({
                             <span className="kanban-outline-number">{outlineNumber}.</span>
                             <strong>{titleWithoutMatchingOutline(task.title, outlineNumber)}</strong>
                           </div>
-                          {summaryIds.has(task.id) ? <span>Resumo</span> : null}
+                          <div className="kanban-card-actions">
+                            {summaryIds.has(task.id) ? <span>Resumo</span> : null}
+                            <button
+                              ref={contextMenu?.task.id === task.id ? contextMenuButtonRef : undefined}
+                              type="button"
+                              aria-label={`Mais ações para ${task.title}`}
+                              aria-haspopup="menu"
+                              aria-expanded={contextMenu?.task.id === task.id}
+                              disabled={disabled || isSaving}
+                              onClick={(event) => {
+                                const bounds = event.currentTarget.getBoundingClientRect();
+                                setContextMenu({ task, x: bounds.right, y: bounds.bottom });
+                              }}
+                            >⋯</button>
+                          </div>
                         </div>
                         <div className="kanban-meta">
                           <span className={`priority priority-${task.priority.toLocaleLowerCase()}`}>
@@ -246,6 +316,17 @@ export function TaskKanban({
             );
           })}
         </div>
+      )}
+      {contextMenu === null ? null : (
+        <ContextMenu
+          ariaLabel={`Ações de ${contextMenu.task.title}`}
+          heading={contextMenu.task.title}
+          items={contextMenuItems}
+          returnFocusRef={contextMenuButtonRef}
+          x={contextMenu.x}
+          y={contextMenu.y}
+          onClose={closeContextMenu}
+        />
       )}
     </section>
   );

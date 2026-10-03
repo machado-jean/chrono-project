@@ -4,7 +4,7 @@ Este é o registro vivo de execução do Chrono Project. Ele traduz o roadmap de
 
 `AGENTS.md` continua sendo a fonte de verdade para produto, arquitetura e regras operacionais. Este documento não substitui a especificação e não deve introduzir escopo incompatível com ela.
 
-Última atualização: **25 de setembro de 2026**.
+Última atualização: **3 de outubro de 2026**.
 
 ## Como manter este documento
 
@@ -31,13 +31,13 @@ Não usar percentuais subjetivos. O progresso deve ser demonstrado por entregáv
 
 | Item | Estado |
 | --- | --- |
-| Etapa do produto | Identidade Chrono Project consolidada para a versão 0.2.1 |
-| Fase ativa | Distribuição 0.2.1 gerada; validações manuais e publicação pendentes |
-| Próxima fase | Validar atualização/ícones no Windows e publicar a v0.2.1 |
-| Versão da aplicação | `0.2.1` |
-| Versão do schema SQLite | `5` |
-| Último commit de referência | `427599e` — `docs: consolidate post-MVP roadmap` |
-| Branch de trabalho | `main`; fechamento da Fase 8 ainda não commitado |
+| Etapa do produto | Estabilização e evolução de produtividade após a versão 0.2.1 |
+| Fase ativa | Revisões de UX e scheduling; etapas 1 a 6 concluídas localmente |
+| Próxima fase | Auditoria manual do incremento e definição do próximo recorte |
+| Versão da aplicação | `0.2.2` |
+| Versão do schema SQLite | `7` |
+| Último commit de referência | `0169029` — `docs: require complete release notes before publication` |
+| Branch de trabalho | `main`; etapas 1 a 6 do incremento ainda não commitadas |
 | Checkpoints obrigatórios | A, B, C e D concluídos; E reservado à distribuição |
 | Funcionalidades de negócio | Core, scheduler, views, reutilização e portabilidade implementados |
 
@@ -142,7 +142,8 @@ Estado: **Concluída**.
 - [x] Implementar edição assistida entre início, fim e duração.
 - [x] Implementar grafo, detecção de ciclo e ordenação topológica.
 - [x] Implementar dependência FS com lag e múltiplos predecessores.
-- [x] Restringir dependências ao mesmo projeto e a tarefas-folha.
+- [x] Restringir dependências ao mesmo projeto; sucessoras permanecem folhas e
+  predecessoras podem ser folhas ou resumos conforme o ADR 025.
 - [x] Implementar modos AUTO e MANUAL com conflitos informativos.
 - [x] Implementar calendário opcional por tarefa e opção **Todos os dias**.
 - [x] Implementar propagação reativa para frente e para trás em tarefas `AUTO`.
@@ -322,6 +323,120 @@ Os executáveis e instaladores padrão/offline `0.2.1` foram gerados, assinados 
 validados localmente em 25/09/2026. O encerramento da fase ainda depende da
 atualização manual sobre `0.2.0` e da inspeção dos pontos de integração do
 Windows.
+
+## Incremento transversal — Estabilidade e produtividade pós-0.2.1
+
+Estado: **Em andamento**. Versão-alvo: **a definir**.
+
+Este incremento reúne revisões observadas no uso real da Tabela e do Gantt. A
+ordem prioriza estabilidade, depois fluidez de edição e, por último, mudanças
+de domínio no scheduler.
+
+### Etapa 1 — Segurança na edição de datas
+
+Estado: **Concluída localmente; não commitada**.
+
+- [x] impedir que anos parciais ou inválidos sejam enviados ao scheduler;
+- [x] restaurar a última data válida quando a edição incompleta perde o foco;
+- [x] manter datas completas com cálculo assistido de início, fim e duração;
+- [x] proteger Tabela e Kanban com a mesma recuperação visual já usada no Gantt;
+- [x] cobrir a regressão que derrubava a Tabela durante a digitação do ano.
+
+Evidências: ESLint, TypeScript, 141 testes regulares, jornada E2E da aplicação
+e build Vite de produção aprovados em 2 de outubro de 2026. Não houve mudança de
+schema, persistência ou regra do scheduler.
+
+### Etapa 2 — Ações rápidas das views
+
+Estado: **Concluída localmente; não commitada**.
+
+- [x] substituir o texto do botão de confirmação de predecessora por `+`, com
+  contraste, tooltip **Adicionar predecessora** e nome acessível;
+- [x] manter a rolagem horizontal disponível na parte inferior da área visível;
+- [x] criar menu de contexto próprio para tarefas, reutilizável entre Tabela,
+  Kanban e Gantt, sem remover copiar/colar nativo dos campos de texto;
+- [x] começar o menu da Tabela com detalhes, subtarefa, predecessora, duplicação, template
+  e exclusão, respeitando contexto, teclado e confirmação destrutiva.
+- [x] oferecer no Kanban mudança de status, duplicação e exclusão pelo mesmo
+  padrão, mantendo o seletor de status e o Gantt como alternativas existentes.
+
+Evidências: componente de menu reutilizável, abertura por clique direito ou
+botão acessível, navegação por setas, `Home`, `End` e `Esc`, restauração de foco,
+preservação do menu nativo nos campos e sincronização bidirecional da rolagem.
+ESLint, TypeScript, 143 testes regulares, jornada E2E e build Vite aprovados.
+
+### Etapa 3 — Salvamento automático
+
+Estado: **Concluída localmente; não commitada**.
+
+- [x] persistir seleções e datas válidas ao confirmar a alteração;
+- [x] persistir texto após pausa curta e sempre ao sair do campo;
+- [x] capturar gravações pendentes antes de desmontar a Tabela ao trocar de view;
+- [x] serializar gravações por tarefa e exibir **Salvando**, **Salva** ou erro;
+- [x] manter a edição local e permitir nova tentativa quando a gravação falhar.
+
+Evidências: autosave não bloqueante com debounce de 700 ms, flush ao perder foco
+ou desmontar a linha, fila independente por tarefa e botão **Salvar** mantido
+como fallback. Foram aprovados ESLint, TypeScript, 149 testes regulares, jornada
+E2E da aplicação e build Vite em 2 de outubro de 2026. Não houve mudança de
+schema, código nativo ou política do scheduler.
+
+### Etapa 4 — Bloqueio explícito de datas
+
+Estado: **Concluída localmente; não commitada**.
+
+- [x] representar `AUTO`/`MANUAL` como cadeado aberto/fechado;
+- [x] impedir arrasto e redimensionamento de tarefa travada e explicar o bloqueio;
+- [x] manter alertas de conflitos FS e alterações de lag produzidas por arrasto;
+- [x] integrar travar/destravar à linha, aos detalhes e aos menus de contexto sem remover a semântica
+  interna atual antes de existir justificativa para migration.
+
+Evidências: Tabela e Gantt expõem a mesma trava, tarefas `MANUAL` continuam
+editáveis por valores exatos e o domínio rejeita gestos temporais em tarefas
+travadas. Testes de UI e domínio cobrem alternância e bloqueio do arrasto.
+
+### Etapa 5 — Tarefa-resumo como predecessora
+
+Estado: **Concluída localmente; não commitada**.
+
+- [x] permitir resumo somente como predecessora, mantendo resumo como sucessora
+  proibido por possuir datas derivadas;
+- [x] propagar alterações descendentes para o resumo e dele para sucessoras;
+- [x] preservar dependências diretas com folhas quando uma nova irmã for criada;
+- [x] oferecer a escolha entre manter, transferir ou remover uma relação quando
+  uma tarefa-folha recebe sua primeira subtarefa;
+- [x] validar ciclos combinando hierarquia e dependências;
+- [x] revisar duplicação, templates, importação, exportação e transações;
+- [x] cobrir o exemplo em que `2.1` depende do resumo `1`, enquanto `3.1`
+  depende diretamente de `1.5`: criar `1.6` desloca apenas `2.1`.
+
+Evidências: ADR 025, migration `0006_summary_predecessors.sql`, schema 6,
+upgrade não destrutivo, grafo combinado, testes de scheduler, templates, UI,
+persistência e portabilidade. A suíte consolidada possui 157 testes
+TypeScript/React e 38 testes Rust aprovados em 2 de outubro de 2026.
+
+### Etapa 6 — Impacto, produtividade e histórico persistente
+
+Estado: **Concluída localmente; não commitada**.
+
+- [x] mostrar prévia das datas afetadas antes de adicionar ou remover uma
+  predecessora-resumo;
+- [x] travar e destravar tarefas-folha selecionadas em uma transação;
+- [x] oferecer `Ctrl+Shift+L` sem capturar o atalho dentro de campos editáveis;
+- [x] persistir até 50 revisões de desfazer/refazer do Gantt por projeto;
+- [x] manter o histórico ao trocar de view e reabrir a aplicação;
+- [x] migrar o schema 7 sem destruir dados e aceitar pacotes dos schemas 4 a 6
+  por upgrade de uma cópia temporária;
+- [x] auditar uma cópia do banco real da versão 0.2.1 e preservar o original;
+- [x] corrigir a corrida entre autosave e criação rápida de dependências para
+  que A → B → C sempre use o grafo mais recente.
+
+Evidências: ADR 026, migration `0007_persistent_gantt_history.sql`, teste de
+upgrade do banco real, testes de domínio/UI/Rust e jornada no Tauri/WebView2
+real. O histórico persistente cobre edições temporais do Gantt e não pretende
+ser uma trilha de auditoria global. Em 3 de outubro de 2026, passaram 161 testes
+TypeScript/React, 39 testes Rust mais a auditoria isolada do banco 0.2.1,
+Clippy, build e duas execuções consecutivas dos cinco cenários desktop.
 
 ## Fase 10 — Análise e explicação do cronograma
 
@@ -1311,6 +1426,101 @@ matriz no host, na VM limpa e no CI Windows.
 - Executável, instaladores, atualização e integração Windows ainda precisam do
   gate de distribuição antes do encerramento da fase.
 - Commit: `não commitado`; nenhum push, tag ou release foi executado.
+
+### 2 de outubro de 2026 — Edição segura de datas
+
+- A Tabela passou a aceitar somente datas completas e válidas antes de chamar
+  o domínio de scheduling. Estados intermediários produzidos pelo controle
+  nativo durante a digitação do ano não apagam nem recalculam a tarefa.
+- Ao abandonar uma entrada parcial, o campo restaura a última data válida.
+- A recuperação visual já aplicada ao Gantt passou a envolver também Tabela e
+  Kanban, evitando uma área vazia caso uma renderização futura falhe.
+- Foi adicionada regressão automatizada para o ano intermediário `0002`; a
+  interface permanece disponível e aceita a data completa digitada em seguida.
+- ESLint, TypeScript, 141 testes regulares, jornada E2E da aplicação e build
+  Vite foram aprovados. Não houve mudança de schema ou código nativo.
+- Commit: `não commitado`; nenhuma operação remota foi executada.
+
+### 2 de outubro de 2026 — Ações rápidas e rolagem permanente
+
+- O botão de confirmação de predecessora passou a usar `+` preto, tooltip
+  correto e nome acessível contextual.
+- Uma barra horizontal sincronizada e aderente à base visível da Tabela passou
+  a controlar as mesmas colunas sem exigir navegação até a última tarefa.
+- Um componente reutilizável de menu contextual passou a atender linhas da
+  Tabela e cartões do Kanban; o Gantt conserva seu menu especializado existente.
+- Tabela oferece detalhes, subtarefa, predecessora, duplicação, template e
+  exclusão; Kanban oferece mudança de status, duplicação e exclusão.
+- Os menus abrem por clique direito ou botão **Mais ações**, suportam teclado e
+  restauram o foco. Campos editáveis continuam usando o menu nativo.
+- ESLint, TypeScript, 143 testes regulares, jornada E2E e build Vite foram
+  aprovados. Não houve mudança de schema ou regra de scheduling.
+- Commit: `não commitado`; nenhuma operação remota foi executada.
+
+### 2 de outubro de 2026 — Salvamento automático da Tabela
+
+- Seleções e datas completas passaram a persistir assim que confirmadas; texto,
+  números e campos longos usam pausa de 700 ms e também salvam ao perder foco.
+- A troca de visualização captura o rascunho antes de desmontar a Tabela, sem
+  bloquear a navegação enquanto a escrita local termina.
+- Gravações da mesma tarefa são serializadas. Uma resposta antiga não limpa nem
+  sobrescreve uma edição mais recente feita enquanto a primeira estava em curso.
+- Cada linha informa **Alterada**, **Salvando…**, **Salva** ou **Erro ao salvar**.
+  Em falha, o valor permanece no campo e o botão **Salvar** permite nova tentativa.
+- Autosave valida o rascunho antes da escrita; datas parciais e cronogramas
+  incompletos permanecem locais até serem corrigidos ou submetidos manualmente.
+- ESLint, TypeScript, 149 testes regulares, jornada E2E da aplicação e build
+  Vite foram aprovados. Não houve mudança de schema ou código nativo.
+- Commit: `não commitado`; nenhuma operação remota foi executada.
+
+### 2 de outubro de 2026 — Trava de datas e predecessoras-resumo
+
+- O modo `AUTO`/`MANUAL` passou a ser apresentado como cadeado aberto/fechado
+  na Tabela, nos detalhes e nos menus de contexto da Tabela e do Gantt.
+- Tarefas travadas rejeitam movimento e redimensionamento no Gantt com mensagem
+  explícita, mas continuam aceitando datas exatas pelos campos acessíveis.
+- Tarefas-resumo passaram a ser aceitas como predecessoras FS e continuam
+  proibidas como sucessoras; o grafo combina dependências e hierarquia para
+  validar ciclos e ordenar a propagação.
+- Ao criar a primeira subtarefa, relações de saída podem permanecer no resumo,
+  ser transferidas ou removidas. Novas irmãs não deslocam relações diretas de
+  folhas e relações de saída de um resumo existente são preservadas.
+- O ADR 025 e a migration `0006_summary_predecessors.sql` consolidam a decisão.
+  Importação lê schemas 4 e 5 por upgrade temporário e o schema corrente é 6.
+- Foram aprovados 157 testes TypeScript/React, 38 testes Rust, `cargo fmt`,
+  `cargo check`, Clippy, jornada E2E e build Vite de produção. O teste de
+  desempenho reagendou 1.000 tarefas em 31 ms e projetou 10.000 em 6 ms.
+- Commit: `não commitado`; nenhuma operação remota foi executada.
+
+### 3 de outubro de 2026 — Prévia de impacto, edição em massa e histórico do Gantt
+
+- Relações com tarefas-resumo passaram a exigir confirmação sobre uma prévia
+  determinística das datas alteradas antes de escrever no workspace.
+- A Tabela ganhou trava/destrava em massa para folhas selecionadas e o atalho
+  `Ctrl+Shift+L`, documentado também na ajuda da aplicação.
+- O Gantt passou a persistir, por projeto, até 50 revisões de desfazer/refazer;
+  a migration `0007_persistent_gantt_history.sql` elevou o schema para 7.
+- Importação aceita schemas 4 a 7 e migra 4 a 6 apenas em cópia temporária. Uma
+  cópia do banco instalado pela versão 0.2.1 foi atualizada e verificada sem
+  qualquer escrita no arquivo original.
+- O E2E desktop encontrou uma corrida ao editar uma predecessora imediatamente
+  após criar A → B → C. O estado atual do grafo agora é sincronizado antes da
+  próxima interação e o teste compara também o conteúdo persistido no SQLite.
+- Commit: `não commitado`; nenhuma operação remota foi executada.
+
+### 3 de outubro de 2026 — Candidato de distribuição 0.2.2
+
+- Versões npm, Cargo e Tauri foram alinhadas em 0.2.2; o schema permanece 7 e
+  o formato `.chronoproject` permanece 1.
+- Os gates finais aprovaram 161 testes TypeScript/React, 39 testes Rust, lint,
+  typecheck, auditoria npm sem vulnerabilidades, Cargo fmt/check/Clippy, jornada
+  E2E, cinco cenários Tauri/WebView2 e os dois testes de desempenho.
+- Foram gerados o executável avulso, o instalador padrão de 7.319.198 bytes e o
+  instalador offline de 222.348.571 bytes. Os dois instaladores estão assinados
+  para o updater e seus manifestos e hashes foram aprovados em modo `-VerifyOnly`.
+- O instalador padrão atualizou a instalação local em 1,32 s. A aplicação abriu
+  e encerrou normalmente, com backup anterior e preservação do banco durante as
+  migrations. Commit, push, CI de `main`, tag e publicação não foram executados.
 
 ## Regras permanentes de acompanhamento
 

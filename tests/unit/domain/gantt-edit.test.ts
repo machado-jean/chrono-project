@@ -170,12 +170,11 @@ describe("movimento FS pelo Gantt", () => {
     expect(result.dependencyUpdates.map(({ lagDays }) => lagDays)).toEqual([3, 2]);
   });
 
-  it("move tarefa manual sem alterar lag", () => {
+  it("bloqueia o arrasto de tarefa com datas travadas", () => {
     const pred = predecessor("20000000-0000-4000-8000-000000000002", "2026-09-03");
     const current = { ...task(), schedulingMode: "MANUAL" as const };
     const dep = dependency("40000000-0000-4000-8000-000000000001", pred.id, 0);
-    const result = planGanttFsMove(current, 1, calendar, [dep], [pred, current]);
-    expect(result.task.startDate).toBe("2026-09-02");
-    expect(result.dependencyUpdates).toEqual([]);
+    expect(() => planGanttFsMove(current, 1, calendar, [dep], [pred, current]))
+      .toThrow(/datas estão travadas/i);
   });
 });

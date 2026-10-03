@@ -55,11 +55,14 @@ schema; reordenar ou mudar o pai recalcula a identificação imediatamente.
 ## Persistência
 
 O plugin SQL oficial do Tauri abre o SQLite e aplica as migrations registradas.
-O schema atual é a versão 5: `0001_initial.sql` cria metadados técnicos,
+O schema atual é a versão 7: `0001_initial.sql` cria metadados técnicos,
 `0002_core.sql` introduz calendários, projetos, tarefas e tags, e
 `0003_scheduling.sql` acrescenta exceções, calendário opcional por tarefa e
 dependências FS. `0004_reuse.sql` cria as tabelas relacionais de templates e
-`0005_plan_control.sql` acrescenta prazo-limite e fotografias de linha de base.
+`0005_plan_control.sql` acrescenta prazo-limite e fotografias de linha de base;
+`0006_summary_predecessors.sql` permite resumo como predecessora e mantém
+resumos proibidos no lado sucessor; `0007_persistent_gantt_history.sql`
+persiste as pilhas limitadas de desfazer/refazer do Gantt por projeto.
 
 Migrations são registradas no processo nativo, aplicadas em transação pelo
 plugin e versionadas de forma crescente. O adapter carrega explicitamente a URL
@@ -86,6 +89,12 @@ Os comandos de CRUD simples continuam disponíveis. A Fase 3 acrescenta
 validado do domínio e grava calendários, tarefas, dependências e exclusões em
 uma única transação. Uma falha reverte todo o conjunto. O SQLite permanece a
 fonte de verdade; o estado React é uma projeção em memória do workspace.
+
+O controlador mantém snapshots atuais de tarefas e dependências sincronizados
+antes de liberar uma nova interação. Isso impede que duas alterações rápidas —
+por exemplo, criar uma relação e editar a predecessora — recalcularem o grafo
+com uma revisão anterior. O histórico do Gantt usa comandos próprios de
+leitura/escrita e não amplia a transação de scheduling.
 
 Ao carregar, o estado reconcilia uma vez as cadeias automáticas e as
 tarefas-resumo. Somente diferenças reais são gravadas pelo mesmo comando
