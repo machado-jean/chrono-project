@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, type MouseEvent, type SyntheticEvent } from "react";
 
-import chronoMark from "../../assets/chrono-mark.png";
 import { PROJECT_STATUS_LABELS, type Project } from "../../domain/projects/project";
 
 interface ProjectSidebarProps {
@@ -16,7 +15,6 @@ interface ProjectSidebarProps {
   readonly onArchive: (project: Project) => Promise<boolean>;
   readonly onExport: (project: Project) => Promise<string | null>;
   readonly onDelete: (projectId: string) => Promise<boolean>;
-  readonly onToggle: () => void;
 }
 
 interface ProjectContextMenu {
@@ -35,7 +33,6 @@ export function ProjectSidebar({
   onArchive,
   onExport,
   onDelete,
-  onToggle,
 }: ProjectSidebarProps) {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
@@ -110,19 +107,15 @@ export function ProjectSidebar({
   return (
     <aside className={`project-sidebar${collapsed ? " collapsed" : ""}`} aria-label="Projetos">
       {collapsed ? (
-        <button className="sidebar-expand-button brand-expand-button" type="button" aria-label="Mostrar projetos" title="Mostrar projetos" onClick={onToggle}>
-          <img src={chronoMark} alt="" />
-        </button>
+        null
       ) : (
         <>
       <div className="brand-block">
-        <img className="brand-mark" src={chronoMark} alt="" />
-        <span className="brand-context">Planejamento local</span>
-        <button className="sidebar-collapse-button" type="button" aria-label="Recolher projetos" title="Recolher projetos" onClick={onToggle}>‹</button>
+        <strong className="brand-context">Projetos</strong>
       </div>
 
       <div className="sidebar-heading">
-        <h2>Projetos</h2>
+        <h2>Recentes</h2>
         <button
           className="icon-button"
           type="button"

@@ -1450,6 +1450,45 @@ Priorizar:
 - tema claro/escuro futuramente;
 - foco em produtividade.
 
+## 45.1 Identidade autoral da interface
+
+O Chrono Project não deve parecer um template genérico de dashboard, uma
+landing page adaptada para desktop ou uma interface produzida pela repetição de
+padrões comuns de aplicações geradas por IA.
+
+A interface deve desenvolver uma linguagem própria, reconhecível mesmo sem o
+logotipo, derivada dos conceitos de tempo, cronologia, precisão e mecanismo.
+Essa direção não autoriza excesso ornamental: a personalidade visual deve
+reforçar hierarquia, operação e leitura de dados.
+
+Evitar como padrão automático:
+
+- excesso de cartões arredondados dentro de outros cartões;
+- grandes áreas vazias que reduzam a densidade útil de uma aplicação desktop;
+- gradientes decorativos, sombras difusas e efeitos de brilho sem função;
+- transformar todo estado, rótulo ou ação em `pill`;
+- ícones genéricos usados sem vocabulário ou proporção consistente;
+- páginas com aparência de painel SaaS ou site promocional;
+- componentes visualmente diferentes que executem a mesma função.
+
+Priorizar:
+
+- composição desktop densa, clara e ajustável;
+- proporções, divisores, ritmos e detalhes inspirados em instrumentos de
+  precisão e relojoaria, sem imitar produtos existentes;
+- tokens próprios de cor, tipografia, espaçamento, raio, borda, elevação e
+  movimento;
+- controles Chrono consistentes para menus, diálogos, tabelas, estados, filtros
+  e ações;
+- microinterações discretas que comuniquem causa, tempo e consequência;
+- avaliação visual com dados reais, títulos longos, muitas tarefas, largura
+  mínima e escalas do Windows, não apenas com estados vazios ideais.
+
+Referências externas podem orientar princípios, mas não devem ser copiadas. Uma
+mudança visual ampla deve começar por inventário e direção de design aprovados,
+ser aplicada progressivamente e preservar acessibilidade, desempenho e
+familiaridade operacional.
+
 ---
 
 # 46. ACESSIBILIDADE

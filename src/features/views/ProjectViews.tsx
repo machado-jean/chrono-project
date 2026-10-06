@@ -1,8 +1,8 @@
-import { lazy, Suspense, useMemo, useState, type KeyboardEvent } from "react";
+import { lazy, Suspense, useMemo, type KeyboardEvent, type ReactNode } from "react";
 
 import type { Calendar } from "../../domain/calendars/calendar";
 import type { Project } from "../../domain/projects/project";
-import type { BaselineTask, ProjectBaseline } from "../../domain/planning/baseline";
+import type { BaselineTask } from "../../domain/planning/baseline";
 import type { TaskDependency } from "../../domain/scheduling/dependency";
 import type { SchedulingConflict } from "../../domain/scheduling/scheduler";
 import type { Task } from "../../domain/tasks/task";
@@ -10,20 +10,11 @@ import type { SchedulingMode } from "../../domain/tasks/task";
 import type { TaskSaveResult } from "../../domain/tasks/task-save";
 import type { GanttHistoryState } from "../../domain/history/gantt-history";
 import { TaskKanban } from "../kanban/TaskKanban";
-import { ProjectPdfExport } from "../reporting/ProjectPdfExport";
-import { ProjectBaselineControl } from "../planning/ProjectBaselineControl";
 import { TaskTable } from "../table/TaskTable";
 import { TaskFilterBar } from "./TaskFilterBar";
 import { ViewErrorBoundary } from "./ViewErrorBoundary";
-import {
-  EMPTY_TASK_FILTERS,
-  filterTasks,
-  hasActiveTaskFilters,
-  includeTaskAncestors,
-  type TaskFilters,
-} from "./task-filters";
-
-export type ProjectView = "TABLE" | "KANBAN" | "GANTT";
+import { PROJECT_VIEW_LABELS, type ProjectView } from "./project-view";
+import type { TaskFilters } from "./task-filters";
 
 const TaskGantt = lazy(async () => {
   const module = await import("../gantt/TaskGantt");
@@ -31,16 +22,20 @@ const TaskGantt = lazy(async () => {
 });
 
 interface ProjectViewsProps {
+  readonly activeView: ProjectView;
   readonly project: Project;
   readonly tasks: readonly Task[];
   readonly calendars: readonly Calendar[];
   readonly projectCalendarId: string;
   readonly dependencies: readonly TaskDependency[];
   readonly conflicts: readonly SchedulingConflict[];
-  readonly baselines: readonly ProjectBaseline[];
-  readonly activeBaseline: ProjectBaseline | null;
   readonly activeBaselineTasks: readonly BaselineTask[];
+  readonly filters: TaskFilters;
+  readonly filtersActive: boolean;
+  readonly matchingTasks: readonly Task[];
+  readonly visibleTaskIds: ReadonlySet<string>;
   readonly disabled: boolean;
+  readonly onFiltersChange: (filters: TaskFilters) => void;
   readonly onCreate: (input: { readonly title: string; readonly parentId: string | null; readonly parentDependencyPolicy?: "KEEP" | "TRANSFER" | "REMOVE" }) => Promise<Task | null>;
   readonly onSave: (
     task: Task,
@@ -63,28 +58,82 @@ interface ProjectViewsProps {
     readonly name: string;
     readonly description: string | null;
   }) => Promise<unknown>;
-  readonly onSavePdf: (suggestedName: string, bytes: readonly number[]) => Promise<string | null>;
-  readonly onCreateBaseline: (name: string) => Promise<ProjectBaseline | null>;
-  readonly onDeleteBaselines: () => Promise<boolean>;
 }
 
-const VIEW_LABELS: Readonly<Record<ProjectView, string>> = {
-  TABLE: "Tabela",
-  KANBAN: "Kanban",
-  GANTT: "Gantt",
-};
+function ViewGlyph({ view }: { readonly view: ProjectView }): ReactNode {
+  if (view === "TABLE") {
+    return <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="3" width="15" height="14" rx="1" /><path d="M2.5 7.5h15M7.5 3v14" /></svg>;
+  }
+  if (view === "KANBAN") {
+    return <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="3" width="4" height="10" rx="1" /><rect x="8" y="3" width="4" height="14" rx="1" /><rect x="13.5" y="3" width="4" height="8" rx="1" /></svg>;
+  }
+  return <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 4v13h14M5.5 7h5M8 11h7M5.5 15h7" /><path d="M10.5 7l2.5 4M15 11l-2.5 4" /></svg>;
+}
+
+interface ProjectViewRailProps {
+  readonly activeView: ProjectView;
+  readonly disabled?: boolean;
+  readonly onViewChange: (view: ProjectView) => void;
+}
+
+export function ProjectViewRail({ activeView, disabled = false, onViewChange }: ProjectViewRailProps) {
+  const moveTabFocus = (event: KeyboardEvent<HTMLButtonElement>, view: ProjectView): void => {
+    const views = Object.keys(PROJECT_VIEW_LABELS) as ProjectView[];
+    const currentIndex = views.indexOf(view);
+    let nextIndex: number | null = null;
+    if (event.key === "ArrowDown" || event.key === "ArrowRight") nextIndex = (currentIndex + 1) % views.length;
+    if (event.key === "ArrowUp" || event.key === "ArrowLeft") nextIndex = (currentIndex - 1 + views.length) % views.length;
+    if (event.key === "Home") nextIndex = 0;
+    if (event.key === "End") nextIndex = views.length - 1;
+    if (nextIndex === null) return;
+
+    event.preventDefault();
+    const nextView = views[nextIndex];
+    if (nextView === undefined) return;
+    onViewChange(nextView);
+    document.getElementById(`view-tab-${nextView.toLocaleLowerCase()}`)?.focus();
+  };
+
+  return (
+    <nav className="view-rail" aria-label="Visualização do projeto" role="tablist">
+      {(Object.keys(PROJECT_VIEW_LABELS) as ProjectView[]).map((view) => (
+        <button
+          key={view}
+          type="button"
+          role="tab"
+          id={`view-tab-${view.toLocaleLowerCase()}`}
+          aria-label={PROJECT_VIEW_LABELS[view]}
+          title={PROJECT_VIEW_LABELS[view]}
+          aria-selected={activeView === view}
+          aria-controls={`view-panel-${view.toLocaleLowerCase()}`}
+          tabIndex={activeView === view ? 0 : -1}
+          className={activeView === view ? "active" : ""}
+          disabled={disabled}
+          onClick={() => { onViewChange(view); }}
+          onKeyDown={(event) => { moveTabFocus(event, view); }}
+        >
+          <ViewGlyph view={view} />
+        </button>
+      ))}
+    </nav>
+  );
+}
 
 export function ProjectViews({
+  activeView,
   project,
   tasks,
   calendars,
   projectCalendarId,
   dependencies,
   conflicts,
-  baselines,
-  activeBaseline,
   activeBaselineTasks,
+  filters,
+  filtersActive,
+  matchingTasks,
+  visibleTaskIds,
   disabled,
+  onFiltersChange,
   onCreate,
   onSave,
   onSetSchedulingMode,
@@ -96,96 +145,20 @@ export function ProjectViews({
   onDeleteDependency,
   onDuplicateTask,
   onCreateTemplate,
-  onSavePdf,
-  onCreateBaseline,
-  onDeleteBaselines,
 }: ProjectViewsProps) {
-  const [activeView, setActiveView] = useState<ProjectView>("TABLE");
-  const [filters, setFilters] = useState<TaskFilters>(EMPTY_TASK_FILTERS);
-  const filtersActive = hasActiveTaskFilters(filters);
-  const matchingTasks = useMemo(() => filterTasks(tasks, filters), [filters, tasks]);
-  const visibleTaskIds = useMemo(
-    () => includeTaskAncestors(tasks, matchingTasks),
-    [matchingTasks, tasks],
-  );
   const ganttTasks = useMemo(
     () => tasks.filter((task) => visibleTaskIds.has(task.id)),
     [tasks, visibleTaskIds],
   );
 
-  const moveTabFocus = (event: KeyboardEvent<HTMLButtonElement>, view: ProjectView): void => {
-    const views = Object.keys(VIEW_LABELS) as ProjectView[];
-    const currentIndex = views.indexOf(view);
-    let nextIndex: number | null = null;
-    if (event.key === "ArrowRight") nextIndex = (currentIndex + 1) % views.length;
-    if (event.key === "ArrowLeft") nextIndex = (currentIndex - 1 + views.length) % views.length;
-    if (event.key === "Home") nextIndex = 0;
-    if (event.key === "End") nextIndex = views.length - 1;
-    if (nextIndex === null) return;
-
-    event.preventDefault();
-    const nextView = views[nextIndex];
-    if (nextView === undefined) return;
-    setActiveView(nextView);
-    document.getElementById(`view-tab-${nextView.toLocaleLowerCase()}`)?.focus();
-  };
-
   return (
     <div className="project-views">
-      <div className="view-command-bar">
-        <div className="view-navigation">
-          <div className="view-heading">
-            <strong>Visualizações do projeto</strong>
-            <span>As alterações são compartilhadas entre Tabela, Kanban e Gantt.</span>
-          </div>
-          <nav className="view-tabs" aria-label="Visualização do projeto" role="tablist">
-            {(Object.keys(VIEW_LABELS) as ProjectView[]).map((view) => (
-              <button
-                key={view}
-                type="button"
-                role="tab"
-                id={`view-tab-${view.toLocaleLowerCase()}`}
-                aria-selected={activeView === view}
-                aria-controls={`view-panel-${view.toLocaleLowerCase()}`}
-                tabIndex={activeView === view ? 0 : -1}
-                className={activeView === view ? "active" : ""}
-                onClick={() => { setActiveView(view); }}
-                onKeyDown={(event) => { moveTabFocus(event, view); }}
-              >
-                {VIEW_LABELS[view]}
-              </button>
-            ))}
-          </nav>
-        </div>
-        <div className="view-command-actions">
-          <ProjectBaselineControl
-            tasks={tasks}
-            baselines={baselines}
-            activeBaseline={activeBaseline}
-            activeBaselineTasks={activeBaselineTasks}
-            disabled={disabled}
-            onCreate={onCreateBaseline}
-            onDelete={onDeleteBaselines}
-          />
-          <ProjectPdfExport
-            project={project}
-            tasks={tasks}
-            dependencies={dependencies}
-            calendars={calendars}
-            baselineTasks={activeBaselineTasks}
-            visibleTaskIds={visibleTaskIds}
-            filtersActive={filtersActive}
-            disabled={disabled || tasks.length === 0}
-            onSave={onSavePdf}
-          />
-        </div>
-      </div>
-
+      <div className="view-workspace">
       <TaskFilterBar
         filters={filters}
         resultCount={matchingTasks.length}
         totalCount={tasks.length}
-        onChange={setFilters}
+        onChange={onFiltersChange}
       />
 
       <div
@@ -251,6 +224,7 @@ export function ProjectViews({
             </Suspense>
           </ViewErrorBoundary>
         ) : null}
+      </div>
       </div>
     </div>
   );

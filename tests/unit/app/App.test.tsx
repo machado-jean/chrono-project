@@ -452,6 +452,7 @@ class MemoryWorkspaceRepository implements WorkspaceRepository {
 describe("aplicação Chrono Project", () => {
   it("permite ajustar e restaurar a largura da coluna Tarefa", async () => {
     window.localStorage.removeItem("chrono-project.task-table.task-column-width");
+    window.localStorage.removeItem("chrono-project.task-table.predecessors-column-width");
     render(<App repository={new MemoryWorkspaceRepository({ projects: [project()] })} />);
     await screen.findByRole("heading", { name: "Tabela de tarefas" });
 
@@ -466,6 +467,18 @@ describe("aplicação Chrono Project", () => {
 
     fireEvent.doubleClick(resizeHandle);
     expect(resizeHandle).toHaveAttribute("aria-valuenow", "380");
+
+    const predecessorsResizeHandle = screen.getByRole("separator", { name: "Ajustar largura da coluna Predecessoras" });
+    expect(predecessorsResizeHandle).toHaveAttribute("aria-valuenow", "240");
+
+    fireEvent.keyDown(predecessorsResizeHandle, { key: "ArrowRight" });
+    expect(predecessorsResizeHandle).toHaveAttribute("aria-valuenow", "256");
+    await waitFor(() => {
+      expect(window.localStorage.getItem("chrono-project.task-table.predecessors-column-width")).toBe("256");
+    });
+
+    fireEvent.doubleClick(predecessorsResizeHandle);
+    expect(predecessorsResizeHandle).toHaveAttribute("aria-valuenow", "240");
   });
 
   it("recolhe e restaura a lista de projetos", async () => {
@@ -517,7 +530,9 @@ describe("aplicação Chrono Project", () => {
     });
     render(<App repository={repository} />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "Gerar PDF" }));
+    const pdfButton = await screen.findByRole("button", { name: "Gerar PDF" });
+    expect(pdfButton.closest("header")).toHaveClass("project-header");
+    fireEvent.click(pdfButton);
     const dialog = screen.getByRole("dialog", { name: "Gerar PDF do projeto" });
 
     expect(within(dialog).getByText("Relatório completo")).toBeVisible();
@@ -2133,7 +2148,7 @@ describe("aplicação Chrono Project", () => {
     });
     render(<App repository={repository} />);
 
-    fireEvent.click(await screen.findByText("Projeto"));
+    fireEvent.click(await screen.findByText("Editar"));
     fireEvent.click(screen.getByRole("button", { name: "Duplicar projeto" }));
 
     await waitFor(() => {
@@ -2265,7 +2280,9 @@ describe("aplicação Chrono Project", () => {
     await screen.findByRole("heading", { name: "Tabela de tarefas" });
     expect(screen.queryByLabelText("Informação sobre Início planejado")).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Criar plano de referência" }));
+    const baselineButton = screen.getByRole("button", { name: "Criar plano de referência" });
+    expect(baselineButton.closest("header")).toHaveClass("project-header");
+    fireEvent.click(baselineButton);
     const dialog = screen.getByRole("dialog", { name: "Criar plano de referência" });
     fireEvent.change(within(dialog).getByLabelText("Nome do plano de referência"), {
       target: { value: "Plano aprovado" },

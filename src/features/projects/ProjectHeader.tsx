@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
 import {
   PROJECT_STATUSES,
@@ -11,6 +11,7 @@ interface ProjectHeaderProps {
   readonly project: Project;
   readonly taskCount: number;
   readonly disabled: boolean;
+  readonly tools?: ReactNode;
   readonly onSave: (project: Project) => Promise<boolean>;
 }
 
@@ -18,6 +19,7 @@ export function ProjectHeader({
   project,
   taskCount,
   disabled,
+  tools,
   onSave,
 }: ProjectHeaderProps) {
   const [draft, setDraft] = useState(project);
@@ -43,13 +45,16 @@ export function ProjectHeader({
       </div>
 
       <div className="project-header-actions">
-        <label>
-          <span className="sr-only">Status do projeto</span>
-          <select value={draft.status} disabled={disabled} onChange={(event) => { updateDraft({ status: event.target.value as ProjectStatus }); }}>
-            {PROJECT_STATUSES.map((status) => <option key={status} value={status}>{PROJECT_STATUS_LABELS[status]}</option>)}
-          </select>
-        </label>
-        {dirty ? <button className="primary-button" type="button" disabled={disabled} onClick={() => void save()}>Salvar projeto</button> : null}
+        <div className="project-status-actions">
+          <label>
+            <span className="sr-only">Status do projeto</span>
+            <select value={draft.status} disabled={disabled} onChange={(event) => { updateDraft({ status: event.target.value as ProjectStatus }); }}>
+              {PROJECT_STATUSES.map((status) => <option key={status} value={status}>{PROJECT_STATUS_LABELS[status]}</option>)}
+            </select>
+          </label>
+          {dirty ? <button className="primary-button" type="button" disabled={disabled} onClick={() => void save()}>Salvar projeto</button> : null}
+        </div>
+        {tools}
       </div>
     </header>
   );

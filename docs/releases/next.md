@@ -1,29 +1,27 @@
-# Chrono Project — candidato v0.2.4
+# Chrono Project — candidato v0.2.5
 
-O candidato `0.2.4` parte da versão publicada `0.2.3` e concentra ajustes de
-usabilidade na Tabela e na portabilidade de projetos. Não altera o schema
-SQLite, as regras do scheduler nem o formato `.chronoproject`.
+O candidato `0.2.5` parte da versão publicada `0.2.4` e consolida a primeira
+etapa da identidade desktop Chrono. Não altera o schema SQLite, o scheduler nem
+o formato `.chronoproject`.
 
 ## Escopo confirmado
 
-- a coluna **Tarefa** começa com largura mais confortável;
-- a borda direita do cabeçalho **Tarefa** permite redimensionamento entre 300 e
-  760 pixels por arrasto;
-- o redimensionamento também pode ser feito pelas setas do teclado, com
-  restauração por duplo clique;
-- a largura escolhida é preservada localmente entre execuções;
-- os cabeçalhos de **Prioridade**, **Progresso**, **Duração** e
-  **Prazo-limite** não cortam o botão de informação;
-- o menu de contexto de cada projeto oferece **Exportar projeto…**;
-- a exportação pelo clique direito usa o mesmo pacote `.chronoproject` aceito
-  por **Arquivo > Importar pacote** e informa o caminho gerado.
+- barra de menus e navegação com composição semelhante a um aplicativo Windows;
+- trilho compacto para alternar Tabela, Kanban e Gantt;
+- painel de projetos intermediário, recolhível pela marca Chrono;
+- superfícies e cores claras unificadas entre cabeçalho, filtros e views;
+- coluna **Predecessoras** redimensionável e persistente, seguindo o contrato da
+  coluna **Tarefa**;
+- plano de referência e PDF integrados ao cabeçalho do projeto;
+- barra horizontal da Tabela fixa na área visível durante a rolagem vertical;
+- dimensões e alinhamento dos controles do cabeçalho padronizados.
 
 ## Compatibilidade
 
 - schema SQLite permanece em `8`;
 - formato `.chronoproject` permanece na versão `1`;
 - identificador e diretório de dados permanecem `chronoproject`;
-- a atualização sobre a v0.2.3 preserva projetos, tarefas e preferências;
+- a atualização sobre a v0.2.4 preserva projetos, tarefas e preferências;
 - instaladores continuam destinados ao Windows 11 x64.
 
 ## Gates do candidato
@@ -34,7 +32,7 @@ SQLite, as regras do scheduler nem o formato `.chronoproject`.
 - [x] build web;
 - [x] `npm ci` do release;
 - [x] jornada E2E;
-- [x] testes de desempenho;
+- [x] dois testes de desempenho;
 - [x] auditoria npm sem vulnerabilidades;
 - [x] Cargo fmt/check/test/Clippy;
 - [x] executável de distribuição;
@@ -44,16 +42,18 @@ SQLite, as regras do scheduler nem o formato `.chronoproject`.
 
 ## Validação manual recomendada
 
-1. Abra a Tabela com tarefas de títulos longos e confirme que **Tarefa** inicia
-   mais larga.
-2. Arraste o divisor à direita de **Tarefa**, feche e reabra o aplicativo e
-   confirme que a largura foi preservada.
-3. Use as setas com foco no divisor e dê duplo clique para restaurar 380 pixels.
-4. Confirme que nenhum botão `i` dos cabeçalhos está cortado.
-5. Clique com o botão direito em um projeto, escolha **Exportar projeto…** e
-   confirme a mensagem com o caminho do pacote.
-6. Importe o pacote por **Arquivo > Importar pacote** e valide projetos,
-   tarefas, dependências, calendários e linhas de base.
+1. Confirme a barra superior, o trilho de visualizações e o painel de projetos
+   em janela maximizada e na largura mínima suportada.
+2. Recolha e reabra o painel de projetos usando a marca Chrono.
+3. Alterne Tabela, Kanban e Gantt e confirme que tarefas e filtros permanecem
+   coerentes.
+4. Redimensione Tarefa e Predecessoras por arrasto e teclado; reinicie o
+   aplicativo e confirme a persistência.
+5. Percorra um projeto longo e confirme que a barra horizontal da Tabela fica
+   acessível sem chegar à última tarefa.
+6. Confirme o alinhamento e as dimensões de Estado, Plano de referência e Gerar
+   PDF no cabeçalho.
+7. Gere um PDF com e sem filtros ativos e confira o conjunto exportado.
 
-Nenhum artefato da v0.2.3 deve ser alterado. Os novos binários pertencem
-exclusivamente à v0.2.4.
+Nenhum artefato da v0.2.4 deve ser alterado. Os novos binários pertencem
+exclusivamente à v0.2.5.

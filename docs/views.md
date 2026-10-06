@@ -6,8 +6,10 @@ entidades persistidas específicas da interface.
 
 ## Filtros compartilhados
 
-Os filtros ficam na composição `ProjectViews` e permanecem ativos ao alternar
-entre as três views. O conjunto mínimo cobre:
+Os filtros são controlados pela composição principal e permanecem ativos ao
+alternar entre as três views. Esse estado compartilhado também permite que a
+exportação em PDF respeite exatamente as atividades visíveis. O conjunto mínimo
+cobre:
 
 - texto em título, código, descrição, responsável, tags e observações;
 - status;
@@ -173,7 +175,7 @@ operações estruturais como excluir tarefas ou importar workspaces.
 
 ## Controle do plano de referência
 
-Acima das views, **Criar plano de referência** registra uma fotografia nomeada
+No cabeçalho do projeto, **Criar plano de referência** registra uma fotografia nomeada
 do planejamento aprovado. Ela serve apenas para comparar mudanças futuras e
 não altera as tarefas atuais. Depois da primeira fotografia, **Atualizar plano
 de referência** exige confirmação e mantém as anteriores no histórico. O painel

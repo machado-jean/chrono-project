@@ -34,9 +34,10 @@ validação e persistência; `WorkspaceRepository` define a fronteira; e o adapt
 Tauri invoca comandos nativos explícitos. A interface nunca executa SQL nem
 contém regras centrais de agendamento.
 
-A Fase 4 mantém a mesma fronteira. `ProjectViews` conserva somente estado de
-navegação e filtros; Tabela, Kanban e Gantt recebem as mesmas entidades do
-workspace. `TaskKanban` altera status pelo mesmo `onSave` e `TaskGantt` cria uma
+A Fase 4 mantém a mesma fronteira. A composição da aplicação conserva o estado
+de navegação e filtros para compartilhá-lo com as visualizações e a exportação
+em PDF; Tabela, Kanban e Gantt recebem as mesmas entidades do workspace.
+`TaskKanban` altera status pelo mesmo `onSave` e `TaskGantt` cria uma
 projeção transitória para a biblioteca SVAR. Não existem tabelas, repositories
 ou cópias persistidas específicas de view.
 

@@ -698,3 +698,46 @@ Artefatos promovidos para `.local/distribution/v0.2.4/`:
 | `chrono-project.exe` | 21.540.864 bytes | `1E2595982A116204000ED8CE5052AA66E70D7FC557929057D2868AA3F11AB1F6` |
 | `Chrono-Project-Windows-x64-Setup.exe` | 7.332.640 bytes | `9AF24DFD4BA6ABDA97978A2C76EABC09871DF03685794B3C22EB0042579DCB04` |
 | `Chrono-Project-Windows-x64-Offline-Setup.exe` | 222.448.397 bytes | `5229DD85CB719A5675B97B09471645F34CD126A1B50EAFBE1C476528A0D8BECD` |
+
+## Validação local do candidato 0.2.5
+
+O candidato 0.2.5 reutilizou o toolchain aprovado: Windows 11 x64, Node.js
+24.20.0, npm 11.19.0, Rust/Cargo 1.98.0 e Tauri CLI 2.11.4. Nenhuma ferramenta
+global foi instalada ou atualizada.
+
+Foram aprovados 173 testes TypeScript/React, 39 testes Rust, 1 jornada E2E,
+2 testes de desempenho, lint, typecheck, Cargo fmt/check/Clippy, build web e
+auditoria npm sem vulnerabilidades conhecidas. O teste Rust dependente de uma
+base externa v0.2.1 permaneceu explicitamente ignorado.
+
+Tempos totais observados nesta preparação:
+
+| Etapa | Tempo total |
+| --- | ---: |
+| `npm ci` | 11,33 s |
+| `npm run check` | 52,56 s |
+| jornada E2E da aplicação e testes Rust | 42,98 s |
+| testes de desempenho | 0,92 s |
+| auditoria npm final | 1,00 s |
+| Cargo fmt | 0,32 s |
+| Cargo check | 9,64 s |
+| Cargo test `--all-targets` | 8,22 s |
+| Cargo Clippy | 4,98 s |
+| build web | 4,26 s |
+| executável sem bundle | 49,99 s |
+| instalador padrão, NSIS e assinatura | 226,32 s |
+| primeira tentativa offline, encerrada por bloqueio de rede | 37,05 s |
+| instalador offline aprovado, NSIS e assinatura | 1.263,15 s |
+
+O instalador padrão compilou o perfil Rust em 31,40 s e o offline em 30,94 s.
+Ambos aguardaram o prompt interativo `Password:` e prosseguiram com Enter para a
+chave local sem passphrase. A primeira tentativa offline falhou com `os error
+10013`; a repetição autorizada acessou a fonte oficial do WebView2 e concluiu.
+
+Artefatos promovidos para `.local/distribution/v0.2.5/`:
+
+| Arquivo | Tamanho | SHA-256 |
+| --- | ---: | --- |
+| `chrono-project.exe` | 21.544.960 bytes | `803B86F09600BD969CC22841A46D6E6D717AD66D90EC9037E9DFB7EA576722E7` |
+| `Chrono-Project-Windows-x64-Setup.exe` | 7.337.587 bytes | `506773F13C5A59128635454D11FDA54210A52919440FC802C4A8733A1D2754CA` |
+| `Chrono-Project-Windows-x64-Offline-Setup.exe` | 222.449.753 bytes | `0166B4DC1E9C93ACD7CA3199132A203C92E832E2E4912FF06F809DC42CD94215` |

@@ -4,7 +4,7 @@ Este é o registro vivo de execução do Chrono Project. Ele traduz o roadmap de
 
 `AGENTS.md` continua sendo a fonte de verdade para produto, arquitetura e regras operacionais. Este documento não substitui a especificação e não deve introduzir escopo incompatível com ela.
 
-Última atualização: **5 de outubro de 2026**.
+Última atualização: **6 de outubro de 2026**.
 
 ## Como manter este documento
 
@@ -31,13 +31,13 @@ Não usar percentuais subjetivos. O progresso deve ser demonstrado por entregáv
 
 | Item | Estado |
 | --- | --- |
-| Etapa do produto | Preparação do patch 0.2.4 após validação funcional |
-| Fase ativa | Hardening e distribuição Windows |
-| Próxima fase | Commit/push pelo usuário e publicação por `PUBLISH_RELEASE.ps1` |
-| Versão da aplicação | `0.2.4` |
+| Etapa do produto | Candidato visual 0.2.5 em preparação |
+| Fase ativa | Identidade visual da interface |
+| Próxima fase | Validar e publicar a composição desktop unificada |
+| Versão da aplicação | `0.2.5` |
 | Versão do schema SQLite | `8` |
-| Último commit de referência | `0cc438f` — `Build core project and task management foundation` |
-| Branch de trabalho | `main`; candidato 0.2.4 ainda não commitado |
+| Último commit de referência | `a76e865` — `Prepare Chrono Project v0.2.4 release` |
+| Branch de trabalho | `main`; candidato 0.2.5 ainda não commitado |
 | Checkpoints obrigatórios | A, B, C e D concluídos; E em preparação |
 | Funcionalidades de negócio | Core, scheduler, views, reutilização e portabilidade implementados |
 
@@ -54,7 +54,7 @@ Não usar percentuais subjetivos. O progresso deve ser demonstrado por entregáv
 | 6 — Portabilidade | Entregar exportação, importação e backup | Concluída | 7 | Round-trip preserva semanticamente o workspace |
 | 7 — Hardening e distribuição | Preparar o produto para uso real no Windows | Em andamento | 8 | Instalador e operação offline validados em máquina limpa |
 | 8 — Controle do plano | Baseline, desvios, prazos-limite e saúde | Concluída | 9 | O plano aprovado pode ser comparado ao cronograma corrente |
-| 9 — Identidade visual | Novo ícone profissional e aplicação consistente da marca | Em validação | 10 | Aplicativo, instaladores e artefatos exibem a identidade aprovada |
+| 9 — Identidade visual | Novo ícone profissional e aplicação consistente da marca | Em andamento | 10 | Aplicativo, instaladores e artefatos exibem a identidade aprovada |
 | 10 — Análise do cronograma | Caminho crítico, folgas e explicabilidade | Planejada | 11 | O usuário identifica e entende as tarefas que controlam o término |
 | 11 — Progresso e marcos | Marcos e consolidação automática de progresso | Planejada | 12 | Progresso e eventos-chave são coerentes na hierarquia e nas views |
 | 12 — Produtividade | Visões salvas, edição em massa e histórico global | Planejada | 13 | Operações frequentes são rápidas, reversíveis e acessíveis |
@@ -302,6 +302,13 @@ Estado: **Implementada; validação de distribuição pendente**. Versão-alvo:
   aprovada permitir, mantendo nome e acessibilidade textual.
 - Aplicar a identidade aos instaladores, executável, metadados e documentação de
   distribuição sem alterar identidade do aplicativo ou localização dos dados.
+- Estender a identidade para um sistema de interface autoral, reconhecível mesmo
+  sem o logotipo e diferente de dashboards genéricos ou templates recorrentes
+  de aplicações geradas por IA.
+- Definir tokens e padrões próprios para densidade, tipografia, cores, bordas,
+  raios, elevação, ícones e movimento, preservando a produtividade desktop.
+- Evitar excesso de cartões, `pills`, gradientes, sombras e espaços vazios sem
+  função operacional.
 
 ### Integridade e testes obrigatórios
 
@@ -318,11 +325,24 @@ Estado: **Implementada; validação de distribuição pendente**. Versão-alvo:
 O Chrono Project possui um ícone aprovado, reconhecível e consistente na interface,
 no Windows e nos artefatos de distribuição, sem regressão funcional.
 
+Em uma evolução posterior, a própria interface deve continuar reconhecível como
+Chrono sem depender do ícone: original, coesa e relacionada a precisão e tempo,
+sem copiar outro produto nem sacrificar densidade ou acessibilidade.
+
 O símbolo, a interface e os derivados Tauri foram implementados em 24/09/2026.
 Os executáveis e instaladores padrão/offline `0.2.1` foram gerados, assinados e
 validados localmente em 25/09/2026. O encerramento da fase ainda depende da
 atualização manual sobre `0.2.0` e da inspeção dos pontos de integração do
 Windows.
+
+### Próxima revisão visual da interface
+
+Antes de uma reformulação ampla, criar um inventário das telas e componentes
+atuais, identificar padrões genéricos ou inconsistentes e propor duas ou três
+telas-piloto com dados reais. A direção escolhida deve ser aplicada por sistema
+de componentes, não por retoques isolados. A validação deve cobrir Tabela densa,
+Kanban, Gantt, diálogos, estados vazios, largura mínima, escalas de 125%/150%,
+teclado e contraste.
 
 ## Incremento transversal — Estabilidade e produtividade pós-0.2.1
 
@@ -1577,6 +1597,53 @@ matriz no host, na VM limpa e no CI Windows.
 - Executável e instaladores padrão/offline v0.2.4 foram gerados, assinados,
   verificados e promovidos para a pasta final. Commit, push, CI, tag e
   publicação permanecem reservados ao usuário.
+
+### 6 de outubro de 2026 — Publicação 0.2.4 e piloto visual Chrono
+
+- A versão 0.2.4 foi publicada no commit `a76e865`, reutilizando com sucesso o
+  CI de `main`; a tag não criou uma segunda execução do quality gate.
+- A direção visual passou a exigir uma identidade reconhecível mesmo sem o
+  logotipo, evitando a composição genérica de dashboards e interfaces geradas
+  pela repetição de padrões prontos.
+- A primeira etapa criou tokens próprios em tinta, papel, latão e ciano e os
+  aplicou ao shell, barra lateral, menus superiores, cabeçalho, filtros, abas e
+  Tabela. Cantos, sombras e estados foram contidos para reforçar a sensação de
+  instrumento desktop de planejamento.
+- Após as inspeções do piloto, a moldura passou a seguir uma aplicação Windows:
+  barra compacta com recolhimento, voltar/avançar e menus Arquivo, Editar e
+  Exibir; trilho lateral para Tabela, Kanban e Gantt; painel de projetos simples
+  entre esse trilho e o conteúdo. Numeração, descrições e ícones ornamentais dos
+  menus foram removidos.
+- As superfícies laterais e as três visualizações foram harmonizadas com os
+  mesmos fundos, bordas, raios, foco e paleta funcional.
+- Menus, formulários, diálogos, mensagens e estados passaram pelo mesmo ajuste
+  cromático: neutros firmes, ciano-petróleo e dourado, com verde, âmbar e
+  vermelho reservados à semântica. A composição evita grandes áreas pastéis.
+- A coluna Predecessoras passou a aceitar redimensionamento por arrasto e
+  teclado, persistência local e restauração por duplo clique, seguindo o mesmo
+  contrato acessível da coluna Tarefa.
+- Kanban, Gantt e diálogos permanecem fora deste piloto e serão convertidos
+  progressivamente após inspeção com dados reais, largura mínima e escala do
+  Windows.
+- ESLint, TypeScript, 173 testes e build Vite foram aprovados. Não houve mudança
+  de regra de negócio, schema, código nativo ou formato de exportação.
+- Commit do piloto: `não commitado`; nenhuma nova operação remota foi executada.
+
+### 6 de outubro de 2026 — Candidato de distribuição 0.2.5
+
+- A composição desktop aprovada foi consolidada em barra superior, trilho de
+  visualizações, painel intermediário de projetos e área de trabalho unificada.
+- Tarefa e Predecessoras passaram a aceitar larguras persistentes; plano de
+  referência e PDF foram integrados ao cabeçalho; a barra horizontal da Tabela
+  voltou a permanecer acessível em projetos longos.
+- A versão foi sincronizada em 0.2.5 sem mudança de schema, scheduler ou formato
+  `.chronoproject`.
+- Foram aprovados 173 testes TypeScript/React, 39 testes Rust, E2E, desempenho,
+  lint, typecheck, auditoria npm, Cargo fmt/check/Clippy e os três binários de
+  distribuição.
+- Executável e instaladores padrão/offline foram gerados, assinados, verificados
+  e promovidos para `v0.2.5`. Commit, push, CI, tag e publicação permanecem
+  reservados ao usuário.
 
 ## Regras permanentes de acompanhamento
 

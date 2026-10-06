@@ -1,7 +1,7 @@
 # Relatórios PDF
 
 O Chrono Project gera documentos PDF inteiramente no computador do usuário. Abra
-um projeto e selecione **Gerar PDF**, ao lado das visualizações.
+um projeto e selecione **Gerar PDF** no cabeçalho do projeto.
 
 ## Formatos
 

@@ -1,7 +1,8 @@
 # Processo de release
 
 Este checklist complementa `AGENTS.md`. Publicar os arquivos no GitHub não encerra
-o release: a execução de CI associada à **tag** também precisa ficar verde.
+o release: o CI de `main` associado ao commit exato apontado pela **tag** também
+precisa estar aprovado, sem criar um segundo quality gate para a tag.
 
 O procedimento operacional completo, incluindo executável, instaladores,
 assinaturas, staging, scripts e protocolo de espera, está em
@@ -27,8 +28,8 @@ GitHub Release, no registro de build e no relatório final, sem novo commit.
    [`branding.md`](branding.md) e conferir o ícone no executável, barra de
    tarefas, menu Iniciar, atalho, lista de aplicativos, instalador e
    desinstalador.
-5. Registrar tamanhos e SHA-256 dos dois instaladores em
-   [`releases/v0.2.4.md`](releases/v0.2.4.md).
+5. Registrar tamanhos e SHA-256 dos dois instaladores nas notas da versão em
+   `docs/releases/vX.Y.Z.md`.
 6. Criar o commit somente após a aprovação dessa auditoria.
 
 ## Depois de publicar
@@ -36,7 +37,7 @@ GitHub Release, no registro de build e no relatório final, sem novo commit.
 No PowerShell, execute:
 
 ```powershell
-.\scripts\Check-ReleaseCi.ps1 -Tag v0.2.4
+.\scripts\Check-ReleaseCi.ps1 -Tag vX.Y.Z
 ```
 
 O script resolve o commit apontado pela tag, localiza o workflow `CI` de `main`

@@ -11,6 +11,23 @@ O resultado é uma verificação técnica orientada pelos requisitos do
 `AGENTS.md`; não deve ser apresentado como certificação formal de conformidade
 com WCAG.
 
+## Direção visual para futuras revisões
+
+As próximas revisões de UI devem reduzir a aparência de dashboard genérico e
+construir uma linguagem reconhecível do Chrono Project. Isso inclui densidade de
+aplicação desktop, tokens próprios, hierarquia mais característica e detalhes
+inspirados em precisão e cronologia, sem transformar a interface em decoração
+temática.
+
+Evitar cartões, `pills`, gradientes, sombras e grandes espaçamentos aplicados
+automaticamente apenas porque são recorrentes em templates ou aplicações
+geradas por IA. Cada escolha visual deve ter função clara e permanecer coerente
+nas três views.
+
+Essa diferenciação continua subordinada aos critérios desta auditoria: contraste,
+foco visível, nomes acessíveis, alternativas ao arrasto, redução de movimento,
+largura mínima, escalas do Windows e legibilidade com projetos densos.
+
 ## Correções incorporadas
 
 - Um link **Ir para o conteúdo principal** permite ignorar a lista de projetos.

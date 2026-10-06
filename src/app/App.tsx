@@ -2,10 +2,14 @@ import { useMemo, useState } from "react";
 
 import chronoMark from "../assets/chrono-mark.png";
 import { ProjectHeader } from "../features/projects/ProjectHeader";
+import { ProjectBaselineControl } from "../features/planning/ProjectBaselineControl";
+import { ProjectPdfExport } from "../features/reporting/ProjectPdfExport";
 import { ProjectActionsMenu } from "../features/projects/ProjectActionsMenu";
 import { CalendarSettings } from "../features/projects/CalendarSettings";
 import { ProjectSidebar } from "../features/projects/ProjectSidebar";
-import { ProjectViews } from "../features/views/ProjectViews";
+import { ProjectViewRail, ProjectViews } from "../features/views/ProjectViews";
+import type { ProjectView } from "../features/views/project-view";
+import { ProjectViewMenu } from "../features/views/ProjectViewMenu";
 import { TemplateLibrary } from "../features/templates/TemplateLibrary";
 import { PortabilityPanel } from "../features/import-export/PortabilityPanel";
 import { safeFilename } from "../features/import-export/safe-filename";
@@ -23,6 +27,13 @@ import { TASK_PRIORITY_LABELS, TASK_STATUS_LABELS } from "../domain/tasks/task";
 import { collectTaskTreeIds } from "../domain/tasks/hierarchy";
 import type { TaskDependency } from "../domain/scheduling/dependency";
 import type { TaskSaveResult } from "../domain/tasks/task-save";
+import {
+  EMPTY_TASK_FILTERS,
+  filterTasks,
+  hasActiveTaskFilters,
+  includeTaskAncestors,
+  type TaskFilters,
+} from "../features/views/task-filters";
 
 interface AppProps {
   readonly repository?: WorkspaceRepository;
@@ -55,6 +66,8 @@ function suggestedReopenProgress(task: Task): number {
 function App({ repository }: AppProps) {
   const activeRepository = useMemo(() => repository ?? new TauriWorkspaceRepository(), [repository]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [activeView, setActiveView] = useState<ProjectView>("TABLE");
+  const [taskFilters, setTaskFilters] = useState<TaskFilters>(EMPTY_TASK_FILTERS);
   const [completionRequest, setCompletionRequest] = useState<TaskStatusReviewRequest | null>(null);
   const [completionConfirming, setCompletionConfirming] = useState(false);
   const [completionError, setCompletionError] = useState<string | null>(null);
@@ -74,6 +87,15 @@ function App({ repository }: AppProps) {
   );
   const selectedCalendar = workspace.calendars.find(
     (calendar) => calendar.id === workspace.selectedProject?.calendarId,
+  );
+  const filtersActive = hasActiveTaskFilters(taskFilters);
+  const matchingTasks = useMemo(
+    () => filterTasks(workspace.selectedProjectTasks, taskFilters),
+    [taskFilters, workspace.selectedProjectTasks],
+  );
+  const visibleTaskIds = useMemo(
+    () => includeTaskAncestors(workspace.selectedProjectTasks, matchingTasks),
+    [matchingTasks, workspace.selectedProjectTasks],
   );
   const openCompletionDescendants = useMemo(() => {
     if (completionRequest?.kind !== "COMPLETE") return [];
@@ -168,6 +190,65 @@ function App({ repository }: AppProps) {
     <div className={`app-shell${sidebarCollapsed ? " sidebar-collapsed" : ""}`}>
       <TextContextMenu />
       <a className="skip-link" href="#workspace-content">Ir para o conteúdo principal</a>
+      <WorkspaceMenuBar
+        sidebarCollapsed={sidebarCollapsed}
+        canGoBack={selectedProjectIndex > 0}
+        canGoForward={selectedProjectIndex >= 0 && selectedProjectIndex < projectPeers.length - 1}
+        onToggleSidebar={() => { setSidebarCollapsed((current) => !current); }}
+        onGoBack={() => {
+          const project = projectPeers[selectedProjectIndex - 1];
+          if (project !== undefined) workspace.selectProject(project.id);
+        }}
+        onGoForward={() => {
+          const project = projectPeers[selectedProjectIndex + 1];
+          if (project !== undefined) workspace.selectProject(project.id);
+        }}
+      >
+        <PortabilityPanel
+          repository={activeRepository}
+          selectedProject={workspace.selectedProject}
+          disabled={workspace.isSaving}
+          onWorkspaceChanged={workspace.reloadWorkspace}
+        />
+        {workspace.selectedProject === null ? null : (
+          <>
+            <ProjectActionsMenu
+              project={workspace.selectedProject}
+              disabled={workspace.isSaving}
+              canMoveUp={selectedProjectIndex > 0}
+              canMoveDown={selectedProjectIndex >= 0 && selectedProjectIndex < projectPeers.length - 1}
+              onSave={workspace.saveProject}
+              onMove={workspace.moveProject}
+              onDelete={workspace.removeProject}
+              onDuplicate={workspace.duplicateProject}
+            />
+            <ProjectViewMenu activeView={activeView} onChange={setActiveView} />
+            {selectedCalendar === undefined ? null : (
+              <CalendarSettings
+                key={selectedCalendar.updatedAt}
+                calendar={selectedCalendar}
+                disabled={workspace.isSaving || workspace.selectedProject.isArchived}
+                usedYears={scheduleYears(workspace.selectedProjectTasks)}
+                onSave={workspace.saveCalendar}
+              />
+            )}
+            <TemplateLibrary
+              templates={workspace.templates}
+              items={workspace.templateItems}
+              projectName={workspace.selectedProject.name}
+              disabled={workspace.isSaving || workspace.selectedProject.isArchived}
+              onApply={workspace.applyTemplate}
+              onDelete={workspace.removeTemplate}
+            />
+          </>
+        )}
+        <WorkspaceHelpMenu />
+      </WorkspaceMenuBar>
+      <ProjectViewRail
+        activeView={activeView}
+        disabled={workspace.selectedProject === null || workspace.isLoading}
+        onViewChange={setActiveView}
+      />
       <ProjectSidebar
         collapsed={sidebarCollapsed}
         projects={workspace.projects}
@@ -181,7 +262,6 @@ function App({ repository }: AppProps) {
           return result?.path ?? null;
         }}
         onDelete={workspace.removeProject}
-        onToggle={() => { setSidebarCollapsed((current) => !current); }}
       />
 
       <main className="workspace-main" id="workspace-content" tabIndex={-1}>
@@ -200,15 +280,6 @@ function App({ repository }: AppProps) {
           </section>
         ) : workspace.selectedProject === null ? (
           <>
-            <WorkspaceMenuBar>
-              <PortabilityPanel
-                repository={activeRepository}
-                selectedProject={null}
-                disabled={workspace.isSaving}
-                onWorkspaceChanged={workspace.reloadWorkspace}
-              />
-              <WorkspaceHelpMenu />
-            </WorkspaceMenuBar>
             <section className="center-state">
               <img className="empty-illustration" src={chronoMark} alt="" />
               <h1>Organize seu primeiro projeto</h1>
@@ -217,50 +288,42 @@ function App({ repository }: AppProps) {
           </>
         ) : (
           <div className="project-workspace">
-            <WorkspaceMenuBar>
-              <PortabilityPanel
-                repository={activeRepository}
-                selectedProject={workspace.selectedProject}
-                disabled={workspace.isSaving}
-                onWorkspaceChanged={workspace.reloadWorkspace}
-              />
-              <ProjectActionsMenu
-                project={workspace.selectedProject}
-                disabled={workspace.isSaving}
-                canMoveUp={selectedProjectIndex > 0}
-                canMoveDown={selectedProjectIndex >= 0 && selectedProjectIndex < projectPeers.length - 1}
-                onSave={workspace.saveProject}
-                onMove={workspace.moveProject}
-                onDelete={workspace.removeProject}
-                onDuplicate={workspace.duplicateProject}
-              />
-              {selectedCalendar !== undefined ? (
-                <CalendarSettings
-                  key={selectedCalendar.updatedAt}
-                  calendar={selectedCalendar}
-                  disabled={workspace.isSaving || workspace.selectedProject.isArchived}
-                  usedYears={scheduleYears(workspace.selectedProjectTasks)}
-                  onSave={workspace.saveCalendar}
-                />
-              ) : null}
-              <TemplateLibrary
-                templates={workspace.templates}
-                items={workspace.templateItems}
-                projectName={workspace.selectedProject.name}
-                disabled={workspace.isSaving || workspace.selectedProject.isArchived}
-                onApply={workspace.applyTemplate}
-                onDelete={workspace.removeTemplate}
-              />
-              <WorkspaceHelpMenu />
-            </WorkspaceMenuBar>
             <ProjectHeader
               key={`${workspace.selectedProject.id}-${workspace.selectedProject.updatedAt}`}
               project={workspace.selectedProject}
               taskCount={workspace.selectedProjectTasks.length}
               disabled={workspace.isSaving}
+              tools={(
+                <div className="project-header-tools">
+                  <ProjectBaselineControl
+                    tasks={workspace.selectedProjectTasks}
+                    baselines={workspace.selectedProjectBaselines}
+                    activeBaseline={workspace.activeBaseline}
+                    activeBaselineTasks={workspace.activeBaselineTasks}
+                    disabled={workspace.isSaving || workspace.selectedProject.isArchived}
+                    onCreate={workspace.createBaseline}
+                    onDelete={workspace.removeProjectBaselines}
+                  />
+                  <ProjectPdfExport
+                    project={workspace.selectedProject}
+                    tasks={workspace.selectedProjectTasks}
+                    dependencies={workspace.selectedProjectDependencies}
+                    calendars={workspace.calendars}
+                    baselineTasks={workspace.activeBaselineTasks}
+                    visibleTaskIds={visibleTaskIds}
+                    filtersActive={filtersActive}
+                    disabled={workspace.isSaving || workspace.selectedProjectTasks.length === 0}
+                    onSave={async (suggestedName, bytes) => {
+                      const result = await activeRepository.savePdfReport(suggestedName, bytes);
+                      return result?.path ?? null;
+                    }}
+                  />
+                </div>
+              )}
               onSave={workspace.saveProject}
             />
             <ProjectViews
+              activeView={activeView}
               project={workspace.selectedProject}
               tasks={workspace.selectedProjectTasks}
               calendars={workspace.calendars}
@@ -269,10 +332,13 @@ function App({ repository }: AppProps) {
               conflicts={workspace.schedulingConflicts.filter((conflict) =>
                 workspace.selectedProjectTasks.some((task) => task.id === conflict.taskId),
               )}
-              baselines={workspace.selectedProjectBaselines}
-              activeBaseline={workspace.activeBaseline}
               activeBaselineTasks={workspace.activeBaselineTasks}
+              filters={taskFilters}
+              filtersActive={filtersActive}
+              matchingTasks={matchingTasks}
+              visibleTaskIds={visibleTaskIds}
               disabled={workspace.isSaving || workspace.selectedProject.isArchived}
+              onFiltersChange={setTaskFilters}
               onCreate={workspace.createTask}
               onSave={saveTaskWithCompletionReview}
               onSetSchedulingMode={workspace.setTasksSchedulingMode}
@@ -284,12 +350,6 @@ function App({ repository }: AppProps) {
               onDeleteDependency={workspace.removeDependency}
               onDuplicateTask={workspace.duplicateTask}
               onCreateTemplate={workspace.createTemplate}
-              onCreateBaseline={workspace.createBaseline}
-              onDeleteBaselines={workspace.removeProjectBaselines}
-              onSavePdf={async (suggestedName, bytes) => {
-                const result = await activeRepository.savePdfReport(suggestedName, bytes);
-                return result?.path ?? null;
-              }}
             />
           </div>
         )}

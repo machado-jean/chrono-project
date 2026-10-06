@@ -29,7 +29,7 @@ export function ProjectActionsMenu({
 
   return (
     <details className="workspace-menu project-actions-menu" name="workspace-menu">
-      <summary>Projeto</summary>
+      <summary>Editar</summary>
       <div className="workspace-menu-popover project-actions-popover">
         <button type="button" disabled={disabled || !canMoveUp} onClick={() => { void onMove(project.id, "up"); }}>Mover para cima</button>
         <button type="button" disabled={disabled || !canMoveDown} onClick={() => { void onMove(project.id, "down"); }}>Mover para baixo</button>

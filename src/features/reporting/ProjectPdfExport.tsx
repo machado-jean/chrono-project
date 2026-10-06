@@ -115,7 +115,7 @@ export function ProjectPdfExport({
 
   return (
     <>
-      <button className="pdf-export-trigger" type="button" disabled={disabled} onClick={showDialog}>
+      <button className="secondary-button pdf-export-trigger" type="button" disabled={disabled} onClick={showDialog}>
         Gerar PDF
       </button>
       {message !== null ? <span className="pdf-export-message" role="status">{message}</span> : null}

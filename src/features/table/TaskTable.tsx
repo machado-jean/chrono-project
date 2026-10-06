@@ -118,6 +118,10 @@ const TASK_COLUMN_WIDTH_STORAGE_KEY = "chrono-project.task-table.task-column-wid
 const DEFAULT_TASK_COLUMN_WIDTH = 380;
 const MIN_TASK_COLUMN_WIDTH = 300;
 const MAX_TASK_COLUMN_WIDTH = 760;
+const PREDECESSORS_COLUMN_WIDTH_STORAGE_KEY = "chrono-project.task-table.predecessors-column-width";
+const DEFAULT_PREDECESSORS_COLUMN_WIDTH = 240;
+const MIN_PREDECESSORS_COLUMN_WIDTH = 160;
+const MAX_PREDECESSORS_COLUMN_WIDTH = 620;
 
 function clampTaskColumnWidth(width: number): number {
   return Math.min(MAX_TASK_COLUMN_WIDTH, Math.max(MIN_TASK_COLUMN_WIDTH, Math.round(width)));
@@ -131,6 +135,21 @@ function initialTaskColumnWidth(): number {
       : DEFAULT_TASK_COLUMN_WIDTH;
   } catch {
     return DEFAULT_TASK_COLUMN_WIDTH;
+  }
+}
+
+function clampPredecessorsColumnWidth(width: number): number {
+  return Math.min(MAX_PREDECESSORS_COLUMN_WIDTH, Math.max(MIN_PREDECESSORS_COLUMN_WIDTH, Math.round(width)));
+}
+
+function initialPredecessorsColumnWidth(): number {
+  try {
+    const storedWidth = Number(window.localStorage.getItem(PREDECESSORS_COLUMN_WIDTH_STORAGE_KEY));
+    return Number.isFinite(storedWidth) && storedWidth > 0
+      ? clampPredecessorsColumnWidth(storedWidth)
+      : DEFAULT_PREDECESSORS_COLUMN_WIDTH;
+  } catch {
+    return DEFAULT_PREDECESSORS_COLUMN_WIDTH;
   }
 }
 
@@ -1042,6 +1061,8 @@ export function TaskTable({
   const [tableScrollWidth, setTableScrollWidth] = useState(0);
   const [taskColumnWidth, setTaskColumnWidth] = useState(initialTaskColumnWidth);
   const taskColumnResize = useRef<{ readonly pointerId: number; readonly startX: number; readonly startWidth: number } | null>(null);
+  const [predecessorsColumnWidth, setPredecessorsColumnWidth] = useState(initialPredecessorsColumnWidth);
+  const predecessorsColumnResize = useRef<{ readonly pointerId: number; readonly startX: number; readonly startWidth: number } | null>(null);
   const [todayDate, setTodayDate] = useState(localTodayDate);
   const forcedExpandedIds = new Set(
     tasks
@@ -1115,6 +1136,14 @@ export function TaskTable({
   }, [taskColumnWidth]);
 
   useEffect(() => {
+    try {
+      window.localStorage.setItem(PREDECESSORS_COLUMN_WIDTH_STORAGE_KEY, String(predecessorsColumnWidth));
+    } catch {
+      // A preferência é opcional quando o armazenamento do WebView está indisponível.
+    }
+  }, [predecessorsColumnWidth]);
+
+  useEffect(() => {
     const tableScroll = tableScrollRef.current;
     if (tableScroll === null) return;
     const updateWidth = (): void => {
@@ -1129,7 +1158,7 @@ export function TaskTable({
       observer?.disconnect();
       window.removeEventListener("resize", updateWidth);
     };
-  }, [showBaselineColumns, taskColumnWidth, tasks.length]);
+  }, [predecessorsColumnWidth, showBaselineColumns, taskColumnWidth, tasks.length]);
 
   const handleTaskColumnResizeStart = (event: ReactPointerEvent<HTMLSpanElement>): void => {
     event.preventDefault();
@@ -1165,6 +1194,43 @@ export function TaskTable({
     } else if (event.key === "End") {
       event.preventDefault();
       setTaskColumnWidth(MAX_TASK_COLUMN_WIDTH);
+    }
+  };
+
+  const handlePredecessorsColumnResizeStart = (event: ReactPointerEvent<HTMLSpanElement>): void => {
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    predecessorsColumnResize.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startWidth: predecessorsColumnWidth,
+    };
+  };
+
+  const handlePredecessorsColumnResizeMove = (event: ReactPointerEvent<HTMLSpanElement>): void => {
+    const resize = predecessorsColumnResize.current;
+    if (resize === null || resize.pointerId !== event.pointerId) return;
+    setPredecessorsColumnWidth(clampPredecessorsColumnWidth(resize.startWidth + event.clientX - resize.startX));
+  };
+
+  const handlePredecessorsColumnResizeEnd = (event: ReactPointerEvent<HTMLSpanElement>): void => {
+    if (predecessorsColumnResize.current?.pointerId !== event.pointerId) return;
+    predecessorsColumnResize.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+  };
+
+  const handlePredecessorsColumnResizeKeyDown = (event: KeyboardEvent<HTMLSpanElement>): void => {
+    if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+      event.preventDefault();
+      setPredecessorsColumnWidth((current) => clampPredecessorsColumnWidth(current + (event.key === "ArrowRight" ? 16 : -16)));
+    } else if (event.key === "Home") {
+      event.preventDefault();
+      setPredecessorsColumnWidth(MIN_PREDECESSORS_COLUMN_WIDTH);
+    } else if (event.key === "End") {
+      event.preventDefault();
+      setPredecessorsColumnWidth(MAX_PREDECESSORS_COLUMN_WIDTH);
     }
   };
 
@@ -1257,7 +1323,8 @@ export function TaskTable({
           className="task-table"
           style={{
             "--task-column-width": `${String(taskColumnWidth)}px`,
-            "--task-table-min-width": `${String((showBaselineColumns ? 2120 : 1780) + taskColumnWidth - DEFAULT_TASK_COLUMN_WIDTH)}px`,
+            "--predecessors-column-width": `${String(predecessorsColumnWidth)}px`,
+            "--task-table-min-width": `${String((showBaselineColumns ? 2120 : 1780) + taskColumnWidth - DEFAULT_TASK_COLUMN_WIDTH + predecessorsColumnWidth - DEFAULT_PREDECESSORS_COLUMN_WIDTH)}px`,
           } as CSSProperties}
         >
           <caption className="sr-only">Tarefas do projeto com cronograma, predecessoras e ações de edição</caption>
@@ -1289,7 +1356,30 @@ export function TaskTable({
                   />
                 )}
               />
-              <TableColumnHeader className="predecessors-column" label="Predecessoras" help="Tarefas que precisam terminar antes desta começar. O intervalo define a espera em dias úteis." />
+              <TableColumnHeader
+                className="predecessors-column"
+                label="Predecessoras"
+                help="Tarefas que precisam terminar antes desta começar. O intervalo define a espera em dias úteis. Arraste a borda direita para ajustar a largura."
+                resizeHandle={(
+                  <span
+                    className="table-column-resize-handle"
+                    role="separator"
+                    aria-label="Ajustar largura da coluna Predecessoras"
+                    aria-orientation="vertical"
+                    aria-valuemin={MIN_PREDECESSORS_COLUMN_WIDTH}
+                    aria-valuemax={MAX_PREDECESSORS_COLUMN_WIDTH}
+                    aria-valuenow={predecessorsColumnWidth}
+                    tabIndex={0}
+                    title="Arraste para ajustar; duplo clique restaura a largura padrão"
+                    onDoubleClick={() => { setPredecessorsColumnWidth(DEFAULT_PREDECESSORS_COLUMN_WIDTH); }}
+                    onKeyDown={handlePredecessorsColumnResizeKeyDown}
+                    onPointerDown={handlePredecessorsColumnResizeStart}
+                    onPointerMove={handlePredecessorsColumnResizeMove}
+                    onPointerUp={handlePredecessorsColumnResizeEnd}
+                    onPointerCancel={handlePredecessorsColumnResizeEnd}
+                  />
+                )}
+              />
               <TableColumnHeader className="status-column" label="Status" help="Situação atual da tarefa, como não iniciada, em andamento, bloqueada ou concluída." />
               <TableColumnHeader className="priority-column" label="Prioridade" help="Importância relativa da tarefa. Não altera automaticamente suas datas." />
               <TableColumnHeader className="progress-column" label="Progresso" help="Percentual concluído da tarefa, de 0% a 100%." />

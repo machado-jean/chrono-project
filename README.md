@@ -112,6 +112,7 @@ Documentação principal:
 - [notas do Chrono Project v0.2.2](docs/releases/v0.2.2.md);
 - [notas do Chrono Project v0.2.3](docs/releases/v0.2.3.md);
 - [notas do Chrono Project v0.2.4](docs/releases/v0.2.4.md);
+- [notas do Chrono Project v0.2.5](docs/releases/v0.2.5.md);
 - [decisões arquiteturais](docs/decisions/).
 
 ## Preparação
