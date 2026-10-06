@@ -110,6 +110,7 @@ Documentação principal:
 - [preparação do próximo release](docs/releases/next.md);
 - [notas do Chrono Project v0.2.1](docs/releases/v0.2.1.md);
 - [notas do Chrono Project v0.2.2](docs/releases/v0.2.2.md);
+- [notas do Chrono Project v0.2.3](docs/releases/v0.2.3.md);
 - [decisões arquiteturais](docs/decisions/).
 
 ## Preparação
@@ -135,13 +136,13 @@ O build de distribuição continua usando o diretório de configuração do usu�
 resolvido pelo Tauri. No Windows usado no bootstrap:
 
 ```text
-%APPDATA%\io.github.machadojean.chronoproject\chronoproject.sqlite
+%APPDATA%\chronoproject\chronoproject.sqlite
 ```
 
 Logs ficam no diretório recomendado do Windows:
 
 ```text
-%LOCALAPPDATA%\io.github.machadojean.chronoproject\logs\
+%LOCALAPPDATA%\chronoproject\logs\
 ```
 
 `.local/` é ignorado pelo Git. A separação entre o release local de teste e o
@@ -153,7 +154,7 @@ migration 3 existiu em builds locais. A inicialização reconhece somente essa
 variante, valida integralmente o banco e cria uma cópia anterior ao reparo em:
 
 ```text
-%APPDATA%\io.github.machadojean.chronoproject\backups\
+%APPDATA%\chronoproject\backups\
 ```
 
 Projetos e tarefas não são modificados. Qualquer divergência diferente da
@@ -240,23 +241,33 @@ As atribuições e licenças das bibliotecas e bases de dados incorporadas ficam
 
 ## Builds de auditoria e controle de cache
 
-Use `npm run audit:build` para compilar o executável de auditoria e arquivá-lo
-em `.local\audit-builds`. A rotina mantém somente os três builds mais recentes,
-cada um com `chrono-project.exe` e `build.json` contendo commit, versão e SHA-256.
+Use `npm run audit:build` para compilar e substituir o único executável de
+auditoria em `.local\inspection\Chrono-Project-Inspection.exe`. O arquivo fixo
+`Chrono-Project-Inspection.build.json` registra commit, estado do working tree,
+modo do banco, versão e SHA-256.
 
 ```powershell
 npm run audit:build
-npm run audit:archive-current
 npm run artifacts:status
 npm run artifacts:clean
 npm run releases:status
 npm run releases:clean
 ```
 
-`audit:archive-current` arquiva o executável já existente sem recompilar. O cache
-Cargo em `src-tauri\target` é preservado enquanto estiver abaixo de 20 GiB. Após
-arquivar um novo build, `audit:build` limpa esse cache automaticamente se o limite
-for atingido. A compilação seguinte à limpeza será completa e mais demorada.
+O executável fixo nunca é atualizado sem uma nova compilação com
+`shared-dev-data`; assim, ele não pode receber por engano o binário de produção.
+O cache Cargo em `src-tauri\target` é preservado enquanto estiver abaixo de
+30 GiB. Depois de atualizar o executável, `audit:build` remove automaticamente
+somente `src-tauri\target\debug\incremental` se o limite for atingido. As
+dependências, os builds de release e os instaladores são preservados; apenas a
+próxima compilação de debug pode ficar parcialmente mais demorada.
+
+Para recriar de forma determinística as datas e predecessoras da massa local de
+205 tarefas, com o Chrono Project fechado, execute:
+
+```powershell
+npm run dev:seed-schedule
+```
 
 Os comandos `releases:*` mantêm somente os três releases versionados mais
 recentes em `.local\distribution`. Pastas de staging não são removidas por

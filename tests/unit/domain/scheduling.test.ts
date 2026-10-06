@@ -55,6 +55,7 @@ function task(id: string, overrides: Partial<Task> = {}): Task {
     endDate: "2026-08-28",
     durationDays: 1,
     deadlineDate: null,
+    completedDate: null,
     schedulingMode: "AUTO",
     position: 0,
     assignee: null,

@@ -4,8 +4,9 @@ use tauri_plugin_sql::{Migration, MigrationKind};
 
 pub const PRODUCTION_DATABASE_URL: &str = "sqlite:chronoproject.sqlite";
 pub const DATABASE_FILENAME: &str = "chronoproject.sqlite";
-pub const DATABASE_SCHEMA_VERSION: i64 = 7;
+pub const DATABASE_SCHEMA_VERSION: i64 = 8;
 pub const SCHEDULING_MIGRATION_VERSION: i64 = 3;
+pub const PERSISTENT_GANTT_HISTORY_MIGRATION_VERSION: i64 = 7;
 
 pub(crate) const INITIAL_SCHEMA: &str = include_str!("../migrations/0001_initial.sql");
 pub(crate) const CORE_SCHEMA: &str = include_str!("../migrations/0002_core.sql");
@@ -16,6 +17,8 @@ pub(crate) const SUMMARY_PREDECESSORS_SCHEMA: &str =
     include_str!("../migrations/0006_summary_predecessors.sql");
 pub(crate) const PERSISTENT_GANTT_HISTORY_SCHEMA: &str =
     include_str!("../migrations/0007_persistent_gantt_history.sql");
+pub(crate) const TASK_COMPLETION_SCHEMA: &str =
+    include_str!("../migrations/0008_task_completion.sql");
 
 pub fn uses_shared_development_database() -> bool {
     !uses_e2e_database() && cfg!(any(debug_assertions, feature = "shared-dev-data"))
@@ -142,9 +145,15 @@ pub fn migrations() -> Vec<Migration> {
             kind: MigrationKind::Up,
         },
         Migration {
-            version: DATABASE_SCHEMA_VERSION,
+            version: PERSISTENT_GANTT_HISTORY_MIGRATION_VERSION,
             description: "persist gantt undo and redo history",
             sql: PERSISTENT_GANTT_HISTORY_SCHEMA,
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: DATABASE_SCHEMA_VERSION,
+            description: "record factual task completion dates",
+            sql: TASK_COMPLETION_SCHEMA,
             kind: MigrationKind::Up,
         },
     ]
@@ -158,15 +167,16 @@ mod tests {
 
     use super::{
         database_path_for_mode, migrations, sqlite_url, CORE_SCHEMA, DATABASE_FILENAME,
-        DATABASE_SCHEMA_VERSION, INITIAL_SCHEMA, PERSISTENT_GANTT_HISTORY_SCHEMA,
-        PLAN_CONTROL_SCHEMA, REUSE_SCHEMA, SCHEDULING_MIGRATION_VERSION, SCHEDULING_SCHEMA,
-        SUMMARY_PREDECESSORS_SCHEMA,
+        DATABASE_SCHEMA_VERSION, INITIAL_SCHEMA, PERSISTENT_GANTT_HISTORY_MIGRATION_VERSION,
+        PERSISTENT_GANTT_HISTORY_SCHEMA, PLAN_CONTROL_SCHEMA, REUSE_SCHEMA,
+        SCHEDULING_MIGRATION_VERSION, SCHEDULING_SCHEMA, SUMMARY_PREDECESSORS_SCHEMA,
+        TASK_COMPLETION_SCHEMA,
     };
 
     #[test]
     fn shared_development_database_is_inside_local_data() {
         let path = database_path_for_mode(
-            Path::new("C:/Users/test/AppData/Roaming/io.github.machadojean.chronoproject"),
+            Path::new("C:/Users/test/AppData/Roaming/chronoproject"),
             Path::new("C:/workspace/chrono-project"),
             true,
         );
@@ -186,8 +196,7 @@ mod tests {
 
     #[test]
     fn production_database_remains_inside_app_config() {
-        let app_config =
-            Path::new("C:/Users/test/AppData/Roaming/io.github.machadojean.chronoproject");
+        let app_config = Path::new("C:/Users/test/AppData/Roaming/chronoproject");
         let path =
             database_path_for_mode(app_config, Path::new("C:/workspace/chrono-project"), false);
 
@@ -247,6 +256,10 @@ mod tests {
             .execute(&mut database)
             .await
             .expect("persistent Gantt history migration should execute");
+        sqlx::raw_sql(TASK_COMPLETION_SCHEMA)
+            .execute(&mut database)
+            .await
+            .expect("task completion migration should execute");
 
         let schema_version: String =
             sqlx::query_scalar("SELECT value FROM app_metadata WHERE key = 'schema_version'")
@@ -518,7 +531,7 @@ mod tests {
             "INSERT INTO tasks (id, project_id, parent_id, title, status, priority, progress,
              scheduling_mode, position, created_at, updated_at) VALUES
              ('20000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000001',
-             '20000000-0000-4000-8000-000000000001', 'Filha', 'NOT_STARTED', 'NORMAL', 0,
+             '20000000-0000-4000-8000-000000000001', 'Filha concluída', 'COMPLETED', 'NORMAL', 42,
              'AUTO', 0, '2026-10-02T12:00:00.000Z', '2026-10-02T12:00:00.000Z')",
         )
         .execute(&mut database)
@@ -528,6 +541,10 @@ mod tests {
             .execute(&mut database)
             .await
             .expect("persistent history migration should execute");
+        sqlx::raw_sql(TASK_COMPLETION_SCHEMA)
+            .execute(&mut database)
+            .await
+            .expect("task completion migration should execute");
 
         let version: String =
             sqlx::query_scalar("SELECT value FROM app_metadata WHERE key = 'schema_version'")
@@ -544,9 +561,16 @@ mod tests {
         .fetch_one(&mut database)
         .await
         .expect("history table should be queryable");
-        assert_eq!(version, "7");
+        let completed_task: (i64, Option<String>) = sqlx::query_as(
+            "SELECT progress, completed_date FROM tasks WHERE id = '20000000-0000-4000-8000-000000000003'",
+        )
+        .fetch_one(&mut database)
+        .await
+        .expect("legacy completion should be normalized");
+        assert_eq!(version, "8");
         assert_eq!(dependency_count, 1);
         assert_eq!(history_table_count, 1);
+        assert_eq!(completed_task, (100, Some("2026-10-02".into())));
     }
 
     #[tokio::test]
@@ -594,6 +618,10 @@ mod tests {
             .execute(&mut database)
             .await
             .expect("schema 7 should apply to the copy");
+        sqlx::raw_sql(TASK_COMPLETION_SCHEMA)
+            .execute(&mut database)
+            .await
+            .expect("schema 8 should apply to the copy");
         let integrity: String = sqlx::query_scalar("PRAGMA quick_check")
             .fetch_one(&mut database)
             .await
@@ -636,6 +664,7 @@ mod tests {
                 4,
                 5,
                 6,
+                PERSISTENT_GANTT_HISTORY_MIGRATION_VERSION,
                 DATABASE_SCHEMA_VERSION
             ]
         );

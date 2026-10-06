@@ -229,6 +229,20 @@ Validar versão `X.Y.Z`, tamanho, data, SHA-256 e ausência de processos de buil
 Copiar para a pasta de staging. Não confundir com `npm run tauri:build:test`, que
 usa o banco do checkout e não pode ser distribuído.
 
+Antes do primeiro release com o identificador `chronoproject`, confirmar que o
+backup de uma instalação até a v0.2.2 pode ser restaurado em uma instalação
+limpa e que o banco novo foi criado em:
+
+```text
+%APPDATA%\chronoproject\chronoproject.sqlite
+```
+
+O release não deve conter a feature `shared-dev-data`, importar silenciosamente
+`%APPDATA%\io.github.machadojean.chronoproject` nem sobrescrever esse perfil
+anterior. A mudança de identificador também exige conferir se o Windows mantém
+duas entradas de instalação; se mantiver, documentar a desinstalação da versão
+antiga somente depois do backup.
+
 ## 7. Instalador padrão
 
 Configurar a chave apenas no processo atual e iniciar:
@@ -305,14 +319,23 @@ trocar a fonte do download nem desativar a verificação. Copiar o resultado par
 
 - preservar os três releases locais versionados mais recentes;
 - releases publicados continuam recuperáveis pelo GitHub;
-- preservar os três builds de auditoria mais recentes;
+- manter somente `.local/inspection/Chrono-Project-Inspection.exe`, sempre
+  substituído pelo build de auditoria mais recente;
+- nunca atualizar o executável de inspeção sem recompilar explicitamente com
+  `shared-dev-data`;
 - manter `src-tauri/target` para aproveitar compilação incremental;
-- apenas alertar quando o cache Cargo alcançar 20 GiB;
-- limpar o cache Cargo somente por solicitação explícita e depois de arquivar o
-  executável relevante;
-- permitir um cache verificado do WebView2 sob `.local/tools/webview2/`, com
-  tamanho esperado próximo ao instalador offline, para evitar downloads
-  repetidos;
+- considerar 30 GiB o limite do cache Cargo;
+- depois de atualizar o executável fixo de inspeção, remover automaticamente
+  apenas `src-tauri/target/debug/incremental` quando o limite for atingido;
+- preservar dependências, builds de release e instaladores durante essa
+  limpeza;
+- preservar o cache nativo e versionado do Tauri em
+  `%LOCALAPPDATA%/tauri/x64/<GUID>/`; o bundler valida a versão indicada pela
+  Microsoft e reutiliza o redistribuível existente, baixando novamente somente
+  quando o fornecedor publicar outro arquivo;
+- não duplicar o redistribuível em `.local/tools/webview2/`: o modo
+  `offlineInstaller` não aceita caminho customizado e uma cópia paralela não é
+  consultada pelo bundler;
 - remover staging somente após promoção e validação do release correspondente.
 
 ## 10. Documentação antes da publicação

@@ -70,11 +70,18 @@ não são armazenados junto ao executável. Downgrade é bloqueado por seguranç
 No ambiente atual, o banco de produção é resolvido pelo Tauri sob:
 
 ```text
-%APPDATA%\io.github.machadojean.chronoproject\chronoproject.sqlite
+%APPDATA%\chronoproject\chronoproject.sqlite
 ```
 
 Antes de uma atualização importante, use **Arquivo > Backup e portabilidade**
 para criar um backup manual em um local conhecido.
+
+O identificador do aplicativo mudou para `chronoproject` após a versão 0.2.2.
+Essa alteração muda o diretório de dados e a identidade reconhecida pelo
+instalador. Ao atualizar a partir de uma versão anterior, exporte ou faça backup
+do workspace antes da troca, desinstale a versão antiga se ela continuar
+listada separadamente e restaure os dados na nova instalação. O aplicativo não
+mescla automaticamente os dois perfis.
 
 O arquivo privado que assina atualizações não integra o aplicativo, o
 instalador ou o Git. Apenas a chave pública de validação é distribuída. A chave

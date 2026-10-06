@@ -2000,13 +2000,20 @@ explicitamente solicitada pelo usuário.
 # 68. BUILDS DE AUDITORIA E LIMITE DE CACHE
 
 1. gerar builds manuais de auditoria com `npm run audit:build`;
-2. preservar somente os três builds mais recentes em `.local\audit-builds`;
-3. registrar versão, commit, data, tamanho e SHA-256 em `build.json`;
-4. considerar 20 GiB o limite do cache Cargo em `src-tauri\target`;
-5. arquivar o executável antes de qualquer limpeza automática do cache;
+2. manter um único executável em
+   `.local\inspection\Chrono-Project-Inspection.exe`, substituído a cada build;
+3. registrar versão, commit, data, tamanho e SHA-256 no arquivo fixo
+   `.local\inspection\Chrono-Project-Inspection.build.json`;
+4. considerar 30 GiB o limite do cache Cargo em `src-tauri\target`;
+5. atualizar o executável fixo de inspeção antes de qualquer limpeza automática
+   do cache;
 6. não remover dados do usuário, releases publicadas ou artefatos históricos;
-7. avisar que a primeira compilação após `cargo clean` será mais demorada.
-8. preservar somente os três releases versionados mais recentes em
+7. ao atingir o limite, remover automaticamente somente
+   `src-tauri\target\debug\incremental`, preservando dependências, builds de
+   release e instaladores;
+8. avisar que a primeira compilação de debug após essa limpeza pode ser
+   parcialmente mais demorada.
+9. preservar somente os três releases versionados mais recentes em
    `.local\distribution`, usando `npm run releases:status` para inspeção e
    `npm run releases:clean` para aplicar a retenção;
 9. nunca remover automaticamente pastas `-staging` ou `-new` durante um build;

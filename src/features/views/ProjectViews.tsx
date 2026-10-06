@@ -7,6 +7,7 @@ import type { TaskDependency } from "../../domain/scheduling/dependency";
 import type { SchedulingConflict } from "../../domain/scheduling/scheduler";
 import type { Task } from "../../domain/tasks/task";
 import type { SchedulingMode } from "../../domain/tasks/task";
+import type { TaskSaveResult } from "../../domain/tasks/task-save";
 import type { GanttHistoryState } from "../../domain/history/gantt-history";
 import { TaskKanban } from "../kanban/TaskKanban";
 import { ProjectPdfExport } from "../reporting/ProjectPdfExport";
@@ -44,7 +45,7 @@ interface ProjectViewsProps {
   readonly onSave: (
     task: Task,
     dependencyUpdates?: readonly TaskDependency[],
-  ) => Promise<boolean>;
+  ) => Promise<TaskSaveResult>;
   readonly onSetSchedulingMode: (taskIds: readonly string[], mode: SchedulingMode) => Promise<boolean>;
   readonly onLoadGanttHistory: (projectId: string) => Promise<GanttHistoryState>;
   readonly onSaveGanttHistory: (projectId: string, state: GanttHistoryState) => Promise<void>;

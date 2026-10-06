@@ -43,6 +43,7 @@ function task(id: string, title: string, changes: Partial<Task> = {}): Task {
     endDate: "2026-08-28",
     durationDays: 1,
     deadlineDate: null,
+    completedDate: null,
     schedulingMode: "AUTO",
     position: 0,
     assignee: null,
@@ -67,6 +68,8 @@ describe("filtros compartilhados das visualizações", () => {
     position: 1,
     status: "COMPLETED",
     priority: "LOW",
+    progress: 100,
+    completedDate: "2026-09-04",
     startDate: "2026-09-04",
     endDate: "2026-09-04",
   });

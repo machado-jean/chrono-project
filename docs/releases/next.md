@@ -1,67 +1,81 @@
-# Chrono Project v0.2.2 — candidato a release
+# Chrono Project — candidato v0.2.3
 
-A versão `0.2.2` melhora a segurança das edições, a produtividade na Tabela e
-a previsibilidade do scheduling, além de persistir o histórico do Gantt.
+O candidato `0.2.3` parte da versão publicada `0.2.2`. Os manifests, artefatos e
+documentos foram alinhados antes do commit final.
 
-## Escopo
+## Escopo confirmado
 
-- salvamento automático de campos válidos, com fila e recuperação de falha;
-- correção da condição de corrida entre autosave e alterações consecutivas no
-  grafo de dependências;
-- campos de data protegidos contra anos parciais ou inválidos;
-- barra horizontal da Tabela permanentemente acessível;
-- menus de contexto próprios na Tabela, Kanban e Gantt;
-- trava de datas individual ou em massa, com `Ctrl+Shift+L`;
-- tarefa-resumo aceita como predecessora, mas não como sucessora;
-- prévia das datas afetadas antes de alterar uma predecessora-resumo;
-- histórico persistente de até 50 revisões de desfazer/refazer do Gantt.
+- a Tabela mantém somente uma barra horizontal, fixa na base visível;
+- a barra horizontal nativa do contêiner foi removida sem perder touchpad,
+  sincronização bidirecional ou `Shift` + roda;
+- o clique direito em caixas de texto da Tabela usa o menu claro do Chrono;
+- caixas de texto oferecem **Recortar**, **Copiar**, **Colar** e
+  **Selecionar tudo**, seguidas pelas ações da tarefa;
+- falhas de acesso ao clipboard agora geram feedback textual e o foco retorna
+  ao controle que abriu o menu;
+- datas, números e seleções fora da Tabela também deixam de expor o menu nativo;
+- a digitação segmentada de datas no WebView2 preserva dia e mês enquanto o
+  ano ainda está incompleto, sem limpar o cronograma;
+- colar texto pelo menu de contexto não altera temporariamente a altura da linha;
+- a coluna **Ações** agrupa reordenação e menu em uma faixa compacta e deixa de
+  exibir permanentemente o texto **Salva**;
+- os títulos do cabeçalho da Tabela e os ícones da coluna **Ações** ficam
+  centralizados em suas respectivas colunas;
+- o indicador de salvamento funciona como selo sobreposto e não desloca o
+  conjunto visível de ações para a esquerda;
+- as colunas usam larguras semânticas mais justas e a largura mínima da Tabela
+  foi reduzida, preservando datas e controles sem espaço ocioso excessivo;
+- colunas de conteúdo previsível mantêm largura fixa mesmo em janelas amplas;
+  somente Tarefa, Predecessoras, Responsável e Tags absorvem espaço excedente;
+- a saúde considera a data local atual: tarefas abertas ficam **Atrasadas** após
+  o prazo mesmo sem cronograma, e **Em risco** no dia do prazo, sem fim previsto
+  ou com fim posterior ao limite; a referência muda automaticamente à meia-noite;
+- mudar uma atividade para **Concluída** abre uma revisão dos dados já
+  preenchidos — atividade, prioridade, início, fim, duração, prazo-limite,
+  progresso e responsável — antes de gravar a alteração;
+- a confirmação de conclusão é única para Tabela, Kanban e Gantt, eleva o
+  progresso para 100%, registra a data real e pode ser cancelada sem exibir um
+  falso erro de gravação;
+- reabrir solicita o novo progresso e remove a data de conclusão; tarefas-resumo
+  não podem ser concluídas enquanto houver descendentes abertos;
+- a saúde distingue **Concluída com atraso** pela data real e apresenta
+  **Cancelada** como classificação neutra;
+- o schema 8 migra conclusões antigas, preserva importação/restauração dos
+  schemas 4 a 7 e reforça no domínio a coerência entre status, progresso e data;
+- o inspetor do Gantt passa a oferecer também o seletor de status, mantendo a
+  mesma proteção de conclusão disponível nas demais visualizações;
+- o menu **Ajuda** obtém do executável Tauri a versão realmente instalada, em
+  vez de repetir a versão do `package.json` usada durante a compilação web;
+- o restante da linha continua oferecendo diretamente as ações operacionais;
+- o executável de inspeção usa um único nome fixo e só pode ser atualizado por
+  uma nova compilação com `shared-dev-data`;
+- a massa de 205 tarefas possui seed determinístico de datas e 119 relações FS,
+  sem duplicar o banco SQLite;
+- o identificador Tauri passa de `io.github.machadojean.chronoproject` para
+  `chronoproject`, simplificando o diretório do perfil para
+  `%APPDATA%\chronoproject`;
+- a troca de identidade não importa nem sobrescreve automaticamente a base
+  anterior: usuários existentes devem criar backup antes da atualização e
+  restaurá-lo na nova instalação.
 
-## Compatibilidade
+## Auditoria de consistência
 
-- atualização direta sobre `0.2.1`;
-- schema SQLite atualizado da versão 5 para 7 pelas migrations aditivas
-  `0006_summary_predecessors.sql` e `0007_persistent_gantt_history.sql`;
-- banco da versão 0.2.1 validado por upgrade de uma cópia, sem alteração do
-  arquivo de origem;
-- formato `.chronoproject` permanece na versão 1 e aceita schemas 4 a 7;
-- dados continuam locais e a aplicação permanece compatível com Windows 11 x64.
+- [x] contêineres com `overflow` revisados em Tabela, Kanban, Gantt, diálogos e
+  menus;
+- [x] menus de contexto revisados em projetos, Tabela, Kanban e Gantt;
+- [x] botões repetidos revisados; alternativas de teclado, recuperação de
+  salvamento e ações destrutivas explícitas foram mantidas quando intencionais;
+- [x] 171 testes TypeScript/React aprovados;
+- [x] lint e typecheck aprovados;
+- [x] seed determinístico reaplicado com integridade SQLite aprovada;
+- [x] jornada E2E da aplicação aprovada;
+- [x] 39 testes Rust aprovados, com 1 auditoria local ignorada por exigir banco
+  externo específico;
+- [x] transição, restauração, persistência, datas, clipboard, Tabela, scheduler,
+  Kanban, Gantt e backup validados manualmente no Tauri/WebView2 real com o
+  instalador `0.2.3-alpha.2`;
+- [x] número da versão e documentação final alinhados;
+- [x] executável e instaladores regenerados e assinados.
 
-## Gates locais concluídos
-
-- [x] versões `0.2.2` alinhadas em npm, Cargo e Tauri;
-- [x] ESLint e typecheck TypeScript;
-- [x] 161 testes TypeScript/React;
-- [x] 39 testes Rust e auditoria isolada do banco real `0.2.1`;
-- [x] `cargo fmt`, `cargo check` e Clippy com `-D warnings`;
-- [x] jornada E2E da aplicação;
-- [x] cinco cenários Tauri/WebView2 aprovados em duas execuções consecutivas;
-- [x] testes de desempenho com 1.000 e 10.000 tarefas;
-- [x] build Vite de produção;
-- [x] gates reproduzidos após o alinhamento final da versão;
-- [x] executável de distribuição gerado;
-- [x] instalador padrão assinado;
-- [x] instalador offline assinado;
-- [x] artefatos, hashes e scripts finais validados;
-- [x] instalação sobre `0.2.1`, abertura e migração do banco local validadas;
-- [ ] commit e push executados pelo usuário;
-- [ ] CI de `main` aprovado para o commit final;
-- [ ] publicação executada pelo usuário com `PUBLISH_RELEASE.ps1`.
-
-## Destino local
-
-Os artefatos foram preparados e validados em
-`.local/distribution/v0.2.2-staging/` e promovidos para
-`.local/distribution/v0.2.2/` após o teste local de instalação e atualização.
-Commit, push e publicação permanecem como etapas obrigatórias do usuário.
-
-## Artefatos validados
-
-| Arquivo | Tamanho | SHA-256 |
-| --- | ---: | --- |
-| `chrono-project.exe` | 21.526.016 bytes | `47946256BDECB1ABC17EBB5F8E8F92771051A9D40DCBE73E6E1A042CDA4EFF0E` |
-| `Chrono-Project-Windows-x64-Setup.exe` | 7.319.198 bytes | `B20C8370C09713723E689493C8C0CDA42EAE3BFCBDA366EF612D3A31E5A5D9FD` |
-| `Chrono-Project-Windows-x64-Offline-Setup.exe` | 222.348.571 bytes | `7C7DFC02CF84A52B805A67306D608FF6655DC10F98B75906FED9E1D7A05CC126` |
-
-As assinaturas dos dois instaladores têm 428 bytes e foram aprovadas contra a
-chave pública incorporada. `latest.json`, `BUILD_RECORD.json` e
-`SHA256SUMS.txt` também foram regenerados e verificados.
+Nenhum artefato da v0.2.2 foi alterado. A tag e a release publicadas continuam
+imutáveis; estes ajustes pertencem exclusivamente ao próximo patch.

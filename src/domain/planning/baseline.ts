@@ -35,7 +35,13 @@ export interface BaselineBundle {
   readonly tasks: readonly BaselineTask[];
 }
 
-export type ScheduleHealth = "NO_DEADLINE" | "ON_TRACK" | "AT_RISK" | "OVERDUE";
+export type ScheduleHealth =
+  | "NO_DEADLINE"
+  | "ON_TRACK"
+  | "AT_RISK"
+  | "OVERDUE"
+  | "COMPLETED_LATE"
+  | "CANCELLED";
 
 export interface BaselineComparison {
   readonly taskId: string;
@@ -124,10 +130,17 @@ function signedWorkingDayVariance(calendar: Calendar, planned: string, current: 
 }
 
 export function taskScheduleHealth(task: Task, today: string): ScheduleHealth {
+  if (task.status === "CANCELLED") return "CANCELLED";
   if (task.deadlineDate === null) return "NO_DEADLINE";
-  if (task.status === "COMPLETED" || task.status === "CANCELLED") return "ON_TRACK";
+  if (task.status === "COMPLETED") {
+    return task.completedDate !== null && task.completedDate > task.deadlineDate
+      ? "COMPLETED_LATE"
+      : "ON_TRACK";
+  }
   if (task.deadlineDate < today) return "OVERDUE";
-  if (task.endDate !== null && task.endDate > task.deadlineDate) return "AT_RISK";
+  if (task.deadlineDate === today || task.endDate === null || task.endDate > task.deadlineDate) {
+    return "AT_RISK";
+  }
   return "ON_TRACK";
 }
 

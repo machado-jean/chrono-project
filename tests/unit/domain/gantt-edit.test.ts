@@ -38,6 +38,7 @@ function task(): Task {
     endDate: "2026-09-03",
     durationDays: 3,
     deadlineDate: null,
+    completedDate: null,
     schedulingMode: "AUTO",
     calendarId: null,
     position: 0,

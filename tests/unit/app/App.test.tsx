@@ -162,6 +162,7 @@ function task(): Task {
     endDate: null,
     durationDays: null,
     deadlineDate: null,
+    completedDate: null,
     schedulingMode: "AUTO",
     position: 0,
     assignee: null,
@@ -589,12 +590,12 @@ describe("aplicação Chrono Project", () => {
 
     const title = await screen.findByLabelText("Título da tarefa");
     fireEvent.change(title, { target: { value: "Escopo salvo automaticamente" } });
-    expect(screen.getByRole("status")).toHaveTextContent("Alterada");
+    expect(screen.getByRole("status", { name: "Alteração pendente" })).toBeVisible();
     fireEvent.blur(title);
 
     await waitFor(() => {
       expect(repository.tasks[0]?.title).toBe("Escopo salvo automaticamente");
-      expect(screen.getByRole("status")).toHaveTextContent("Salva");
+      expect(screen.getByRole("status")).toHaveClass("saved");
     });
   });
 
@@ -689,13 +690,13 @@ describe("aplicação Chrono Project", () => {
     fireEvent.change(title, { target: { value: "Edição preservada" } });
     fireEvent.blur(title);
 
-    expect(await screen.findByText("Erro ao salvar")).toBeVisible();
+    expect(await screen.findByRole("status", { name: "Erro ao salvar" })).toBeVisible();
     expect(title).toHaveValue("Edição preservada");
     fireEvent.click(screen.getByRole("button", { name: "Salvar" }));
 
     await waitFor(() => {
       expect(repository.tasks[0]?.title).toBe("Edição preservada");
-      expect(screen.getByRole("status")).toHaveTextContent("Salva");
+      expect(screen.getByRole("status")).toHaveClass("saved");
     });
   });
 
@@ -849,6 +850,30 @@ describe("aplicação Chrono Project", () => {
     expect(startDate).toHaveValue("2027-08-30");
   });
 
+  it("preserva o cronograma enquanto o ano da data ainda está sendo digitado", async () => {
+    const scheduled = scheduledTask(TASK_ID, "Preparar operação", "2026-08-28");
+    const repository = new MemoryWorkspaceRepository({ projects: [project()], tasks: [scheduled] });
+    render(<App repository={repository} />);
+
+    const startDate = await screen.findByLabelText("Início da tarefa");
+    const endDate = screen.getByLabelText("Fim da tarefa");
+    startDate.focus();
+
+    // Um input date nativo expõe value="" temporariamente durante a digitação
+    // segmentada de dd/mm/aaaa no WebView2.
+    fireEvent.change(startDate, { target: { value: "" } });
+
+    expect(endDate).toHaveValue("2026-08-28");
+    expect(repository.tasks[0]?.startDate).toBe("2026-08-28");
+
+    fireEvent.change(startDate, { target: { value: "2026-10-01" } });
+    fireEvent.blur(startDate);
+
+    await waitFor(() => {
+      expect(repository.tasks[0]?.startDate).toBe("2026-10-01");
+    });
+  });
+
   it("cria predecessora TI com lag zero no mesmo dia do fim", async () => {
     const predecessor = scheduledTask(TASK_ID, "Predecessora", "2026-08-28");
     const successor = scheduledTask(SECOND_TASK_ID, "Sucessora", "2026-08-28", { position: 1 });
@@ -873,6 +898,12 @@ describe("aplicação Chrono Project", () => {
   });
 
   it("oferece confirmação compacta e menu de contexto próprio na tarefa", async () => {
+    const writeClipboard = vi.fn<(text: string) => Promise<void>>().mockResolvedValue();
+    const readClipboard = vi.fn<() => Promise<string>>().mockResolvedValue(" revisada");
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { readText: readClipboard, writeText: writeClipboard },
+    });
     const first = scheduledTask(TASK_ID, "Preparar operação", "2026-08-28");
     const second = scheduledTask(SECOND_TASK_ID, "Executar operação", "2026-08-31", { position: 1 });
     const repository = new MemoryWorkspaceRepository({
@@ -899,20 +930,36 @@ describe("aplicação Chrono Project", () => {
     expect(within(secondRow as HTMLElement).getByLabelText("Nova predecessora de Executar operação")).toHaveFocus();
 
     const titleInput = within(secondRow as HTMLElement).getByLabelText("Título da tarefa");
-    fireEvent.contextMenu(titleInput);
-    expect(screen.queryByRole("menu", { name: "Ações de Executar operação" })).not.toBeInTheDocument();
+    (titleInput as HTMLInputElement).setSelectionRange(0, 8);
+    fireEvent.contextMenu(titleInput, { clientX: 360, clientY: 260 });
+    const textMenu = screen.getByRole("menu", { name: "Ações de Executar operação" });
+    expect(within(textMenu).getByRole("menuitem", { name: "Recortar" })).toBeEnabled();
+    expect(within(textMenu).getByRole("menuitem", { name: "Copiar" })).toBeEnabled();
+    expect(within(textMenu).getByRole("menuitem", { name: "Colar" })).toBeEnabled();
+    expect(within(textMenu).getByRole("menuitem", { name: "Selecionar tudo" })).toBeEnabled();
+    expect(within(textMenu).getByRole("menuitem", { name: "Abrir detalhes" })).toBeVisible();
+    fireEvent.click(within(textMenu).getByRole("menuitem", { name: "Copiar" }));
+    await waitFor(() => { expect(writeClipboard).toHaveBeenCalledWith("Executar"); });
+    await waitFor(() => { expect(titleInput).toHaveFocus(); });
 
-    const moreActions = within(secondRow as HTMLElement).getByRole("button", { name: "Mais ações para Executar operação" });
+    (titleInput as HTMLInputElement).setSelectionRange(17, 17);
+    fireEvent.contextMenu(titleInput, { clientX: 360, clientY: 260 });
+    fireEvent.click(within(screen.getByRole("menu", { name: "Ações de Executar operação" })).getByRole("menuitem", { name: "Colar" }));
+    expect(secondRow?.querySelectorAll(".row-terminal-action")).toHaveLength(1);
+    await waitFor(() => { expect(titleInput).toHaveValue("Executar operação revisada"); });
+    await waitFor(() => { expect(repository.tasks.find(({ id }) => id === SECOND_TASK_ID)?.title).toBe("Executar operação revisada"); });
+
+    const moreActions = within(secondRow as HTMLElement).getByRole("button", { name: "Mais ações para Executar operação revisada" });
     fireEvent.click(moreActions);
-    expect(within(screen.getByRole("menu", { name: "Ações de Executar operação" })).getByRole("menuitem", { name: "Abrir detalhes" })).toHaveFocus();
-    fireEvent.keyDown(screen.getByRole("menu", { name: "Ações de Executar operação" }), { key: "Escape" });
+    expect(within(screen.getByRole("menu", { name: "Ações de Executar operação revisada" })).getByRole("menuitem", { name: "Abrir detalhes" })).toHaveFocus();
+    fireEvent.keyDown(screen.getByRole("menu", { name: "Ações de Executar operação revisada" }), { key: "Escape" });
     expect(moreActions).toHaveFocus();
 
     fireEvent.click(screen.getByRole("tab", { name: "Kanban" }));
-    const kanbanCard = (await screen.findByText("Executar operação", { selector: ".kanban-card-title strong" })).closest("article");
+    const kanbanCard = (await screen.findByText("Executar operação revisada", { selector: ".kanban-card-title strong" })).closest("article");
     expect(kanbanCard).not.toBeNull();
     fireEvent.contextMenu(kanbanCard as HTMLElement, { clientX: 420, clientY: 260 });
-    const kanbanMenu = screen.getByRole("menu", { name: "Ações de Executar operação" });
+    const kanbanMenu = screen.getByRole("menu", { name: "Ações de Executar operação revisada" });
     expect(within(kanbanMenu).getByRole("menuitem", { name: "Mover para Em andamento" })).toBeVisible();
     expect(within(kanbanMenu).getByRole("menuitem", { name: "Duplicar tarefa" })).toBeVisible();
     expect(within(kanbanMenu).getByRole("menuitem", { name: "Excluir tarefa…" })).toBeVisible();
@@ -935,6 +982,46 @@ describe("aplicação Chrono Project", () => {
     tableScroll.scrollLeft = 80;
     fireEvent.scroll(tableScroll);
     expect(horizontalScroll.scrollLeft).toBe(80);
+
+    fireEvent.wheel(tableScroll, { deltaX: 120 });
+    expect(tableScroll.scrollLeft).toBe(200);
+    expect(horizontalScroll.scrollLeft).toBe(200);
+
+    fireEvent.wheel(tableScroll, { deltaY: 40, shiftKey: true });
+    expect(tableScroll.scrollLeft).toBe(240);
+    expect(horizontalScroll.scrollLeft).toBe(240);
+  });
+
+  it("substitui o menu nativo por edição clara nos demais campos de texto", async () => {
+    const writeClipboard = vi.fn<(text: string) => Promise<void>>().mockRejectedValue(new Error("permissão negada"));
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { readText: vi.fn<() => Promise<string>>(), writeText: writeClipboard },
+    });
+    render(<App repository={new MemoryWorkspaceRepository({ projects: [project()] })} />);
+
+    const projectName = await screen.findByLabelText("Nome do projeto");
+    (projectName as HTMLInputElement).setSelectionRange(0, 7);
+    fireEvent.contextMenu(projectName, { clientX: 240, clientY: 180 });
+
+    const menu = screen.getByRole("menu", { name: "Edição de campo" });
+    expect(menu).toHaveClass("app-context-menu");
+    expect(within(menu).getByRole("menuitem", { name: "Recortar" })).toBeEnabled();
+    expect(within(menu).getByRole("menuitem", { name: "Copiar" })).toBeEnabled();
+    expect(within(menu).getByRole("menuitem", { name: "Colar" })).toBeEnabled();
+    expect(within(menu).getByRole("menuitem", { name: "Selecionar tudo" })).toBeEnabled();
+
+    fireEvent.click(within(menu).getByRole("menuitem", { name: "Copiar" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("permissão negada");
+    expect(projectName).toHaveFocus();
+
+    const dateFilter = screen.getByLabelText("De");
+    fireEvent.contextMenu(dateFilter, { clientX: 260, clientY: 200 });
+    const dateMenu = screen.getByRole("menu", { name: "Edição de campo" });
+    expect(within(dateMenu).getByRole("menuitem", { name: "Copiar valor" })).toBeDisabled();
+
+    fireEvent.keyDown(dateMenu, { key: "Escape" });
+    expect(dateFilter).toHaveFocus();
   });
 
   it("preenche o cronograma de uma nova tarefa ao adicionar predecessora", async () => {
@@ -1375,6 +1462,118 @@ describe("aplicação Chrono Project", () => {
     expect(await screen.findByLabelText("Status da tarefa")).toHaveValue("IN_PROGRESS");
   });
 
+  it("revisa os dados preenchidos antes de concluir pela Tabela", async () => {
+    const repository = new MemoryWorkspaceRepository({
+      projects: [project()],
+      tasks: [scheduledTask(TASK_ID, "Preparar operação", "2026-08-28", {
+        priority: "HIGH",
+        progress: 40,
+        deadlineDate: "2026-09-04",
+        assignee: "Ana",
+      })],
+    });
+    render(<App repository={repository} />);
+
+    fireEvent.change(await screen.findByLabelText("Status da tarefa"), {
+      target: { value: "COMPLETED" },
+    });
+    const dialog = await screen.findByRole("alertdialog", { name: "Confirmar conclusão" });
+    expect(within(dialog).getByText("Preparar operação")).toBeVisible();
+    expect(within(dialog).getByText("Alta")).toBeVisible();
+    expect(within(dialog).getAllByText("28/08/2026")).toHaveLength(2);
+    expect(within(dialog).getByText("04/09/2026")).toBeVisible();
+    expect(within(dialog).getByText("40%")).toBeVisible();
+    expect(within(dialog).getByText("Ana")).toBeVisible();
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Cancelar" }));
+    await waitFor(() => { expect(screen.getByLabelText("Status da tarefa")).toHaveValue("NOT_STARTED"); });
+    expect(repository.tasks[0]?.status).toBe("NOT_STARTED");
+
+    fireEvent.change(screen.getByLabelText("Status da tarefa"), {
+      target: { value: "COMPLETED" },
+    });
+    fireEvent.click(within(await screen.findByRole("alertdialog", { name: "Confirmar conclusão" }))
+      .getByRole("button", { name: "Confirmar conclusão" }));
+
+    await waitFor(() => {
+      expect(repository.tasks[0]?.status).toBe("COMPLETED");
+      expect(repository.tasks[0]?.progress).toBe(100);
+      expect(repository.tasks[0]?.completedDate).not.toBeNull();
+    });
+  });
+
+  it("confirma a reabertura, remove a data de conclusão e ajusta o progresso", async () => {
+    const repository = new MemoryWorkspaceRepository({
+      projects: [project()],
+      tasks: [scheduledTask(TASK_ID, "Preparar operação", "2026-08-28", {
+        status: "COMPLETED",
+        progress: 100,
+        completedDate: "2026-09-01",
+      })],
+    });
+    render(<App repository={repository} />);
+
+    fireEvent.change(await screen.findByLabelText("Status da tarefa"), {
+      target: { value: "IN_PROGRESS" },
+    });
+    const dialog = await screen.findByRole("alertdialog", { name: "Reabrir atividade" });
+    expect(within(dialog).getByText(/data de conclusão será removida/)).toBeVisible();
+    fireEvent.change(within(dialog).getByLabelText("Progresso ao reabrir"), {
+      target: { value: "65" },
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Confirmar reabertura" }));
+
+    await waitFor(() => {
+      expect(repository.tasks[0]?.status).toBe("IN_PROGRESS");
+      expect(repository.tasks[0]?.progress).toBe(65);
+      expect(repository.tasks[0]?.completedDate).toBeNull();
+    });
+  });
+
+  it("impede concluir uma tarefa-resumo enquanto houver subtarefa aberta", async () => {
+    const summary = scheduledTask(TASK_ID, "Entrega", "2026-08-28");
+    const child = scheduledTask(SECOND_TASK_ID, "Validação pendente", "2026-08-28", {
+      parentId: summary.id,
+      position: 0,
+    });
+    const repository = new MemoryWorkspaceRepository({ projects: [project()], tasks: [summary, child] });
+    render(<App repository={repository} />);
+
+    const summaryRow = (await screen.findByDisplayValue("Entrega")).closest("tr");
+    expect(summaryRow).not.toBeNull();
+    fireEvent.change(within(summaryRow as HTMLElement).getByLabelText("Status da tarefa"), {
+      target: { value: "COMPLETED" },
+    });
+    const dialog = await screen.findByRole("alertdialog", { name: "Confirmar conclusão" });
+    expect(within(dialog).getByText("Conclua primeiro as subtarefas abertas.")).toBeVisible();
+    expect(within(dialog).getByText("Validação pendente")).toBeVisible();
+    expect(within(dialog).getByRole("button", { name: "Confirmar conclusão" })).toBeDisabled();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Cancelar" }));
+
+    expect(repository.tasks.find(({ id }) => id === summary.id)?.status).toBe("NOT_STARTED");
+  });
+
+  it("confirma a conclusão iniciada pelo Kanban", async () => {
+    const repository = new MemoryWorkspaceRepository({
+      projects: [project()],
+      tasks: [scheduledTask(TASK_ID, "Preparar operação", "2026-08-28")],
+    });
+    render(<App repository={repository} />);
+    fireEvent.click(await screen.findByRole("tab", { name: "Kanban" }));
+
+    fireEvent.change(screen.getByLabelText("Status de Preparar operação"), {
+      target: { value: "COMPLETED" },
+    });
+    const dialog = await screen.findByRole("alertdialog", { name: "Confirmar conclusão" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Confirmar conclusão" }));
+
+    await waitFor(() => {
+      expect(repository.tasks[0]?.status).toBe("COMPLETED");
+      expect(repository.tasks[0]?.progress).toBe(100);
+      expect(repository.tasks[0]?.completedDate).not.toBeNull();
+    });
+  });
+
   it("move uma tarefa entre colunas do Kanban por arrastar e soltar", async () => {
     const repository = new MemoryWorkspaceRepository({
       projects: [project()],
@@ -1474,6 +1673,29 @@ describe("aplicação Chrono Project", () => {
       expect(repository.tasks[0]?.startDate).toBe("2026-08-31");
       expect(repository.tasks[0]?.endDate).toBe("2026-09-02");
       expect(repository.tasks[0]?.durationDays).toBe(3);
+    });
+  });
+
+  it("confirma a conclusão iniciada pelo inspetor do Gantt", async () => {
+    const scheduled = scheduledTask(TASK_ID, "Planejar entrega", "2026-08-28", { progress: 55 });
+    const repository = new MemoryWorkspaceRepository({ projects: [project()], tasks: [scheduled] });
+    render(<App repository={repository} />);
+
+    fireEvent.click(await screen.findByRole("tab", { name: "Gantt" }));
+    fireEvent.change(await screen.findByLabelText("Tarefa selecionada no Gantt"), {
+      target: { value: TASK_ID },
+    });
+    fireEvent.change(screen.getByLabelText("Status de Planejar entrega"), {
+      target: { value: "COMPLETED" },
+    });
+    const dialog = await screen.findByRole("alertdialog", { name: "Confirmar conclusão" });
+    expect(within(dialog).getByText("55%")).toBeVisible();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Confirmar conclusão" }));
+
+    await waitFor(() => {
+      expect(repository.tasks[0]?.status).toBe("COMPLETED");
+      expect(repository.tasks[0]?.progress).toBe(100);
+      expect(repository.tasks[0]?.completedDate).not.toBeNull();
     });
   });
 

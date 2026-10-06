@@ -14,13 +14,14 @@ import {
   type Task,
   type TaskStatus,
 } from "../../domain/tasks/task";
+import { taskSaveWasCancelled, taskSaveSucceeded, type TaskSaveResult } from "../../domain/tasks/task-save";
 
 interface TaskKanbanProps {
   readonly tasks: readonly Task[];
   readonly allProjectTasks: readonly Task[];
   readonly dependencies: readonly TaskDependency[];
   readonly disabled: boolean;
-  readonly onSave: (task: Task) => Promise<boolean>;
+  readonly onSave: (task: Task) => Promise<TaskSaveResult>;
   readonly onDuplicate: (taskId: string, includeDescendants: boolean) => Promise<Task | null>;
   readonly onDelete: (taskId: string) => Promise<boolean>;
 }
@@ -95,9 +96,9 @@ export function TaskKanban({
     setLocalError(null);
     try {
       const saved = await onSave({ ...task, status });
-      if (saved) {
+      if (taskSaveSucceeded(saved)) {
         setAnnouncement(`${task.title} movida para ${TASK_STATUS_LABELS[status]}.`);
-      } else {
+      } else if (!taskSaveWasCancelled(saved)) {
         setLocalError("Não foi possível salvar o novo status. A tarefa permaneceu na coluna anterior.");
       }
     } catch {

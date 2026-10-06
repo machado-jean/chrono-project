@@ -151,6 +151,8 @@ function taskTable(report: ProjectReport): PdfNode {
     ON_TRACK: "No prazo",
     AT_RISK: "Em risco",
     OVERDUE: "Atrasada",
+    COMPLETED_LATE: "Concluída com atraso",
+    CANCELLED: "Cancelada",
   })[health];
   const headers = [
     "Atividade", "Status", "Início", "Fim",

@@ -57,6 +57,7 @@ export interface Task {
   readonly endDate: string | null;
   readonly durationDays: number | null;
   readonly deadlineDate: string | null;
+  readonly completedDate: string | null;
   readonly schedulingMode: SchedulingMode;
   readonly position: number;
   readonly assignee: string | null;
@@ -165,7 +166,44 @@ export function validateTask(task: Task): Task {
     );
   }
 
+  const completedDate = task.completedDate === null
+    ? null
+    : requireDateOnly(task.completedDate, "completedDate", "A data de conclusão");
+  if (task.status === "COMPLETED" && task.progress !== 100) {
+    throw new DomainValidationError(
+      "completed_task_progress",
+      "progress",
+      "Uma tarefa concluída deve possuir 100% de progresso.",
+    );
+  }
+  if (task.status === "COMPLETED" && completedDate === null) {
+    throw new DomainValidationError(
+      "completed_task_date",
+      "completedDate",
+      "Uma tarefa concluída deve possuir uma data de conclusão.",
+    );
+  }
+  if (task.status !== "COMPLETED" && completedDate !== null) {
+    throw new DomainValidationError(
+      "open_task_completion_date",
+      "completedDate",
+      "Somente tarefas concluídas podem possuir uma data de conclusão.",
+    );
+  }
+
   const schedule = validateSchedule(task);
+  if (
+    task.status === "COMPLETED" &&
+    completedDate !== null &&
+    schedule.startDate !== null &&
+    completedDate < schedule.startDate
+  ) {
+    throw new DomainValidationError(
+      "completion_before_start",
+      "completedDate",
+      "A data de conclusão não pode ser anterior à data de início.",
+    );
+  }
 
   return {
     ...task,
@@ -185,6 +223,7 @@ export function validateTask(task: Task): Task {
       task.deadlineDate === null
         ? null
         : requireDateOnly(task.deadlineDate, "deadlineDate", "O prazo-limite"),
+    completedDate,
     position: requireNonNegativeInteger(task.position, "position", "A posição da tarefa"),
     assignee: optionalText(task.assignee),
     tags: normalizeTags(task.tags),

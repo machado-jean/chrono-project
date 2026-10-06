@@ -30,9 +30,12 @@ import {
   type GanttHistoryState,
 } from "../../domain/history/gantt-history";
 import {
+  TASK_STATUSES,
   TASK_STATUS_LABELS,
   type Task,
+  type TaskStatus,
 } from "../../domain/tasks/task";
+import { taskSaveSucceeded, type TaskSaveResult } from "../../domain/tasks/task-save";
 import {
   buildTaskOutlineNumbers,
   taskOutlineLabel,
@@ -54,7 +57,7 @@ interface TaskGanttProps {
   readonly dependencies: readonly TaskDependency[];
   readonly baselineTasks: readonly BaselineTask[];
   readonly disabled: boolean;
-  readonly onSave: (task: Task, dependencyUpdates?: readonly TaskDependency[]) => Promise<boolean>;
+  readonly onSave: (task: Task, dependencyUpdates?: readonly TaskDependency[]) => Promise<TaskSaveResult>;
   readonly onLoadHistory: (projectId: string) => Promise<GanttHistoryState>;
   readonly onSaveHistory: (projectId: string, state: GanttHistoryState) => Promise<void>;
   readonly onCreateDependency: (input: {
@@ -473,7 +476,7 @@ export function TaskGantt({
     setLocalError(null);
     const locked = contextTask.schedulingMode === "MANUAL";
     try {
-      if (await onSave({ ...contextTask, schedulingMode: locked ? "AUTO" : "MANUAL" })) {
+      if (taskSaveSucceeded(await onSave({ ...contextTask, schedulingMode: locked ? "AUTO" : "MANUAL" }))) {
         setAnnouncement(`${contextTask.title}: datas ${locked ? "destravadas para agendamento automático" : "travadas contra arrasto e reagendamento automático"}.`);
       } else {
         setLocalError("Não foi possível alterar a trava de datas.");
@@ -561,6 +564,11 @@ export function TaskGantt({
     const task = tasksById.get(String(input.id));
     if (task === undefined) return;
     if ("progress" in input.task) {
+      if (task.status === "COMPLETED") {
+        setLocalError(`${task.title} está concluída. Reabra a atividade pelo inspetor antes de alterar o progresso.`);
+        resetGanttProjection();
+        return;
+      }
       const progress = input.task.progress;
       if (typeof progress !== "number" || !Number.isFinite(progress)) {
         setLocalError("O percentual de conclusão informado pelo Gantt é inválido.");
@@ -572,7 +580,7 @@ export function TaskGantt({
       try {
         const normalizedProgress = Math.round(Math.min(100, Math.max(0, progress)));
         const saved = await onSave({ ...task, progress: normalizedProgress });
-        if (!saved) {
+        if (!taskSaveSucceeded(saved)) {
           setLocalError("Não foi possível salvar a conclusão. Nenhuma alteração foi aplicada.");
           resetGanttProjection();
         } else {
@@ -648,7 +656,7 @@ export function TaskGantt({
       setSavingVisualEdit(true);
       setLocalError(null);
       const saved = await onSave(edited, fsMove?.dependencyUpdates ?? []);
-      if (!saved) {
+      if (!taskSaveSucceeded(saved)) {
         setLocalError("Não foi possível salvar o cronograma. Nenhuma alteração foi aplicada.");
         resetGanttProjection();
       } else {
@@ -686,7 +694,7 @@ export function TaskGantt({
     const taskToSave = direction === "UNDO" ? entry.beforeTask : entry.afterTask;
     const dependenciesToSave = direction === "UNDO" ? entry.beforeDependencies : entry.afterDependencies;
     try {
-      if (await onSave(taskToSave, dependenciesToSave)) {
+      if (taskSaveSucceeded(await onSave(taskToSave, dependenciesToSave))) {
         destination.push(entry);
         persistHistory();
         setAnnouncement(`${entry.label}: ${direction === "UNDO" ? "desfeito" : "refeito"}.`);
@@ -801,10 +809,28 @@ export function TaskGantt({
         calendar,
       );
       const saved = await onSave(scheduled);
-      if (!saved) return;
+      if (!taskSaveSucceeded(saved)) return;
       setLocalError(null);
     } catch (error) {
       setLocalError(error instanceof Error ? error.message : "Não foi possível alterar o cronograma.");
+    }
+  };
+
+  const saveStatus = async (status: TaskStatus): Promise<void> => {
+    if (selectedTask === null || selectedTask.status === status || disabled || savingVisualEdit) return;
+    setSavingVisualEdit(true);
+    setLocalError(null);
+    try {
+      const saved = await onSave({ ...selectedTask, status });
+      if (taskSaveSucceeded(saved)) {
+        setAnnouncement(`${selectedTask.title}: status alterado para ${TASK_STATUS_LABELS[status]}.`);
+        setSelectedTaskId(selectedTask.id);
+        resetGanttProjection();
+      }
+    } catch (error) {
+      setLocalError(error instanceof Error ? error.message : "Não foi possível alterar o status.");
+    } finally {
+      setSavingVisualEdit(false);
     }
   };
 
@@ -1013,7 +1039,21 @@ export function TaskGantt({
             ) : (
               <>
                 <dl>
-                  <div><dt>Status</dt><dd>{TASK_STATUS_LABELS[selectedTask.status]}</dd></div>
+                  <div className="gantt-status-row">
+                    <dt>Status</dt>
+                    <dd>
+                      <select
+                        aria-label={`Status de ${selectedTask.title}`}
+                        value={selectedTask.status}
+                        disabled={disabled || savingVisualEdit}
+                        onChange={(event) => { void saveStatus(event.target.value as TaskStatus); }}
+                      >
+                        {TASK_STATUSES.map((status) => (
+                          <option value={status} key={status}>{TASK_STATUS_LABELS[status]}</option>
+                        ))}
+                      </select>
+                    </dd>
+                  </div>
                   <div><dt>Datas</dt><dd>{selectedTask.schedulingMode === "MANUAL" ? "🔒 Travadas" : "🔓 Automáticas"}</dd></div>
                   <div><dt>Progresso</dt><dd>{String(selectedTask.progress)}%</dd></div>
                 </dl>

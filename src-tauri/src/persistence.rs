@@ -63,6 +63,8 @@ pub struct TaskRecord {
     pub end_date: Option<String>,
     pub duration_days: Option<i64>,
     pub deadline_date: Option<String>,
+    #[serde(default)]
+    pub completed_date: Option<String>,
     pub scheduling_mode: String,
     pub position: i64,
     pub assignee: Option<String>,
@@ -306,7 +308,7 @@ pub async fn load_workspace(pool: &SqlitePool) -> Result<WorkspaceData, sqlx::Er
     .await?;
     let mut tasks = sqlx::query_as::<_, TaskRecord>(
         "SELECT id, code, project_id, parent_id, calendar_id, title, description, status, priority, \
-         progress, start_date, end_date, duration_days, deadline_date, scheduling_mode, position, assignee, \
+         progress, start_date, end_date, duration_days, deadline_date, completed_date, scheduling_mode, position, assignee, \
          notes, created_at, updated_at FROM tasks ORDER BY project_id, parent_id, position, created_at",
     )
     .fetch_all(pool)
@@ -541,9 +543,9 @@ pub(crate) async fn save_task_record(
     sqlx::query(
         "INSERT INTO tasks (
             id, code, project_id, parent_id, calendar_id, title, description, status, priority, progress,
-            start_date, end_date, duration_days, deadline_date, scheduling_mode, position, assignee, notes,
+            start_date, end_date, duration_days, deadline_date, completed_date, scheduling_mode, position, assignee, notes,
             created_at, updated_at
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(id) DO UPDATE SET
             code = excluded.code,
             parent_id = excluded.parent_id,
@@ -557,6 +559,7 @@ pub(crate) async fn save_task_record(
             end_date = excluded.end_date,
             duration_days = excluded.duration_days,
             deadline_date = excluded.deadline_date,
+            completed_date = excluded.completed_date,
             scheduling_mode = excluded.scheduling_mode,
             position = excluded.position,
             assignee = excluded.assignee,
@@ -577,6 +580,7 @@ pub(crate) async fn save_task_record(
     .bind(&task.end_date)
     .bind(task.duration_days)
     .bind(&task.deadline_date)
+    .bind(&task.completed_date)
     .bind(&task.scheduling_mode)
     .bind(task.position)
     .bind(&task.assignee)
@@ -1045,7 +1049,7 @@ mod tests {
     };
     use crate::database::{
         CORE_SCHEMA, INITIAL_SCHEMA, PERSISTENT_GANTT_HISTORY_SCHEMA, PLAN_CONTROL_SCHEMA,
-        REUSE_SCHEMA, SCHEDULING_SCHEMA, SUMMARY_PREDECESSORS_SCHEMA,
+        REUSE_SCHEMA, SCHEDULING_SCHEMA, SUMMARY_PREDECESSORS_SCHEMA, TASK_COMPLETION_SCHEMA,
     };
 
     const PROJECT_ID: &str = "10000000-0000-4000-8000-000000000001";
@@ -1087,6 +1091,10 @@ mod tests {
             .execute(&pool)
             .await
             .expect("persistent Gantt history migration should execute");
+        sqlx::raw_sql(TASK_COMPLETION_SCHEMA)
+            .execute(&pool)
+            .await
+            .expect("task completion migration should execute");
         pool
     }
 
@@ -1149,6 +1157,7 @@ mod tests {
             end_date: None,
             duration_days: None,
             deadline_date: None,
+            completed_date: None,
             scheduling_mode: "AUTO".into(),
             position: 0,
             assignee: None,

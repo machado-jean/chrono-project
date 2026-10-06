@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Chrono Project",
-  "version": "0.2.2",
-  "identifier": "io.github.machadojean.chronoproject",
+  "version": "0.2.3",
+  "identifier": "chronoproject",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",

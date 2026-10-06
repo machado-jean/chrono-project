@@ -2,7 +2,7 @@
 
 ## Versão atual
 
-O schema atual é a versão **7**.
+O schema atual é a versão **8**.
 
 | Migration | Conteúdo |
 | --- | --- |
@@ -13,6 +13,7 @@ O schema atual é a versão **7**.
 | `0005_plan_control.sql` | prazo-limite, linhas de base e fotografias de tarefas; versão 5 |
 | `0006_summary_predecessors.sql` | resumo como predecessora e novos triggers de integridade; versão 6 |
 | `0007_persistent_gantt_history.sql` | pilhas persistentes de desfazer/refazer do Gantt por projeto; versão 7 |
+| `0008_task_completion.sql` | data real, normalização e índice de conclusão das tarefas; versão 8 |
 
 As tabelas usam modo `STRICT`. Chaves externas são habilitadas em todas as conexões. Migrations são crescentes e não devem ser alteradas depois de publicadas.
 
@@ -44,17 +45,24 @@ O calendário padrão contém segunda a sexta. O calendário integrado **Todos o
 
 ## Tarefa
 
-`tasks` possui UUID imutável, código opcional, projeto, tarefa-pai, calendário opcional, título, descrição, status, prioridade, progresso, datas, duração, prazo-limite opcional, modo de agendamento, posição, responsável, observações e timestamps.
+`tasks` possui UUID imutável, código opcional, projeto, tarefa-pai, calendário opcional, título, descrição, status, prioridade, progresso, datas, duração, prazo-limite opcional, data real de conclusão, modo de agendamento, posição, responsável, observações e timestamps.
 
 `deadline_date` é uma data `YYYY-MM-DD` independente do fim calculado. Ela
 classifica a saúde da tarefa, mas não desloca o cronograma nem participa das
 restrições FS.
+
+`completed_date` registra em `YYYY-MM-DD` quando a atividade foi realmente
+concluída. Ela é obrigatória somente em `COMPLETED`, determina se a conclusão
+ocorreu no prazo e é removida quando a atividade é reaberta.
 
 `calendar_id` nulo significa herdar `projects.calendar_id`; um UUID preenchido seleciona um calendário específico para a tarefa.
 
 Invariantes principais:
 
 - progresso inteiro de 0 a 100;
+- status `COMPLETED` exige progresso 100 e `completed_date`; outros status não
+  podem conservar uma data de conclusão;
+- a conclusão não pode ser anterior ao início registrado;
 - modo `AUTO` ou `MANUAL`;
 - cronograma totalmente vazio ou com início, fim e duração juntos;
 - datas em `YYYY-MM-DD`, duração inteira maior ou igual a 1 e fim não anterior ao início;
@@ -139,7 +147,7 @@ negócio e não é uma trilha de auditoria multiusuário.
 - `projects.calendar_id` e `tasks.calendar_id` usam `ON DELETE RESTRICT`;
 - calendário e exceções usam cascade controlado;
 - índices atendem calendário, hierarquia, ordenação, filtros e travessia por predecessor/sucessor;
-- banco novo, sequência de migrations e upgrades preservando dados até a versão 7 são testados;
+- banco novo, sequência de migrations e upgrades preservando dados até a versão 8 são testados;
 - a única variante conhecida do checksum da migration 3 recebe reparo
   conservador antes da abertura: schema e integridade são validados, uma cópia
   SQLite é criada e somente `_sqlx_migrations.checksum` é atualizado;

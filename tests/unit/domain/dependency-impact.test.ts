@@ -17,7 +17,7 @@ function task(id: string, title: string, parentId: string | null, startDate: str
     status: "NOT_STARTED", priority: "NORMAL", progress: 0,
     startDate, endDate, durationDays: 1, schedulingMode: "AUTO",
     position: 0, calendarId: null, assignee: null, tags: [], notes: null,
-    code: null, deadlineDate: null,
+    code: null, deadlineDate: null, completedDate: null,
     createdAt: "2026-10-02T00:00:00.000Z", updatedAt: "2026-10-02T00:00:00.000Z",
   };
 }

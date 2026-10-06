@@ -1,11 +1,12 @@
+import { getVersion } from "@tauri-apps/api/app";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { check } from "@tauri-apps/plugin-updater";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { version as appVersion } from "../../../package.json";
 import { WorkspaceHelpMenu } from "../../../src/components/WorkspaceHelpMenu";
+vi.mock("@tauri-apps/api/app", () => ({ getVersion: vi.fn(() => Promise.resolve("0.2.3-alpha.2")) }));
 vi.mock("@tauri-apps/plugin-opener", () => ({ openUrl: vi.fn() }));
 vi.mock("@tauri-apps/plugin-process", () => ({ relaunch: vi.fn() }));
 vi.mock("@tauri-apps/plugin-updater", () => ({ check: vi.fn() }));
@@ -16,6 +17,14 @@ afterEach(() => {
 });
 
 describe("verificação de atualização no menu Ajuda", () => {
+  it("mostra a versão fornecida pelo executável instalado", async () => {
+    render(<WorkspaceHelpMenu automatic={false} />);
+    fireEvent.click(screen.getByText("Ajuda"));
+
+    expect(await screen.findByText("Versão instalada: 0.2.3-alpha.2")).toBeVisible();
+    expect(getVersion).toHaveBeenCalledOnce();
+  });
+
   it("verifica ao abrir e abre Ajuda quando existe atualização", async () => {
     vi.mocked(check).mockResolvedValue({ version: "0.2.0" } as never);
     render(<WorkspaceHelpMenu />);
@@ -67,7 +76,7 @@ describe("verificação de atualização no menu Ajuda", () => {
     fireEvent.click(screen.getByText("Ajuda"));
     fireEvent.click(screen.getByRole("button", { name: "Verificar atualizações" }));
 
-    expect(await screen.findByText(`Você já está na versão mais recente (${appVersion}).`))
+    expect(await screen.findByText("Você já está na versão mais recente (0.2.3-alpha.2)."))
       .toBeVisible();
   });
 

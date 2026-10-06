@@ -115,8 +115,10 @@ e as alternativas estão no [ADR 013](decisions/013-svar-react-gantt.md). A
 instalação adicionou 35 pacotes ao lockfile e a auditoria npm não encontrou
 vulnerabilidades conhecidas nessa resolução.
 
-O identificador vigente é `io.github.machadojean.chronoproject`, definido com a
-identidade Chrono Project 0.2.0.
+O identificador vigente é `chronoproject`. A decisão e o procedimento de
+transição estão no [ADR 027](decisions/027-simplified-application-identifier.md).
+O identificador anterior, `io.github.machadojean.chronoproject`, permanece
+registrado apenas no histórico das versões até 0.2.2.
 
 ## Validação local da identidade 0.2.0
 
@@ -283,6 +285,24 @@ reproduzir localmente o passo de distribuição do CI, executar novamente
 `npm run tauri:build:test` antes de entregar o executável para auditoria. Isso
 troca apenas o destino compilado do banco; não copia, apaga ou mistura os dois
 arquivos SQLite.
+
+`npm run audit:build` copia esse resultado para um único caminho estável,
+`.local/inspection/Chrono-Project-Inspection.exe`, sobrescrevendo a inspeção
+anterior. Não criar cópias datadas ou identificadas pela quantidade de tarefas.
+O script sempre recompila com `shared-dev-data`; não existe modo de copiar às
+cegas o último executável de `target/release`.
+
+A massa local de 205 tarefas pode receber novamente o cronograma artificial
+determinístico, sem criar uma segunda base, com:
+
+```powershell
+npm run dev:seed-schedule
+```
+
+O comando exige exatamente a hierarquia esperada, recusa execução implícita sem
+`--apply`, opera em transação e valida a integridade antes de escrever. Ele
+preenche 205 cronogramas e recria 119 predecessoras FS com identificadores
+determinísticos. O Chrono Project deve permanecer fechado durante a execução.
 
 No fechamento da Fase 5, todos esses gates voltaram a ser executados: lint e
 typecheck aprovados, 78 testes TypeScript/React e 23 testes Rust/SQLite
@@ -583,3 +603,52 @@ padrão atualizou a instalação local em 1,32 s; a aplicação abriu e encerrou
 código 0. Antes da abertura, o banco de 188.416 bytes foi copiado para
 `.local/backups/chronoproject-before-v0.2.2-install-20261003-104157.sqlite`.
 Depois das migrations, o banco preservado passou a 200.704 bytes.
+
+## Validação local do candidato 0.2.3
+
+O candidato 0.2.3 foi reproduzido em Windows 11 x64 com Node.js 24.20.0,
+npm 11.19.0, Rust/Cargo 1.98.0 e Tauri CLI 2.11.4. Nenhuma ferramenta global
+foi instalada ou atualizada. `npm audit --audit-level=low` não encontrou
+vulnerabilidades.
+
+Foram aprovados 171 testes TypeScript/React, 39 testes Rust, 1 jornada E2E,
+2 testes de desempenho, lint, typecheck, Cargo fmt/check/Clippy e as assinaturas
+dos dois instaladores. O teste Rust que exige uma base externa v0.2.1 permaneceu
+ignorado de forma explícita; a mesma transição já havia sido validada manualmente
+com o instalador `0.2.3-alpha.2`.
+
+Tempos observados nesta preparação:
+
+| Etapa | Tempo de processamento |
+| --- | ---: |
+| `npm ci` | 12,2 s |
+| `npm run check` | 26,0 s |
+| jornada E2E da aplicação e testes Rust | 27,9 s |
+| testes de desempenho | 2,2 s |
+| executável sem bundle | 43,6 s |
+| compilação Rust do instalador padrão | 48,15 s |
+| primeira tentativa offline, encerrada por bloqueio de rede | 33,35 s |
+| compilação Rust do instalador offline aprovado | 32,38 s |
+
+Os builds padrão e offline ficaram aguardando o prompt interativo `Password:`
+até o envio de Enter para a chave sem passphrase. Essa espera, próxima de uma
+hora em cada ocorrência, não correspondeu a uso de CPU nem a compilação. O
+primeiro offline falhou com `os error 10013`; a repetição autorizada baixou o
+redistribuível oficial e concluiu normalmente.
+
+O Tauri guarda redistribuíveis versionados em
+`%LOCALAPPDATA%\tauri\x64\<GUID>\`. O runbook passou a preservar esse cache
+nativo. O bundler consulta a versão indicada pela Microsoft e reutiliza o
+arquivo existente; somente uma nova versão exige outra transferência.
+
+Artefatos finais em `.local/distribution/v0.2.3-staging/`:
+
+| Arquivo | Tamanho | SHA-256 |
+| --- | ---: | --- |
+| `chrono-project.exe` | 21.540.864 bytes | `DDC3516F836538CB9E57EE7D73B12C5C3387FF040914F6358FE6EE5C034A993C` |
+| `Chrono-Project-Windows-x64-Setup.exe` | 7.332.597 bytes | `76383BD5BAEBB5360C4A125BE1F0BBF434497B40FC109B6968AE45230B9C988B` |
+| `Chrono-Project-Windows-x64-Offline-Setup.exe` | 222.448.020 bytes | `01D34D3BA81056B7AE389D3F9E68FBB35DA997FAFB66E458588B6C20D14D5F5A` |
+
+As duas assinaturas, `latest.json`, `BUILD_RECORD.json` e `SHA256SUMS.txt`
+foram validados localmente. A publicação permanece reservada ao usuário depois
+do commit, push e CI de `main`.

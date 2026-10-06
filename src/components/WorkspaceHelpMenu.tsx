@@ -1,9 +1,10 @@
+import { getVersion } from "@tauri-apps/api/app";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { check, type DownloadEvent, type Update } from "@tauri-apps/plugin-updater";
 import { useEffect, useRef, useState } from "react";
 
-import { version as appVersion } from "../../package.json";
+import { version as packagedVersion } from "../../package.json";
 import {
   CHRONO_PROJECT_OFFLINE_INSTALLER_URL,
 } from "../domain/updates/release";
@@ -21,6 +22,7 @@ interface WorkspaceHelpMenuProps {
 }
 
 export function WorkspaceHelpMenu({ automatic = true }: WorkspaceHelpMenuProps) {
+  const [appVersion, setAppVersion] = useState(packagedVersion);
   const [checking, setChecking] = useState(automatic);
   const [installing, setInstalling] = useState(false);
   const [availableUpdate, setAvailableUpdate] = useState<Update | null>(null);
@@ -29,6 +31,18 @@ export function WorkspaceHelpMenu({ automatic = true }: WorkspaceHelpMenuProps) 
   const [error, setError] = useState<string | null>(null);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const menuRef = useRef<HTMLDetailsElement>(null);
+
+  useEffect(() => {
+    let active = true;
+    void getVersion()
+      .then((version) => {
+        if (active) setAppVersion(version);
+      })
+      .catch(() => {
+        // O navegador de desenvolvimento usa a versão do pacote como fallback.
+      });
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     if (!automatic) return;
@@ -141,7 +155,8 @@ export function WorkspaceHelpMenu({ automatic = true }: WorkspaceHelpMenuProps) 
         <hr />
         <section className="update-check" aria-labelledby="update-check-title">
           <strong id="update-check-title">Atualizações</strong>
-          <small>Chrono Project {appVersion} · verifica automaticamente ao abrir.</small>
+          <small>Versão instalada: {appVersion}</small>
+          <small>Verificação automática ao abrir.</small>
           <button type="button" disabled={checking} onClick={() => { void checkForUpdates(); }}>
             {checking ? "Verificando…" : "Verificar atualizações"}
           </button>

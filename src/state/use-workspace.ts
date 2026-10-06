@@ -622,6 +622,7 @@ export function useWorkspace(repository: WorkspaceRepository): WorkspaceControll
           endDate: null,
           durationDays: null,
           deadlineDate: null,
+          completedDate: null,
           schedulingMode: "AUTO",
           position: nextPosition(siblings),
           assignee: null,

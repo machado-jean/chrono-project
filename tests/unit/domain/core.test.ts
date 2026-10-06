@@ -59,6 +59,7 @@ function task(overrides: Partial<Task> = {}): Task {
     endDate: null,
     durationDays: null,
     deadlineDate: null,
+    completedDate: null,
     schedulingMode: "AUTO",
     position: 0,
     assignee: null,
@@ -116,6 +117,36 @@ describe("núcleo de tarefas", () => {
 
   it("rejeita progresso fora da faixa", () => {
     expect(() => validateTask(task({ progress: 101 }))).toThrow("entre 0 e 100");
+  });
+
+  it("exige data real e 100% de progresso em tarefas concluídas", () => {
+    expect(() => validateTask(task({ status: "COMPLETED", progress: 100 }))).toThrow(
+      "data de conclusão",
+    );
+    expect(() => validateTask(task({
+      status: "COMPLETED",
+      progress: 80,
+      completedDate: "2026-10-05",
+    }))).toThrow("100% de progresso");
+    expect(validateTask(task({
+      status: "COMPLETED",
+      progress: 100,
+      completedDate: "2026-10-05",
+    })).completedDate).toBe("2026-10-05");
+    expect(() => validateTask(task({
+      status: "COMPLETED",
+      progress: 100,
+      startDate: "2026-10-06",
+      endDate: "2026-10-06",
+      durationDays: 1,
+      completedDate: "2026-10-05",
+    }))).toThrow("anterior à data de início");
+  });
+
+  it("rejeita data de conclusão em atividade reaberta", () => {
+    expect(() => validateTask(task({ completedDate: "2026-10-05" }))).toThrow(
+      "Somente tarefas concluídas",
+    );
   });
 });
 

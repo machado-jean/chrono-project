@@ -44,6 +44,7 @@ function createTasks(count: number): Task[] {
     endDate: "2026-08-30",
     durationDays: 1,
     deadlineDate: null,
+    completedDate: null,
     schedulingMode: "AUTO",
     position: index,
     assignee: null,

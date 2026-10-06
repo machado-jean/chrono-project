@@ -37,6 +37,7 @@ function task(overrides: Partial<Task> = {}): Task {
     endDate: "2026-09-10",
     durationDays: 3,
     deadlineDate: "2026-09-14",
+    completedDate: null,
     schedulingMode: "AUTO",
     position: 0,
     assignee: null,
@@ -82,11 +83,36 @@ describe("controle do plano", () => {
     expect(earlier.endVarianceDays).toBe(-1);
   });
 
-  it("classifica prazo sem alterar cronograma ou tarefas encerradas", () => {
+  it("classifica prazo pela data atual, inclusive sem cronograma", () => {
     expect(taskScheduleHealth(task(), "2026-09-10")).toBe("ON_TRACK");
     expect(taskScheduleHealth(task({ endDate: "2026-09-15" }), "2026-09-10")).toBe("AT_RISK");
     expect(taskScheduleHealth(task({ deadlineDate: "2026-09-09" }), "2026-09-10")).toBe("OVERDUE");
-    expect(taskScheduleHealth(task({ deadlineDate: "2026-09-09", status: "COMPLETED" }), "2026-09-10")).toBe("ON_TRACK");
+    expect(taskScheduleHealth(task({
+      startDate: null,
+      endDate: null,
+      durationDays: null,
+      deadlineDate: "2026-09-09",
+    }), "2026-09-10")).toBe("OVERDUE");
+    expect(taskScheduleHealth(task({
+      startDate: null,
+      endDate: null,
+      durationDays: null,
+      deadlineDate: "2026-09-11",
+    }), "2026-09-10")).toBe("AT_RISK");
+    expect(taskScheduleHealth(task({ deadlineDate: "2026-09-10" }), "2026-09-10")).toBe("AT_RISK");
+    expect(taskScheduleHealth(task({
+      deadlineDate: "2026-09-09",
+      status: "COMPLETED",
+      progress: 100,
+      completedDate: "2026-09-09",
+    }), "2026-09-10")).toBe("ON_TRACK");
+    expect(taskScheduleHealth(task({
+      deadlineDate: "2026-09-09",
+      status: "COMPLETED",
+      progress: 100,
+      completedDate: "2026-09-10",
+    }), "2026-09-10")).toBe("COMPLETED_LATE");
+    expect(taskScheduleHealth(task({ status: "CANCELLED" }), "2026-09-10")).toBe("CANCELLED");
     expect(taskScheduleHealth(task({ deadlineDate: null }), "2026-09-10")).toBe("NO_DEADLINE");
   });
 });

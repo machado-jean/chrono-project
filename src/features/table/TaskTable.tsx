@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type FocusEvent, type KeyboardEvent, type MouseEvent, type RefObject, type SyntheticEvent } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type FocusEvent, type KeyboardEvent, type MouseEvent, type RefObject, type SyntheticEvent, type WheelEvent } from "react";
 
 import type { Calendar } from "../../domain/calendars/calendar";
 import { isWorkingDay } from "../../domain/calendars/working-calendar";
@@ -16,6 +16,14 @@ import { applyScheduleEdit, type ScheduleEdit } from "../../domain/scheduling/sc
 import type { SchedulingConflict } from "../../domain/scheduling/scheduler";
 import { requireDateOnly } from "../../domain/shared/validation";
 import { ContextMenu, type ContextMenuItem } from "../../components/ContextMenu";
+import {
+  clipboardErrorMessage,
+  copyTextSelection,
+  isEditableTextControl,
+  pasteTextSelection,
+  selectionFromControl,
+  type TextSelection,
+} from "../../components/text-clipboard";
 import {
   canTaskHaveChild,
   collectTaskTreeIds,
@@ -38,6 +46,7 @@ import {
   type TaskStatus,
   validateTask,
 } from "../../domain/tasks/task";
+import { taskSaveWasCancelled, type TaskSaveResult } from "../../domain/tasks/task-save";
 import { ModalDialog } from "../../components/ModalDialog";
 
 interface TaskTableProps {
@@ -53,7 +62,7 @@ interface TaskTableProps {
   readonly onSave: (
     task: Task,
     dependencyUpdates: readonly TaskDependency[],
-  ) => Promise<boolean>;
+  ) => Promise<TaskSaveResult>;
   readonly onSetSchedulingMode: (
     taskIds: readonly string[],
     schedulingMode: SchedulingMode,
@@ -325,6 +334,7 @@ interface TaskRowProps {
   readonly conflicts: readonly SchedulingConflict[];
   readonly baselineTask: BaselineTask | null;
   readonly showBaselineColumns: boolean;
+  readonly todayDate: string;
   readonly selected: boolean;
   readonly expanded: boolean;
   readonly disabled: boolean;
@@ -347,6 +357,8 @@ const HEALTH_LABELS: Readonly<Record<ScheduleHealth, string>> = {
   ON_TRACK: "No prazo",
   AT_RISK: "Em risco",
   OVERDUE: "Atrasada",
+  COMPLETED_LATE: "Concluída com atraso",
+  CANCELLED: "Cancelada",
 };
 
 function HealthBadge({ health }: { readonly health: ScheduleHealth }) {
@@ -367,6 +379,17 @@ function displayDate(value: string): string {
   return `${day ?? ""}/${month ?? ""}/${year ?? ""}`;
 }
 
+function localTodayDate(): string {
+  const today = new Date();
+  return `${String(today.getFullYear())}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+}
+
+function millisecondsUntilNextLocalDay(): number {
+  const now = new Date();
+  const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+  return Math.max(1_000, tomorrow.getTime() - now.getTime() + 1_000);
+}
+
 interface SafeDateInputProps {
   readonly ariaLabel: string;
   readonly className: string;
@@ -384,25 +407,41 @@ function SafeDateInput({
   value,
   onCommit,
 }: SafeDateInputProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const input = inputRef.current;
+    if (input === null || document.activeElement === input) return;
+    input.value = value ?? "";
+  }, [value]);
+
   return (
     <input
+      ref={inputRef}
       className={className}
       type="date"
       aria-label={ariaLabel}
-      value={value ?? ""}
+      defaultValue={value ?? ""}
       disabled={disabled}
       title={title}
       onChange={(event) => {
         const input = event.currentTarget;
+        // WebView2 reports an empty value while a localized date is still being
+        // typed (for example, between 01/10 and the completed year). Committing
+        // that transient empty value clears the schedule and makes the native
+        // control return to dd/mm/aaaa before typing can finish.
+        if (input.value === "") return;
         if (input.validity.badInput) return;
-        if (input.value !== "" && !isCompleteDateInput(input.value)) return;
-        onCommit(input.value || null);
+        if (!isCompleteDateInput(input.value)) return;
+        onCommit(input.value);
       }}
       onBlur={(event) => {
         const input = event.currentTarget;
         if (input.validity.badInput || (input.value !== "" && !isCompleteDateInput(input.value))) {
           input.value = value ?? "";
+          return;
         }
+        onCommit(input.value || null);
       }}
     />
   );
@@ -417,7 +456,16 @@ interface TaskSaveSnapshot {
 
 function autosaveSnapshotIsValid(snapshot: TaskSaveSnapshot): boolean {
   try {
-    validateTask(snapshot.task);
+    // Status transitions are finalized by the shared review dialog. Validate
+    // the remaining fields with a temporary consistent completion state so
+    // the request can reach that dialog instead of being rejected locally.
+    validateTask(snapshot.task.status === "COMPLETED"
+      ? {
+          ...snapshot.task,
+          progress: 100,
+          completedDate: snapshot.task.completedDate ?? snapshot.task.startDate ?? "2000-01-01",
+        }
+      : { ...snapshot.task, completedDate: null });
     return snapshot.dependencyUpdates.every(
       (dependency) => Number.isInteger(dependency.lagDays) && dependency.lagDays >= 0,
     );
@@ -437,6 +485,7 @@ function TaskRow({
   conflicts,
   baselineTask,
   showBaselineColumns,
+  todayDate,
   selected,
   expanded,
   disabled,
@@ -460,8 +509,11 @@ function TaskRow({
   const [lagDrafts, setLagDrafts] = useState<Readonly<Record<string, number>>>({});
   const [showDetails, setShowDetails] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ readonly x: number; readonly y: number } | null>(null);
+  const [textEditContext, setTextEditContext] = useState<TextSelection | null>(null);
+  const [clipboardError, setClipboardError] = useState<string | null>(null);
   const detailsButtonRef = useRef<HTMLButtonElement>(null);
   const contextMenuButtonRef = useRef<HTMLButtonElement>(null);
+  const contextMenuOriginRef = useRef<HTMLElement | null>(null);
   const predecessorSelectRef = useRef<HTMLSelectElement>(null);
   const draftRef = useRef(row.task);
   const tagsTextRef = useRef(row.task.tags.join(", "));
@@ -473,7 +525,7 @@ function TaskRow({
   const editRevisionRef = useRef(0);
   const latestQueuedRevisionRef = useRef(0);
   const lastQueuedFingerprintRef = useRef<string | null>(null);
-  const saveQueueRef = useRef<Promise<boolean>>(Promise.resolve(true));
+  const saveQueueRef = useRef<Promise<TaskSaveResult>>(Promise.resolve(true));
   const visibleDraft = dirty ? draft : row.task;
   const visibleTagsText = dirty ? tagsText : row.task.tags.join(", ");
   const detailsId = `task-details-${row.task.id}`;
@@ -487,8 +539,6 @@ function TaskRow({
     (calendar) => calendar.id === (visibleDraft.calendarId ?? projectCalendarId),
   ) ?? calendars[0];
   const taskConflicts = conflicts.filter((conflict) => conflict.taskId === row.task.id);
-  const today = new Date();
-  const todayDate = `${String(today.getFullYear())}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
   const comparison = taskCalendar === undefined
     ? null
     : compareTaskWithBaseline(visibleDraft, baselineTask, taskCalendar, todayDate);
@@ -544,7 +594,7 @@ function TaskRow({
     return { task, dependencyUpdates };
   }, [row.task.id]);
 
-  const queueSave = useCallback((reportInvalid = false): Promise<boolean> => {
+  const queueSave = useCallback((reportInvalid = false): Promise<TaskSaveResult> => {
     if (!dirtyRef.current) return saveQueueRef.current;
     const snapshot = buildSaveSnapshot();
     if (!reportInvalid && !autosaveSnapshotIsValid(snapshot)) return Promise.resolve(false);
@@ -556,22 +606,28 @@ function TaskRow({
     latestQueuedRevisionRef.current = revision;
     if (mountedRef.current) setSaveState("SAVING");
 
-    const operation = async (): Promise<boolean> => {
-      let saved: boolean;
+    const operation = async (): Promise<TaskSaveResult> => {
+      let saved: TaskSaveResult;
       try {
         saved = await onSaveRef.current(snapshot.task, snapshot.dependencyUpdates);
       } catch {
         saved = false;
       }
-      if (!saved) lastQueuedFingerprintRef.current = null;
+      if (saved !== true) lastQueuedFingerprintRef.current = null;
       if (!mountedRef.current || latestQueuedRevisionRef.current !== revision) return saved;
-      if (saved && editRevisionRef.current === revision) {
+      if (saved === true && editRevisionRef.current === revision) {
         dirtyRef.current = false;
         lagDraftsRef.current = {};
         setDirty(false);
         setLagDrafts({});
         setSaveState("SAVED");
-      } else if (!saved) {
+      } else if (taskSaveWasCancelled(saved)) {
+        const revertedTask = { ...snapshot.task, status: row.task.status };
+        draftRef.current = revertedTask;
+        setDraft(revertedTask);
+        editRevisionRef.current += 1;
+        setSaveState("DIRTY");
+      } else if (saved === false) {
         setSaveState("ERROR");
       } else {
         setSaveState("DIRTY");
@@ -581,7 +637,7 @@ function TaskRow({
 
     saveQueueRef.current = saveQueueRef.current.catch(() => false).then(operation);
     return saveQueueRef.current;
-  }, [buildSaveSnapshot]);
+  }, [buildSaveSnapshot, row.task.status]);
 
   useEffect(() => {
     if (!dirty) return;
@@ -698,18 +754,67 @@ function TaskRow({
     markDirty();
   };
 
-  const closeContextMenu = useCallback((): void => { setContextMenu(null); }, []);
+  const closeContextMenu = useCallback((): void => {
+    setContextMenu(null);
+    setTextEditContext(null);
+  }, []);
 
   const openContextMenu = (event: MouseEvent<HTMLElement>): void => {
-    if (event.target instanceof Element && event.target.closest("input, textarea, select, [contenteditable='true']") !== null) return;
     event.preventDefault();
+    event.stopPropagation();
+    const target = event.target;
+    contextMenuOriginRef.current = target instanceof HTMLElement ? target : event.currentTarget;
+    setClipboardError(null);
+    const textControl = target instanceof Element ? target.closest("input, textarea") : null;
+    if (isEditableTextControl(textControl)) {
+      setTextEditContext(selectionFromControl(textControl));
+    } else {
+      setTextEditContext(null);
+    }
     setContextMenu({ x: event.clientX, y: event.clientY });
   };
 
+  const runClipboardAction = (action: () => Promise<void>): void => {
+    void action()
+      .catch((error: unknown) => { setClipboardError(clipboardErrorMessage(error)); })
+      .finally(() => { contextMenuOriginRef.current?.focus(); });
+  };
+
+  const hasSelectedText = textEditContext !== null && textEditContext.end > textEditContext.start;
+
   const contextMenuItems: readonly ContextMenuItem[] = [
+    ...(textEditContext === null ? [] : [
+      {
+        id: "cut-text",
+        label: "Recortar",
+        disabled: !hasSelectedText || textEditContext.control.disabled || textEditContext.control.readOnly,
+        onSelect: () => { runClipboardAction(() => copyTextSelection(textEditContext, true)); },
+      },
+      {
+        id: "copy-text",
+        label: "Copiar",
+        disabled: !hasSelectedText,
+        onSelect: () => { runClipboardAction(() => copyTextSelection(textEditContext, false)); },
+      },
+      {
+        id: "paste-text",
+        label: "Colar",
+        disabled: textEditContext.control.disabled || textEditContext.control.readOnly,
+        onSelect: () => { runClipboardAction(() => pasteTextSelection(textEditContext)); },
+      },
+      {
+        id: "select-all-text",
+        label: "Selecionar tudo",
+        onSelect: () => {
+          textEditContext.control.focus();
+          textEditContext.control.select();
+        },
+      },
+    ] satisfies readonly ContextMenuItem[]),
     {
       id: "details",
       label: showDetails ? "Ocultar detalhes" : "Abrir detalhes",
+      separatorBefore: textEditContext !== null,
       onSelect: () => { setShowDetails((visible) => !visible); },
     },
     {
@@ -790,7 +895,7 @@ function TaskRow({
       <td><PredecessorCell task={row.task} tasks={tasks} dependencies={dependencies} calendars={calendars} projectCalendarId={projectCalendarId} lagDrafts={lagDrafts} isSummary={row.hasChildren} disabled={disabled} selectRef={predecessorSelectRef} onCreate={onCreateDependency} onLagChange={updateLag} onDelete={onDeleteDependency} /></td>
       <td><select className="cell-select" aria-label="Status da tarefa" value={visibleDraft.status} disabled={disabled} onChange={(event) => { update({ status: event.target.value as TaskStatus }, true); }}>{TASK_STATUSES.map((status) => <option value={status} key={status}>{TASK_STATUS_LABELS[status]}</option>)}</select></td>
       <td><select className="cell-select" aria-label="Prioridade da tarefa" value={visibleDraft.priority} disabled={disabled} onChange={(event) => { update({ priority: event.target.value as TaskPriority }, true); }}>{TASK_PRIORITIES.map((priority) => <option value={priority} key={priority}>{TASK_PRIORITY_LABELS[priority]}</option>)}</select></td>
-      <td><div className="progress-editor"><input className="cell-input number-input" type="number" min={0} max={100} aria-label="Progresso da tarefa" value={visibleDraft.progress} disabled={disabled} onChange={(event) => { update({ progress: Number(event.target.value) }); }} /><span>%</span></div></td>
+      <td><div className="progress-editor"><input className="cell-input number-input" type="number" min={0} max={100} aria-label="Progresso da tarefa" title={visibleDraft.status === "COMPLETED" ? "Reabra a atividade para alterar o progresso" : ""} value={visibleDraft.progress} disabled={disabled || visibleDraft.status === "COMPLETED"} onChange={(event) => { update({ progress: Number(event.target.value) }); }} /><span>%</span></div></td>
       <td><SafeDateInput className="cell-input date-input" ariaLabel="Início da tarefa" value={visibleDraft.startDate} disabled={disabled || row.hasChildren} title={row.hasChildren ? "Data calculada pelas subtarefas" : ""} onCommit={(value) => { updateSchedule({ field: "startDate", value }); }} /></td>
       <td><SafeDateInput className="cell-input date-input" ariaLabel="Fim da tarefa" value={visibleDraft.endDate} disabled={disabled || row.hasChildren} title={row.hasChildren ? "Data calculada pelas subtarefas" : ""} onCommit={(value) => { updateSchedule({ field: "endDate", value }); }} /></td>
       <td><input className="cell-input duration-input" type="number" min={1} aria-label="Duração da tarefa" value={visibleDraft.durationDays ?? ""} disabled={disabled || row.hasChildren} title={row.hasChildren ? "Duração calculada pelas subtarefas" : ""} onChange={(event) => { updateSchedule({ field: "durationDays", value: event.target.value === "" ? null : Number(event.target.value) }); }} /></td>
@@ -810,17 +915,23 @@ function TaskRow({
       <td><input className="cell-input" aria-label="Responsável pela tarefa" value={visibleDraft.assignee ?? ""} disabled={disabled} onChange={(event) => { update({ assignee: event.target.value || null }); }} /></td>
       <td><input className="cell-input tags-input" aria-label="Tags da tarefa" placeholder="tag, tag" value={visibleTagsText} disabled={disabled} onChange={(event) => { tagsTextRef.current = event.target.value; setTagsText(event.target.value); markDirty(); }} /></td>
       <td className="row-actions">
-        <button ref={contextMenuButtonRef} className="task-more-button" type="button" aria-label={`Mais ações para ${row.task.title}`} aria-haspopup="menu" aria-expanded={contextMenu !== null} disabled={disabled} onClick={(event) => { const bounds = event.currentTarget.getBoundingClientRect(); setContextMenu({ x: bounds.right, y: bounds.bottom }); }}>⋯</button>
-        <div className="order-buttons row-order-buttons" aria-label={`Ordenação de ${row.task.title}`}><button type="button" disabled={disabled || !canMoveUp} aria-label={`Mover ${row.task.title} para cima`} title="Mover para cima" onClick={() => { onMove("up"); }}>↑</button><button type="button" disabled={disabled || !canMoveDown} aria-label={`Mover ${row.task.title} para baixo`} title="Mover para baixo" onClick={() => { onMove("down"); }}>↓</button></div>
-        <span className={`saved-label ${saveState.toLocaleLowerCase()}`} role="status">
-          {saveState === "SAVING" ? "Salvando…" : saveState === "ERROR" ? "Erro ao salvar" : saveState === "DIRTY" ? "Alterada" : "Salva"}
-        </span>
-        {hasUnsavedChanges ? <button className="save-row-button" type="button" disabled={disabled} onClick={() => { void save(); }}>Salvar</button> : null}
-        <button className="delete-row-button" type="button" disabled={disabled} onClick={onDelete}>Excluir</button>
+        <div className="row-actions-toolbar">
+          <div className="order-buttons row-order-buttons" aria-label={`Ordenação de ${row.task.title}`}><button type="button" disabled={disabled || !canMoveUp} aria-label={`Mover ${row.task.title} para cima`} title="Mover para cima" onClick={() => { onMove("up"); }}>↑</button><button type="button" disabled={disabled || !canMoveDown} aria-label={`Mover ${row.task.title} para baixo`} title="Mover para baixo" onClick={() => { onMove("down"); }}>↓</button></div>
+          <button ref={contextMenuButtonRef} className="task-more-button" type="button" aria-label={`Mais ações para ${row.task.title}`} aria-haspopup="menu" aria-expanded={contextMenu !== null} disabled={disabled} onClick={(event) => { const bounds = event.currentTarget.getBoundingClientRect(); contextMenuOriginRef.current = event.currentTarget; setTextEditContext(null); setClipboardError(null); setContextMenu({ x: bounds.right, y: bounds.bottom }); }}>⋯</button>
+          <span
+            className={`save-state-indicator ${saveState.toLocaleLowerCase()}`}
+            role="status"
+            aria-label={saveState === "SAVING" ? "Salvando alteração" : saveState === "ERROR" ? "Erro ao salvar" : saveState === "DIRTY" ? "Alteração pendente" : undefined}
+            title={saveState === "SAVING" ? "Salvando alteração" : saveState === "ERROR" ? "Erro ao salvar" : saveState === "DIRTY" ? "Alteração pendente" : undefined}
+          >{saveState === "SAVING" ? "↻" : saveState === "ERROR" ? "!" : saveState === "DIRTY" ? "•" : ""}</span>
+        </div>
+        {hasUnsavedChanges
+          ? <button className="save-row-button row-terminal-action" type="button" disabled={disabled} onClick={() => { void save(); }}>Salvar</button>
+          : <button className="delete-row-button row-terminal-action" type="button" disabled={disabled} onClick={onDelete}>Excluir</button>}
       </td>
     </tr>
     {showDetails ? (
-      <tr className="task-details-row" onBlur={saveOnEditorBlur}>
+      <tr className="task-details-row" onBlur={saveOnEditorBlur} onContextMenu={openContextMenu}>
         <td className="selection-cell" />
         <td colSpan={16}>
           <div className="task-details" id={detailsId} style={{ marginLeft: `${String(row.depth * 1.25)}rem` }} onKeyDown={closeDetailsOnEscape}>
@@ -864,12 +975,13 @@ function TaskRow({
         ariaLabel={`Ações de ${row.task.title}`}
         heading={row.task.title}
         items={contextMenuItems}
-        returnFocusRef={contextMenuButtonRef}
+        returnFocusRef={contextMenuOriginRef}
         x={contextMenu.x}
         y={contextMenu.y}
         onClose={closeContextMenu}
       />
     )}
+    {clipboardError === null ? null : <div className="clipboard-error-toast" role="alert">{clipboardError}</div>}
     </>
   );
 }
@@ -906,6 +1018,7 @@ export function TaskTable({
   const tableScrollRef = useRef<HTMLDivElement>(null);
   const horizontalScrollRef = useRef<HTMLDivElement>(null);
   const [tableScrollWidth, setTableScrollWidth] = useState(0);
+  const [todayDate, setTodayDate] = useState(localTodayDate);
   const forcedExpandedIds = new Set(
     tasks
       .filter(
@@ -926,6 +1039,25 @@ export function TaskTable({
   const selectedEditableTasks = tasks.filter(
     (task) => selectedTaskIds.has(task.id) && !summaryIds.has(task.id),
   );
+
+  useEffect(() => {
+    let timeoutId = 0;
+    const scheduleNextDay = (): void => {
+      timeoutId = window.setTimeout(() => {
+        setTodayDate(localTodayDate());
+        scheduleNextDay();
+      }, millisecondsUntilNextLocalDay());
+    };
+    const refreshWhenVisible = (): void => {
+      if (document.visibilityState === "visible") setTodayDate(localTodayDate());
+    };
+    scheduleNextDay();
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    return () => {
+      window.clearTimeout(timeoutId);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+    };
+  }, []);
 
   const setSelectedSchedulingMode = useCallback(async (mode: SchedulingMode): Promise<void> => {
     if (selectedEditableTasks.length === 0) return;
@@ -1021,6 +1153,16 @@ export function TaskTable({
     if (created !== null) setTemplateSource(null);
   };
 
+  const handleTableWheel = (event: WheelEvent<HTMLDivElement>): void => {
+    const horizontalDelta = event.deltaX !== 0 ? event.deltaX : event.shiftKey ? event.deltaY : 0;
+    if (horizontalDelta === 0) return;
+    event.preventDefault();
+    event.currentTarget.scrollLeft += horizontalDelta;
+    if (horizontalScrollRef.current !== null) {
+      horizontalScrollRef.current.scrollLeft = event.currentTarget.scrollLeft;
+    }
+  };
+
   return (
     <section className="task-section" aria-labelledby="task-table-title">
       <div className="task-toolbar">
@@ -1041,39 +1183,39 @@ export function TaskTable({
       </div>
       {conflicts.length > 0 ? <div className="schedule-conflict-summary" role="status"><strong>{conflicts.length} {conflicts.length === 1 ? "conflito de agendamento" : "conflitos de agendamento"}</strong><span>Tarefas manuais foram preservadas. Abra a linha correspondente para revisar a data mínima indicada.</span></div> : null}
       <div className="table-scroll-shell">
-      <div ref={tableScrollRef} className="table-scroll" onScroll={(event) => { if (horizontalScrollRef.current !== null) horizontalScrollRef.current.scrollLeft = event.currentTarget.scrollLeft; }}>
+      <div ref={tableScrollRef} className="table-scroll" onScroll={(event) => { if (horizontalScrollRef.current !== null) horizontalScrollRef.current.scrollLeft = event.currentTarget.scrollLeft; }} onWheel={handleTableWheel}>
         <table className="task-table">
           <caption className="sr-only">Tarefas do projeto com cronograma, predecessoras e ações de edição</caption>
           <thead>
             <tr>
               <th className="selection-cell"><span className="sr-only">Selecionar</span></th>
-              <TableColumnHeader label="Tarefa" help="Nome da atividade. A numeração mostra sua posição na hierarquia do projeto." alignTooltip="left" />
-              <TableColumnHeader label="Predecessoras" help="Tarefas que precisam terminar antes desta começar. O intervalo define a espera em dias úteis." />
-              <TableColumnHeader label="Status" help="Situação atual da tarefa, como não iniciada, em andamento, bloqueada ou concluída." />
-              <TableColumnHeader label="Prioridade" help="Importância relativa da tarefa. Não altera automaticamente suas datas." />
-              <TableColumnHeader label="Progresso" help="Percentual concluído da tarefa, de 0% a 100%." />
-              <TableColumnHeader label="Início" help="Data atual prevista para começar a tarefa." />
-              <TableColumnHeader label="Fim" help="Data atual prevista para terminar a tarefa." />
+              <TableColumnHeader className="task-column" label="Tarefa" help="Nome da atividade. A numeração mostra sua posição na hierarquia do projeto." alignTooltip="left" />
+              <TableColumnHeader className="predecessors-column" label="Predecessoras" help="Tarefas que precisam terminar antes desta começar. O intervalo define a espera em dias úteis." />
+              <TableColumnHeader className="status-column" label="Status" help="Situação atual da tarefa, como não iniciada, em andamento, bloqueada ou concluída." />
+              <TableColumnHeader className="priority-column" label="Prioridade" help="Importância relativa da tarefa. Não altera automaticamente suas datas." />
+              <TableColumnHeader className="progress-column" label="Progresso" help="Percentual concluído da tarefa, de 0% a 100%." />
+              <TableColumnHeader className="date-column" label="Início" help="Data atual prevista para começar a tarefa." />
+              <TableColumnHeader className="date-column" label="Fim" help="Data atual prevista para terminar a tarefa." />
               <TableColumnHeader className="duration-column" label="Duração" help="Quantidade de dias úteis entre o início e o fim, incluindo o primeiro dia." />
               {showBaselineColumns ? (
                 <>
-                  <TableColumnHeader label="Início planejado" help="Data de início guardada no plano de referência ativo." />
-                  <TableColumnHeader label="Fim planejado" help="Data de término guardada no plano de referência ativo." />
-                  <TableColumnHeader label="Desvio" help="Diferença, em dias úteis, entre o fim planejado e o fim atual. Valor positivo indica atraso." />
+                  <TableColumnHeader className="baseline-column" label="Início planejado" help="Data de início guardada no plano de referência ativo." />
+                  <TableColumnHeader className="baseline-column" label="Fim planejado" help="Data de término guardada no plano de referência ativo." />
+                  <TableColumnHeader className="variance-column" label="Desvio" help="Diferença, em dias úteis, entre o fim planejado e o fim atual. Valor positivo indica atraso." />
                 </>
               ) : null}
-              <TableColumnHeader label="Prazo-limite" help="Data máxima desejada para conclusão. Ela informa risco, mas não movimenta a tarefa." />
-              <TableColumnHeader label="Saúde" help="Indica se a tarefa está no prazo, em risco ou atrasada em relação ao prazo-limite." />
-              <TableColumnHeader label="Responsável" help="Pessoa ou referência responsável por acompanhar a tarefa." />
-              <TableColumnHeader label="Tags" help="Palavras-chave separadas por vírgulas, usadas para organizar e filtrar tarefas." />
-              <TableColumnHeader label="Ações" help="Comandos para salvar, abrir detalhes, reordenar, duplicar ou excluir a tarefa." alignTooltip="right" />
+              <TableColumnHeader className="deadline-column" label="Prazo-limite" help="Data máxima desejada para conclusão. Ela informa risco, mas não movimenta a tarefa." />
+              <TableColumnHeader className="health-column" label="Saúde" help="Compara o prazo-limite com hoje e com o fim previsto. Uma tarefa aberta fica atrasada após o prazo, mesmo sem datas; fica em risco no dia do prazo, sem fim previsto ou com fim posterior ao limite." />
+              <TableColumnHeader className="assignee-column" label="Responsável" help="Pessoa ou referência responsável por acompanhar a tarefa." />
+              <TableColumnHeader className="tags-column" label="Tags" help="Palavras-chave separadas por vírgulas, usadas para organizar e filtrar tarefas." />
+              <TableColumnHeader className="actions-column" label="Ações" help="Reordene a tarefa ou abra o menu para detalhes, duplicação e exclusão. Alterações são salvas automaticamente." alignTooltip="right" />
             </tr>
           </thead>
           <tbody>
             {visibleTasks.length === 0 ? <tr><td className="empty-table" colSpan={showBaselineColumns ? 17 : 14}><strong>{tasks.length === 0 ? "Nenhuma tarefa ainda." : "Nenhuma tarefa corresponde aos filtros."}</strong><span>{tasks.length === 0 ? "Use o campo “Nova tarefa” para começar." : "Limpe ou ajuste os filtros para recuperar as linhas."}</span></td></tr> : visibleTasks.map((row) => {
               const siblings = tasks.filter((task) => task.projectId === row.task.projectId && task.parentId === row.task.parentId).sort((left, right) => left.position - right.position || left.createdAt.localeCompare(right.createdAt));
               const siblingIndex = siblings.findIndex((task) => task.id === row.task.id);
-              return <TaskRow key={row.task.id} row={row} outlineNumber={outlineNumbers.get(row.task.id) ?? ""} outlineNumbers={outlineNumbers} tasks={tasks} calendars={calendars} projectCalendarId={projectCalendarId} dependencies={dependencies} conflicts={conflicts} baselineTask={baselineTasks.find((task) => task.taskId === row.task.id) ?? null} showBaselineColumns={showBaselineColumns} disabled={disabled} selected={selectedTaskIds.has(row.task.id)} expanded={effectiveExpandedIds.has(row.task.id)} canMoveUp={siblingIndex > 0} canMoveDown={siblingIndex >= 0 && siblingIndex < siblings.length - 1} onSelect={(selected) => { setSelectedTaskIds((current) => { const next = new Set(current); if (selected) next.add(row.task.id); else next.delete(row.task.id); return next; }); }} onToggleExpanded={() => { setExpandedTaskIds((current) => { const next = new Set(current); if (next.has(row.task.id)) next.delete(row.task.id); else next.add(row.task.id); return next; }); }} onPrepareSubtask={() => { prepareSubtask(row.task.id); }} onSave={onSave} onMove={(direction) => { void onMove(row.task.id, direction); }} onCreateDependency={onCreateDependency} onDeleteDependency={onDeleteDependency} onDuplicate={(includeDescendants) => { void onDuplicate(row.task.id, includeDescendants).then((copy) => { if (copy !== null && includeDescendants) setExpandedTaskIds((current) => new Set([...current, copy.id])); }); }} onPrepareTemplate={() => { prepareTemplate(row.task); }} onDelete={() => { if (window.confirm(`Excluir “${row.task.title}” e todas as suas subtarefas? Esta ação não pode ser desfeita.`)) void onDelete(row.task.id); }} />;
+              return <TaskRow key={row.task.id} row={row} outlineNumber={outlineNumbers.get(row.task.id) ?? ""} outlineNumbers={outlineNumbers} tasks={tasks} calendars={calendars} projectCalendarId={projectCalendarId} dependencies={dependencies} conflicts={conflicts} baselineTask={baselineTasks.find((task) => task.taskId === row.task.id) ?? null} showBaselineColumns={showBaselineColumns} todayDate={todayDate} disabled={disabled} selected={selectedTaskIds.has(row.task.id)} expanded={effectiveExpandedIds.has(row.task.id)} canMoveUp={siblingIndex > 0} canMoveDown={siblingIndex >= 0 && siblingIndex < siblings.length - 1} onSelect={(selected) => { setSelectedTaskIds((current) => { const next = new Set(current); if (selected) next.add(row.task.id); else next.delete(row.task.id); return next; }); }} onToggleExpanded={() => { setExpandedTaskIds((current) => { const next = new Set(current); if (next.has(row.task.id)) next.delete(row.task.id); else next.add(row.task.id); return next; }); }} onPrepareSubtask={() => { prepareSubtask(row.task.id); }} onSave={onSave} onMove={(direction) => { void onMove(row.task.id, direction); }} onCreateDependency={onCreateDependency} onDeleteDependency={onDeleteDependency} onDuplicate={(includeDescendants) => { void onDuplicate(row.task.id, includeDescendants).then((copy) => { if (copy !== null && includeDescendants) setExpandedTaskIds((current) => new Set([...current, copy.id])); }); }} onPrepareTemplate={() => { prepareTemplate(row.task); }} onDelete={() => { if (window.confirm(`Excluir “${row.task.title}” e todas as suas subtarefas? Esta ação não pode ser desfeita.`)) void onDelete(row.task.id); }} />;
             })}
           </tbody>
         </table>

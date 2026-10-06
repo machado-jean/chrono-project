@@ -19,7 +19,7 @@ use zip::{write::SimpleFileOptions, CompressionMethod, ZipArchive, ZipWriter};
 use crate::{
     database::{
         DATABASE_SCHEMA_VERSION, PERSISTENT_GANTT_HISTORY_SCHEMA, PLAN_CONTROL_SCHEMA,
-        SUMMARY_PREDECESSORS_SCHEMA,
+        SUMMARY_PREDECESSORS_SCHEMA, TASK_COMPLETION_SCHEMA,
     },
     persistence::{
         self, BaselineBundleRecord, BaselineTaskRecord, CalendarRecord, DependencyRecord,
@@ -1013,6 +1013,7 @@ async fn load_validated_database(path: &Path) -> PortabilityResult<WorkspaceData
     if version != "4"
         && version != "5"
         && version != "6"
+        && version != "7"
         && version != DATABASE_SCHEMA_VERSION.to_string()
     {
         return Err(format!(
@@ -1023,7 +1024,7 @@ async fn load_validated_database(path: &Path) -> PortabilityResult<WorkspaceData
         .close()
         .await
         .map_err(|error| error.to_string())?;
-    if version == "4" || version == "5" || version == "6" {
+    if version == "4" || version == "5" || version == "6" || version == "7" {
         return load_upgraded_legacy_copy(path, &version).await;
     }
     load_workspace_read_only(path).await
@@ -1061,11 +1062,19 @@ async fn load_upgraded_legacy_copy(path: &Path, version: &str) -> PortabilityRes
                     format!("Falha ao atualizar pacote antigo para o schema 6: {error}")
                 })?;
         }
-        sqlx::raw_sql(PERSISTENT_GANTT_HISTORY_SCHEMA)
+        if version != "7" {
+            sqlx::raw_sql(PERSISTENT_GANTT_HISTORY_SCHEMA)
+                .execute(&writable)
+                .await
+                .map_err(|error| {
+                    format!("Falha ao atualizar pacote antigo para o schema 7: {error}")
+                })?;
+        }
+        sqlx::raw_sql(TASK_COMPLETION_SCHEMA)
             .execute(&writable)
             .await
             .map_err(|error| {
-                format!("Falha ao atualizar pacote antigo para o schema 7: {error}")
+                format!("Falha ao atualizar pacote antigo para o schema 8: {error}")
             })?;
         writable.close().await;
         load_workspace_read_only(&upgraded_path).await
@@ -1620,7 +1629,7 @@ mod tests {
     use crate::{
         database::{
             CORE_SCHEMA, INITIAL_SCHEMA, PERSISTENT_GANTT_HISTORY_SCHEMA, PLAN_CONTROL_SCHEMA,
-            REUSE_SCHEMA, SCHEDULING_SCHEMA, SUMMARY_PREDECESSORS_SCHEMA,
+            REUSE_SCHEMA, SCHEDULING_SCHEMA, SUMMARY_PREDECESSORS_SCHEMA, TASK_COMPLETION_SCHEMA,
         },
         persistence::{
             self, BaselineBundleRecord, BaselineTaskRecord, DependencyRecord,
@@ -1689,6 +1698,7 @@ mod tests {
             PLAN_CONTROL_SCHEMA,
             SUMMARY_PREDECESSORS_SCHEMA,
             PERSISTENT_GANTT_HISTORY_SCHEMA,
+            TASK_COMPLETION_SCHEMA,
         ] {
             sqlx::raw_sql(migration)
                 .execute(&pool)
@@ -1745,6 +1755,7 @@ mod tests {
             end_date: Some("2026-08-31".into()),
             duration_days: Some(1),
             deadline_date: Some("2026-09-05".into()),
+            completed_date: None,
             scheduling_mode: "AUTO".into(),
             position: 0,
             assignee: None,

@@ -17,15 +17,21 @@ com WCAG.
 - O projeto selecionado expõe `aria-current="page"`.
 - A Tabela possui legenda acessível e os botões de hierarquia e detalhes
   expõem o estado aberto por `aria-expanded`.
-- A barra horizontal sincronizada da Tabela pode receber foco e permanece
-  disponível sem percorrer a lista até a última tarefa.
+- A única barra horizontal da Tabela pode receber foco e permanece disponível
+  sem percorrer a lista até a última tarefa. A barra nativa concorrente fica
+  oculta, preservando touchpad e `Shift` + roda.
 - Tabela e Kanban oferecem menus de tarefa por clique direito e por botão
   acessível. Setas, `Home`, `End` e `Esc` controlam o menu e o foco retorna ao
-  acionador; campos editáveis preservam o menu nativo para copiar e colar.
-- Cada linha da Tabela expõe o estado do salvamento automático em uma região de
-  status textual, sem depender apenas da cor: **Alterada**, **Salvando…**,
-  **Salva** ou **Erro ao salvar**. O botão **Salvar** permanece disponível para
-  nova tentativa e uso por teclado enquanto houver alteração local.
+  acionador. Caixas de texto usam o menu claro do Chrono com recortar, copiar,
+  colar e selecionar tudo antes das ações da tarefa. Outros controles de
+  formulário usam o mesmo menu visual para copiar o valor; falhas do clipboard
+  geram alerta textual, e o foco retorna ao controle de origem.
+- Cada linha da Tabela expõe alterações pendentes, salvamento e erro por um
+  indicador compacto com nome acessível e tooltip, sem depender apenas da cor.
+  O estado normal não repete o texto **Salva**; o botão **Salvar** permanece
+  disponível somente enquanto existir uma alteração pendente.
+- Reordenação e menu de ações compartilham uma única faixa horizontal, mantendo
+  alvos com nome acessível e reduzindo a altura ocupada pela coluna.
 - A ajuda do código visual pode receber foco e está associada à sua explicação.
 - A contagem dos filtros anuncia alterações de forma não interruptiva.
 - As abas Tabela, Kanban e Gantt preservam navegação por setas, `Home` e `End`.
@@ -40,6 +46,10 @@ com WCAG.
 - O Kanban mantém o seletor **Status** como alternativa ao arrastar, anuncia a
   gravação e apresenta datas no formato `DD/MM/AAAA`. O destino do arraste é
   realçado; a alça dedicada usa Pointer Events, validados no WebView2 real.
+- A conclusão de uma atividade usa um diálogo modal comum à Tabela, ao Kanban e
+  ao Gantt. O diálogo expõe em texto os dados já preenchidos, prende e restaura
+  o foco, aceita cancelamento por `Esc` e só então grava **Concluída** com 100%
+  e a data real. A reabertura usa o mesmo padrão e solicita o novo progresso.
 - O Gantt mantém o inspetor nativo como alternativa aos gestos. Em tarefas
   automáticas, mover a barra ajusta o lag FS; a borda esquerda permanece
   protegida, a direita altera a duração e tarefas-resumo não têm edição direta.

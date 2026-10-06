@@ -4,7 +4,7 @@ Este é o registro vivo de execução do Chrono Project. Ele traduz o roadmap de
 
 `AGENTS.md` continua sendo a fonte de verdade para produto, arquitetura e regras operacionais. Este documento não substitui a especificação e não deve introduzir escopo incompatível com ela.
 
-Última atualização: **3 de outubro de 2026**.
+Última atualização: **5 de outubro de 2026**.
 
 ## Como manter este documento
 
@@ -31,14 +31,14 @@ Não usar percentuais subjetivos. O progresso deve ser demonstrado por entregáv
 
 | Item | Estado |
 | --- | --- |
-| Etapa do produto | Estabilização e evolução de produtividade após a versão 0.2.1 |
-| Fase ativa | Revisões de UX e scheduling; etapas 1 a 6 concluídas localmente |
-| Próxima fase | Auditoria manual do incremento e definição do próximo recorte |
-| Versão da aplicação | `0.2.2` |
-| Versão do schema SQLite | `7` |
-| Último commit de referência | `0169029` — `docs: require complete release notes before publication` |
-| Branch de trabalho | `main`; etapas 1 a 6 do incremento ainda não commitadas |
-| Checkpoints obrigatórios | A, B, C e D concluídos; E reservado à distribuição |
+| Etapa do produto | Preparação do patch 0.2.3 após validação funcional |
+| Fase ativa | Hardening e distribuição Windows |
+| Próxima fase | Commit/push pelo usuário e publicação por `PUBLISH_RELEASE.ps1` |
+| Versão da aplicação | `0.2.3` |
+| Versão do schema SQLite | `8` |
+| Último commit de referência | `bd5bd3b` — `Build out Chrono Project foundation and core features` |
+| Branch de trabalho | `main`; candidato 0.2.3 ainda não commitado |
+| Checkpoints obrigatórios | A, B, C e D concluídos; E em preparação |
 | Funcionalidades de negócio | Core, scheduler, views, reutilização e portabilidade implementados |
 
 ## Visão geral das fases
@@ -354,7 +354,7 @@ Estado: **Concluída localmente; não commitada**.
   contraste, tooltip **Adicionar predecessora** e nome acessível;
 - [x] manter a rolagem horizontal disponível na parte inferior da área visível;
 - [x] criar menu de contexto próprio para tarefas, reutilizável entre Tabela,
-  Kanban e Gantt, sem remover copiar/colar nativo dos campos de texto;
+  Kanban e Gantt, com copiar/colar integrado nos campos de texto;
 - [x] começar o menu da Tabela com detalhes, subtarefa, predecessora, duplicação, template
   e exclusão, respeitando contexto, teclado e confirmação destrutiva.
 - [x] oferecer no Kanban mudança de status, duplicação e exclusão pelo mesmo
@@ -362,7 +362,7 @@ Estado: **Concluída localmente; não commitada**.
 
 Evidências: componente de menu reutilizável, abertura por clique direito ou
 botão acessível, navegação por setas, `Home`, `End` e `Esc`, restauração de foco,
-preservação do menu nativo nos campos e sincronização bidirecional da rolagem.
+ações de texto no menu próprio e sincronização bidirecional da rolagem.
 ESLint, TypeScript, 143 testes regulares, jornada E2E e build Vite aprovados.
 
 ### Etapa 3 — Salvamento automático
@@ -487,8 +487,8 @@ Estado: **Planejada**. Versão-alvo sugerida: `0.2.1`.
 ### Decisões obrigatórias antes da implementação
 
 - Registrar em ADR a exceção do marco à regra atual `duração 1 = mesmo dia`.
-- Definir se a mudança para `Concluída` força 100% e se 100% força o status,
-  incluindo o comportamento de `Cancelada`.
+- [x] `Concluída` força 100% após confirmação; 100% isoladamente não muda o
+  status. `Cancelada` permanece neutra e não conserva data de conclusão (ADR 028).
 - Definir se o modo calculado será configurado por tarefa-resumo ou por projeto.
 
 ### Integridade e testes obrigatórios
@@ -1521,6 +1521,46 @@ matriz no host, na VM limpa e no CI Windows.
 - O instalador padrão atualizou a instalação local em 1,32 s. A aplicação abriu
   e encerrou normalmente, com backup anterior e preservação do banco durante as
   migrations. Commit, push, CI de `main`, tag e publicação não foram executados.
+
+### 5 de outubro de 2026 — Consistência de barras e menus
+
+- A versão 0.2.2 já publicada permaneceu imutável; a correção foi aberta para o
+  próximo patch.
+- A barra horizontal nativa da Tabela foi eliminada, deixando somente o controle
+  fixo e sincronizado. Touchpad e `Shift` + roda continuam percorrendo colunas.
+- O clique direito em caixas de texto deixou de abrir o menu escuro do WebView2.
+  O menu claro do Chrono oferece recortar, copiar, colar e selecionar tudo antes
+  das ações da tarefa.
+- Foram auditados `overflow`, menus de contexto e botões em Tabela, Kanban,
+  Gantt, projetos e diálogos. Não foram encontradas outras barras concorrentes
+  ou superfícies nativas escapando da identidade visual.
+- ESLint, TypeScript, 162 testes TypeScript/React, jornada E2E e 39 testes Rust
+  foram aprovados. O build desktop também passou; os cinco cenários WebView2
+  não chegaram à interface porque o runtime não expôs CDP em 20 segundos. Não
+  houve mudança de schema ou dados.
+- Commit: `não commitado`; nenhuma operação remota foi executada.
+- A revisão crítica adicionou tratamento explícito de falhas do clipboard,
+  restauração de foco, cobertura dos demais controles de formulário, seed
+  determinístico do cronograma artificial e proteção contra arquivar um
+  executável de produção como inspeção. A massa validada contém 205 tarefas,
+  119 relações FS, nenhuma violação referencial e nenhum ciclo.
+
+### 5 de outubro de 2026 — Candidato de distribuição 0.2.3
+
+- A conclusão de atividades passou a registrar a data real, exigir confirmação
+  nas três visualizações e distinguir conclusão no prazo ou com atraso. Reabrir
+  limpa a data real e solicita novo progresso; tarefas-resumo com descendentes
+  abertos não podem ser concluídas.
+- A migration `0008_task_completion.sql` elevou o schema para 8, normalizou
+  conclusões existentes e preservou a importação dos schemas 4 a 7.
+- Versões npm, Cargo e Tauri foram alinhadas em 0.2.3. Foram aprovados 171 testes
+  TypeScript/React, 39 testes Rust, E2E, desempenho, lint, typecheck, auditoria
+  npm, Cargo fmt/check/Clippy e as assinaturas dos dois instaladores.
+- O executável, o instalador padrão e o instalador offline foram gerados no
+  staging v0.2.3 com hashes documentados. O cache nativo versionado do WebView2
+  passou a ser a política oficial para evitar downloads repetidos do mesmo
+  redistribuível.
+- Commit, push, CI, tag e publicação ainda não foram executados.
 
 ## Regras permanentes de acompanhamento
 

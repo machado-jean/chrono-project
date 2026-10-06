@@ -55,14 +55,15 @@ schema; reordenar ou mudar o pai recalcula a identificação imediatamente.
 ## Persistência
 
 O plugin SQL oficial do Tauri abre o SQLite e aplica as migrations registradas.
-O schema atual é a versão 7: `0001_initial.sql` cria metadados técnicos,
+O schema atual é a versão 8: `0001_initial.sql` cria metadados técnicos,
 `0002_core.sql` introduz calendários, projetos, tarefas e tags, e
 `0003_scheduling.sql` acrescenta exceções, calendário opcional por tarefa e
 dependências FS. `0004_reuse.sql` cria as tabelas relacionais de templates e
 `0005_plan_control.sql` acrescenta prazo-limite e fotografias de linha de base;
 `0006_summary_predecessors.sql` permite resumo como predecessora e mantém
 resumos proibidos no lado sucessor; `0007_persistent_gantt_history.sql`
-persiste as pilhas limitadas de desfazer/refazer do Gantt por projeto.
+persiste as pilhas limitadas de desfazer/refazer do Gantt por projeto; e
+`0008_task_completion.sql` registra a data factual de conclusão.
 
 Migrations são registradas no processo nativo, aplicadas em transação pelo
 plugin e versionadas de forma crescente. O adapter carrega explicitamente a URL
