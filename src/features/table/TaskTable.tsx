@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type FocusEvent, type KeyboardEvent, type MouseEvent, type RefObject, type SyntheticEvent, type WheelEvent } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type FocusEvent, type KeyboardEvent, type MouseEvent, type PointerEvent as ReactPointerEvent, type ReactNode, type RefObject, type SyntheticEvent, type WheelEvent } from "react";
 
 import type { Calendar } from "../../domain/calendars/calendar";
 import { isWorkingDay } from "../../domain/calendars/working-calendar";
@@ -84,9 +84,10 @@ interface TableColumnHeaderProps {
   readonly help: string;
   readonly className?: string;
   readonly alignTooltip?: "center" | "left" | "right";
+  readonly resizeHandle?: ReactNode;
 }
 
-function TableColumnHeader({ label, help, className, alignTooltip = "center" }: TableColumnHeaderProps) {
+function TableColumnHeader({ label, help, className, alignTooltip = "center", resizeHandle }: TableColumnHeaderProps) {
   const helpId = useId();
   return (
     <th className={className}>
@@ -108,8 +109,29 @@ function TableColumnHeader({ label, help, className, alignTooltip = "center" }: 
           </span>
         </span>
       </span>
+      {resizeHandle}
     </th>
   );
+}
+
+const TASK_COLUMN_WIDTH_STORAGE_KEY = "chrono-project.task-table.task-column-width";
+const DEFAULT_TASK_COLUMN_WIDTH = 380;
+const MIN_TASK_COLUMN_WIDTH = 300;
+const MAX_TASK_COLUMN_WIDTH = 760;
+
+function clampTaskColumnWidth(width: number): number {
+  return Math.min(MAX_TASK_COLUMN_WIDTH, Math.max(MIN_TASK_COLUMN_WIDTH, Math.round(width)));
+}
+
+function initialTaskColumnWidth(): number {
+  try {
+    const storedWidth = Number(window.localStorage.getItem(TASK_COLUMN_WIDTH_STORAGE_KEY));
+    return Number.isFinite(storedWidth) && storedWidth > 0
+      ? clampTaskColumnWidth(storedWidth)
+      : DEFAULT_TASK_COLUMN_WIDTH;
+  } catch {
+    return DEFAULT_TASK_COLUMN_WIDTH;
+  }
 }
 
 interface DependencyLagEditorProps {
@@ -1018,6 +1040,8 @@ export function TaskTable({
   const tableScrollRef = useRef<HTMLDivElement>(null);
   const horizontalScrollRef = useRef<HTMLDivElement>(null);
   const [tableScrollWidth, setTableScrollWidth] = useState(0);
+  const [taskColumnWidth, setTaskColumnWidth] = useState(initialTaskColumnWidth);
+  const taskColumnResize = useRef<{ readonly pointerId: number; readonly startX: number; readonly startWidth: number } | null>(null);
   const [todayDate, setTodayDate] = useState(localTodayDate);
   const forcedExpandedIds = new Set(
     tasks
@@ -1083,6 +1107,14 @@ export function TaskTable({
   }, [selectedEditableTasks, setSelectedSchedulingMode]);
 
   useEffect(() => {
+    try {
+      window.localStorage.setItem(TASK_COLUMN_WIDTH_STORAGE_KEY, String(taskColumnWidth));
+    } catch {
+      // A preferência é opcional quando o armazenamento do WebView está indisponível.
+    }
+  }, [taskColumnWidth]);
+
+  useEffect(() => {
     const tableScroll = tableScrollRef.current;
     if (tableScroll === null) return;
     const updateWidth = (): void => {
@@ -1097,7 +1129,44 @@ export function TaskTable({
       observer?.disconnect();
       window.removeEventListener("resize", updateWidth);
     };
-  }, [showBaselineColumns, tasks.length]);
+  }, [showBaselineColumns, taskColumnWidth, tasks.length]);
+
+  const handleTaskColumnResizeStart = (event: ReactPointerEvent<HTMLSpanElement>): void => {
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    taskColumnResize.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startWidth: taskColumnWidth,
+    };
+  };
+
+  const handleTaskColumnResizeMove = (event: ReactPointerEvent<HTMLSpanElement>): void => {
+    const resize = taskColumnResize.current;
+    if (resize === null || resize.pointerId !== event.pointerId) return;
+    setTaskColumnWidth(clampTaskColumnWidth(resize.startWidth + event.clientX - resize.startX));
+  };
+
+  const handleTaskColumnResizeEnd = (event: ReactPointerEvent<HTMLSpanElement>): void => {
+    if (taskColumnResize.current?.pointerId !== event.pointerId) return;
+    taskColumnResize.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+  };
+
+  const handleTaskColumnResizeKeyDown = (event: KeyboardEvent<HTMLSpanElement>): void => {
+    if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+      event.preventDefault();
+      setTaskColumnWidth((current) => clampTaskColumnWidth(current + (event.key === "ArrowRight" ? 16 : -16)));
+    } else if (event.key === "Home") {
+      event.preventDefault();
+      setTaskColumnWidth(MIN_TASK_COLUMN_WIDTH);
+    } else if (event.key === "End") {
+      event.preventDefault();
+      setTaskColumnWidth(MAX_TASK_COLUMN_WIDTH);
+    }
+  };
 
   const handleCreate = async (event: SyntheticEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
@@ -1184,12 +1253,42 @@ export function TaskTable({
       {conflicts.length > 0 ? <div className="schedule-conflict-summary" role="status"><strong>{conflicts.length} {conflicts.length === 1 ? "conflito de agendamento" : "conflitos de agendamento"}</strong><span>Tarefas manuais foram preservadas. Abra a linha correspondente para revisar a data mínima indicada.</span></div> : null}
       <div className="table-scroll-shell">
       <div ref={tableScrollRef} className="table-scroll" onScroll={(event) => { if (horizontalScrollRef.current !== null) horizontalScrollRef.current.scrollLeft = event.currentTarget.scrollLeft; }} onWheel={handleTableWheel}>
-        <table className="task-table">
+        <table
+          className="task-table"
+          style={{
+            "--task-column-width": `${String(taskColumnWidth)}px`,
+            "--task-table-min-width": `${String((showBaselineColumns ? 2120 : 1780) + taskColumnWidth - DEFAULT_TASK_COLUMN_WIDTH)}px`,
+          } as CSSProperties}
+        >
           <caption className="sr-only">Tarefas do projeto com cronograma, predecessoras e ações de edição</caption>
           <thead>
             <tr>
               <th className="selection-cell"><span className="sr-only">Selecionar</span></th>
-              <TableColumnHeader className="task-column" label="Tarefa" help="Nome da atividade. A numeração mostra sua posição na hierarquia do projeto." alignTooltip="left" />
+              <TableColumnHeader
+                className="task-column"
+                label="Tarefa"
+                help="Nome da atividade. A numeração mostra sua posição na hierarquia do projeto. Arraste a borda direita para ajustar a largura."
+                alignTooltip="left"
+                resizeHandle={(
+                  <span
+                    className="table-column-resize-handle"
+                    role="separator"
+                    aria-label="Ajustar largura da coluna Tarefa"
+                    aria-orientation="vertical"
+                    aria-valuemin={MIN_TASK_COLUMN_WIDTH}
+                    aria-valuemax={MAX_TASK_COLUMN_WIDTH}
+                    aria-valuenow={taskColumnWidth}
+                    tabIndex={0}
+                    title="Arraste para ajustar; duplo clique restaura a largura padrão"
+                    onDoubleClick={() => { setTaskColumnWidth(DEFAULT_TASK_COLUMN_WIDTH); }}
+                    onKeyDown={handleTaskColumnResizeKeyDown}
+                    onPointerDown={handleTaskColumnResizeStart}
+                    onPointerMove={handleTaskColumnResizeMove}
+                    onPointerUp={handleTaskColumnResizeEnd}
+                    onPointerCancel={handleTaskColumnResizeEnd}
+                  />
+                )}
+              />
               <TableColumnHeader className="predecessors-column" label="Predecessoras" help="Tarefas que precisam terminar antes desta começar. O intervalo define a espera em dias úteis." />
               <TableColumnHeader className="status-column" label="Status" help="Situação atual da tarefa, como não iniciada, em andamento, bloqueada ou concluída." />
               <TableColumnHeader className="priority-column" label="Prioridade" help="Importância relativa da tarefa. Não altera automaticamente suas datas." />

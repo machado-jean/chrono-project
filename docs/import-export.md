@@ -32,7 +32,7 @@ Limites da versão 1:
 
 ## Exportação
 
-**Exportar projeto** cria um snapshot consistente contendo apenas o projeto selecionado, suas tarefas, tags, dependências, linhas de base e calendários referenciados. Templates globais e outros projetos não são incluídos.
+**Exportar projeto** cria um snapshot consistente contendo apenas o projeto selecionado, suas tarefas, tags, dependências, linhas de base e calendários referenciados. Templates globais e outros projetos não são incluídos. O comando está disponível tanto no menu **Arquivo** quanto pelo clique direito sobre o projeto na barra lateral; os dois acessos executam exatamente o mesmo fluxo.
 
 **Exportar workspace** inclui todos os projetos, calendários, linhas de base e templates. O SQLite é copiado com `VACUUM INTO`; o pacote é montado em staging e publicado no caminho escolhido somente depois de finalizado.
 

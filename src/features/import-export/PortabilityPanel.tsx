@@ -6,6 +6,7 @@ import type {
   ProjectImportMode,
   WorkspaceRepository,
 } from "../../repositories/workspace-repository";
+import { safeFilename } from "./safe-filename";
 
 interface PortabilityPanelProps {
   readonly repository: WorkspaceRepository;
@@ -15,10 +16,6 @@ interface PortabilityPanelProps {
 }
 
 type ProjectChoice = ProjectImportMode | "IGNORE";
-
-function safeFilename(name: string): string {
-  return name.trim().replace(/[<>:"/\\|?*]+/g, "-").replace(/\s+/g, "-") || "projeto";
-}
 
 function packageSummary(preview: ImportPackagePreview): string {
   const projects = `${String(preview.projects.length)} ${preview.projects.length === 1 ? "projeto" : "projetos"}`;

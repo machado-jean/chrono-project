@@ -8,6 +8,7 @@ import { ProjectSidebar } from "../features/projects/ProjectSidebar";
 import { ProjectViews } from "../features/views/ProjectViews";
 import { TemplateLibrary } from "../features/templates/TemplateLibrary";
 import { PortabilityPanel } from "../features/import-export/PortabilityPanel";
+import { safeFilename } from "../features/import-export/safe-filename";
 import { TauriWorkspaceRepository } from "../repositories/tauri-workspace-repository";
 import type { WorkspaceRepository } from "../repositories/workspace-repository";
 import { useWorkspace } from "../state/use-workspace";
@@ -175,6 +176,10 @@ function App({ repository }: AppProps) {
         onSelect={workspace.selectProject}
         onCreate={workspace.createProject}
         onArchive={workspace.saveProject}
+        onExport={async (project) => {
+          const result = await activeRepository.exportProject(project.id, safeFilename(project.name));
+          return result?.path ?? null;
+        }}
         onDelete={workspace.removeProject}
         onToggle={() => { setSidebarCollapsed((current) => !current); }}
       />

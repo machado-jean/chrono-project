@@ -652,3 +652,49 @@ Artefatos finais em `.local/distribution/v0.2.3-staging/`:
 As duas assinaturas, `latest.json`, `BUILD_RECORD.json` e `SHA256SUMS.txt`
 foram validados localmente. A publicação permanece reservada ao usuário depois
 do commit, push e CI de `main`.
+
+## Validação local do candidato 0.2.4
+
+O candidato 0.2.4 reutilizou o mesmo toolchain aprovado da v0.2.3: Windows 11
+x64, Node.js 24.20.0, npm 11.19.0, Rust/Cargo 1.98.0 e Tauri CLI 2.11.4.
+Nenhuma ferramenta global foi instalada ou atualizada.
+
+A auditoria inicial identificou `source-map-js` 1.2.1 como dependência
+transitiva vulnerável de Vite/PostCSS e jsdom/css-tree. O lockfile foi atualizado
+somente para 1.2.2, `npm ci` foi repetido e `npm audit --audit-level=low`
+terminou sem vulnerabilidades conhecidas.
+
+Foram aprovados 173 testes TypeScript/React, 39 testes Rust, 1 jornada E2E,
+2 testes de desempenho, lint, typecheck, Cargo fmt/check/Clippy, executável de
+distribuição e os instaladores padrão/offline assinados. O teste Rust dependente
+de uma base externa v0.2.1 permaneceu ignorado explicitamente.
+
+Tempos totais observados nesta preparação:
+
+| Etapa | Tempo total |
+| --- | ---: |
+| `npm ci` inicial | 8,71 s |
+| `npm ci` após correção do lockfile | 7,51 s |
+| `npm run check` final | 47,34 s |
+| jornada E2E da aplicação e testes Rust | 12,49 s |
+| testes de desempenho | 0,94 s |
+| auditoria npm final | 1,54 s |
+| Cargo fmt | 0,32 s |
+| Cargo check | 9,93 s |
+| Cargo test `--all-targets` | 1,86 s |
+| Cargo Clippy | 4,85 s |
+| executável sem bundle | 43,73 s |
+| instalador padrão, NSIS e assinatura | 78,61 s |
+| instalador offline, NSIS e assinatura | 155,67 s |
+
+O instalador offline reutilizou o redistribuível WebView2 já presente no cache
+nativo do Tauri. Os dois bundles chegaram ao prompt `Password:` e prosseguiram
+com Enter, conforme a chave local registrada sem passphrase.
+
+Artefatos promovidos para `.local/distribution/v0.2.4/`:
+
+| Arquivo | Tamanho | SHA-256 |
+| --- | ---: | --- |
+| `chrono-project.exe` | 21.540.864 bytes | `1E2595982A116204000ED8CE5052AA66E70D7FC557929057D2868AA3F11AB1F6` |
+| `Chrono-Project-Windows-x64-Setup.exe` | 7.332.640 bytes | `9AF24DFD4BA6ABDA97978A2C76EABC09871DF03685794B3C22EB0042579DCB04` |
+| `Chrono-Project-Windows-x64-Offline-Setup.exe` | 222.448.397 bytes | `5229DD85CB719A5675B97B09471645F34CD126A1B50EAFBE1C476528A0D8BECD` |

@@ -450,6 +450,24 @@ class MemoryWorkspaceRepository implements WorkspaceRepository {
 }
 
 describe("aplicação Chrono Project", () => {
+  it("permite ajustar e restaurar a largura da coluna Tarefa", async () => {
+    window.localStorage.removeItem("chrono-project.task-table.task-column-width");
+    render(<App repository={new MemoryWorkspaceRepository({ projects: [project()] })} />);
+    await screen.findByRole("heading", { name: "Tabela de tarefas" });
+
+    const resizeHandle = screen.getByRole("separator", { name: "Ajustar largura da coluna Tarefa" });
+    expect(resizeHandle).toHaveAttribute("aria-valuenow", "380");
+
+    fireEvent.keyDown(resizeHandle, { key: "ArrowRight" });
+    expect(resizeHandle).toHaveAttribute("aria-valuenow", "396");
+    await waitFor(() => {
+      expect(window.localStorage.getItem("chrono-project.task-table.task-column-width")).toBe("396");
+    });
+
+    fireEvent.doubleClick(resizeHandle);
+    expect(resizeHandle).toHaveAttribute("aria-valuenow", "380");
+  });
+
   it("recolhe e restaura a lista de projetos", async () => {
     render(<App repository={new MemoryWorkspaceRepository({ projects: [project()] })} />);
     await screen.findByRole("heading", { name: "Tabela de tarefas" });
@@ -475,6 +493,21 @@ describe("aplicação Chrono Project", () => {
     vi.spyOn(window, "confirm").mockReturnValueOnce(true);
     fireEvent.click(screen.getByRole("menuitem", { name: "Excluir projeto…" }));
     await waitFor(() => { expect(repository.projects).toHaveLength(0); });
+  });
+
+  it("exporta um projeto pelo menu de contexto da barra lateral", async () => {
+    const repository = new MemoryWorkspaceRepository({ projects: [project()] });
+    const exportProject = vi.spyOn(repository, "exportProject");
+    render(<App repository={repository} />);
+    await screen.findByRole("heading", { name: "Tabela de tarefas" });
+
+    fireEvent.contextMenu(screen.getByRole("button", { name: /Projeto Alfa/ }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Exportar projeto…" }));
+
+    await waitFor(() => {
+      expect(exportProject).toHaveBeenCalledWith(PROJECT_ID, "Projeto-Alfa");
+    });
+    expect(await screen.findByText("Projeto exportado para C:\\exports\\projeto.chronoproject")).toBeVisible();
   });
 
   it("oferece relatório, atividades e Gantt no diálogo de PDF", async () => {

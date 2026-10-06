@@ -206,9 +206,16 @@ A barra lateral de projetos pode ser recolhida pelo botão **Recolher projetos**
 No modo compacto, o botão **Mostrar projetos** restaura a navegação sem sair do
 projeto atual. Os cabeçalhos editáveis da Tabela possuem um botão de informação
 acessível por mouse e teclado; seu balão é elevado acima das colunas vizinhas.
+A coluna **Tarefa** começa mais larga e pode ser redimensionada pelo divisor em
+sua borda direita. A preferência é mantida localmente entre execuções; as setas
+ajustam a largura pelo teclado e um duplo clique restaura o tamanho padrão. As
+colunas **Prioridade**, **Progresso**, **Duração** e **Prazo-limite** reservam o
+espaço necessário para manter título e botão de informação totalmente visíveis.
 O clique direito em um projeto abre ações rápidas para arquivar, restaurar ou
-excluir. As mesmas ações continuam disponíveis no menu superior **Projeto** como
-alternativa acessível por teclado.
+excluir e também permite exportar diretamente o projeto para um pacote
+`.chronoproject`. O pacote pode ser recuperado pelo comando **Importar pacote**
+do menu **Arquivo**. As mesmas ações de gestão continuam disponíveis no menu
+superior **Projeto** como alternativa acessível por teclado.
 
 ## Auditoria manual da Fase 4
 

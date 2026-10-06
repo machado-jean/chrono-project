@@ -14,6 +14,7 @@ interface ProjectSidebarProps {
     readonly description: string | null;
   }) => Promise<unknown>;
   readonly onArchive: (project: Project) => Promise<boolean>;
+  readonly onExport: (project: Project) => Promise<string | null>;
   readonly onDelete: (projectId: string) => Promise<boolean>;
   readonly onToggle: () => void;
 }
@@ -32,6 +33,7 @@ export function ProjectSidebar({
   onSelect,
   onCreate,
   onArchive,
+  onExport,
   onDelete,
   onToggle,
 }: ProjectSidebarProps) {
@@ -40,6 +42,8 @@ export function ProjectSidebar({
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [contextMenu, setContextMenu] = useState<ProjectContextMenu | null>(null);
+  const [exportingProjectId, setExportingProjectId] = useState<string | null>(null);
+  const [exportNotice, setExportNotice] = useState<{ readonly kind: "success" | "error"; readonly text: string } | null>(null);
   const contextMenuRef = useRef<HTMLDivElement>(null);
   const visibleProjects = projects.filter((project) => showArchived || !project.isArchived);
 
@@ -65,7 +69,7 @@ export function ProjectSidebar({
     setContextMenu({
       project,
       x: Math.min(event.clientX, window.innerWidth - 230),
-      y: Math.min(event.clientY, window.innerHeight - 125),
+      y: Math.min(event.clientY, window.innerHeight - 165),
     });
   };
 
@@ -73,6 +77,23 @@ export function ProjectSidebar({
     setContextMenu(null);
     if (window.confirm(`Excluir definitivamente “${project.name}” e todas as suas tarefas? Esta ação não pode ser desfeita.`)) {
       void onDelete(project.id);
+    }
+  };
+
+  const exportProject = async (project: Project): Promise<void> => {
+    setContextMenu(null);
+    setExportingProjectId(project.id);
+    setExportNotice(null);
+    try {
+      const path = await onExport(project);
+      if (path !== null) setExportNotice({ kind: "success", text: `Projeto exportado para ${path}` });
+    } catch (error) {
+      setExportNotice({
+        kind: "error",
+        text: error instanceof Error ? error.message : "Não foi possível exportar o projeto.",
+      });
+    } finally {
+      setExportingProjectId(null);
     }
   };
 
@@ -152,6 +173,12 @@ export function ProjectSidebar({
         <input type="checkbox" checked={showArchived} onChange={(event) => { setShowArchived(event.target.checked); }} />
         Mostrar arquivados
       </label>
+      {exportingProjectId === null ? null : <p className="sidebar-operation-message" role="status">Exportando projeto…</p>}
+      {exportNotice === null ? null : (
+        <p className={`sidebar-operation-message ${exportNotice.kind}`} role={exportNotice.kind === "error" ? "alert" : "status"}>
+          {exportNotice.text}
+        </p>
+      )}
       {contextMenu === null ? null : (
         <div
           ref={contextMenuRef}
@@ -161,6 +188,9 @@ export function ProjectSidebar({
           style={{ left: contextMenu.x, top: contextMenu.y }}
         >
           <strong>{contextMenu.project.name}</strong>
+          <button role="menuitem" type="button" disabled={disabled || exportingProjectId !== null} onClick={() => { void exportProject(contextMenu.project); }}>
+            Exportar projeto…
+          </button>
           <button role="menuitem" type="button" disabled={disabled} onClick={() => {
             setContextMenu(null);
             void onArchive({ ...contextMenu.project, isArchived: !contextMenu.project.isArchived });

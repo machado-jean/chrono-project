@@ -45,7 +45,7 @@ As Fases 0 a 6 estão concluídas e o Checkpoint Git 7 foi consolidado no commit
 - identidade visual própria com relógio mecânico em forma de `C`, aplicada ao
   executável e à interface;
 - barra lateral de projetos recolhível e ajuda contextual acessível na Tabela;
-- menu de contexto para arquivar, restaurar ou excluir projetos;
+- menu de contexto para exportar, arquivar, restaurar ou excluir projetos;
 - duplicação de tarefa isolada, árvore completa e projeto, sempre com novos UUIDs;
 - preservação somente das dependências internas ao conteúdo duplicado;
 - biblioteca global de templates de árvores, com aplicação em qualquer projeto
@@ -111,6 +111,7 @@ Documentação principal:
 - [notas do Chrono Project v0.2.1](docs/releases/v0.2.1.md);
 - [notas do Chrono Project v0.2.2](docs/releases/v0.2.2.md);
 - [notas do Chrono Project v0.2.3](docs/releases/v0.2.3.md);
+- [notas do Chrono Project v0.2.4](docs/releases/v0.2.4.md);
 - [decisões arquiteturais](docs/decisions/).
 
 ## Preparação

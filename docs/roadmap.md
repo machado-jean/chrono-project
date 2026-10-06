@@ -31,13 +31,13 @@ Não usar percentuais subjetivos. O progresso deve ser demonstrado por entregáv
 
 | Item | Estado |
 | --- | --- |
-| Etapa do produto | Preparação do patch 0.2.3 após validação funcional |
+| Etapa do produto | Preparação do patch 0.2.4 após validação funcional |
 | Fase ativa | Hardening e distribuição Windows |
 | Próxima fase | Commit/push pelo usuário e publicação por `PUBLISH_RELEASE.ps1` |
-| Versão da aplicação | `0.2.3` |
+| Versão da aplicação | `0.2.4` |
 | Versão do schema SQLite | `8` |
-| Último commit de referência | `bd5bd3b` — `Build out Chrono Project foundation and core features` |
-| Branch de trabalho | `main`; candidato 0.2.3 ainda não commitado |
+| Último commit de referência | `0cc438f` — `Build core project and task management foundation` |
+| Branch de trabalho | `main`; candidato 0.2.4 ainda não commitado |
 | Checkpoints obrigatórios | A, B, C e D concluídos; E em preparação |
 | Funcionalidades de negócio | Core, scheduler, views, reutilização e portabilidade implementados |
 
@@ -1561,6 +1561,22 @@ matriz no host, na VM limpa e no CI Windows.
   passou a ser a política oficial para evitar downloads repetidos do mesmo
   redistribuível.
 - Commit, push, CI, tag e publicação ainda não foram executados.
+
+### 5 de outubro de 2026 — Candidato de distribuição 0.2.4
+
+- A coluna Tarefa ganhou largura inicial de 380 pixels, redimensionamento por
+  arrasto e teclado, persistência local e restauração por duplo clique.
+- Prioridade, Progresso, Duração e Prazo-limite foram ampliadas apenas o
+  necessário para manter seus botões de informação visíveis.
+- O menu de contexto de projeto passou a exportar diretamente um pacote
+  `.chronoproject`, reutilizando o mesmo fluxo aceito pela importação.
+- `source-map-js` foi atualizado de 1.2.1 para 1.2.2 após uma vulnerabilidade
+  alta detectada pela auditoria npm; a repetição retornou zero vulnerabilidades.
+- Foram aprovados 173 testes TypeScript/React, 39 testes Rust, E2E, desempenho,
+  lint, typecheck, Cargo fmt/check/Clippy e os três binários de distribuição.
+- Executável e instaladores padrão/offline v0.2.4 foram gerados, assinados,
+  verificados e promovidos para a pasta final. Commit, push, CI, tag e
+  publicação permanecem reservados ao usuário.
 
 ## Regras permanentes de acompanhamento
 
