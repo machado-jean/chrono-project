@@ -17,6 +17,7 @@ import {
 } from "../../../src/features/gantt/gantt-adapter";
 import {
   EMPTY_TASK_FILTERS,
+  UNASSIGNED_FILTER_VALUE,
   filterTasks,
   includeTaskAncestors,
 } from "../../../src/features/views/task-filters";
@@ -75,14 +76,21 @@ describe("filtros compartilhados das visualizações", () => {
   });
   const tasks = [parent, child, successor];
 
-  it("combina texto, status, prioridade, conclusão, datas e tags", () => {
+  it("combina texto, status, prioridade, datas e tags", () => {
     expect(filterTasks(tasks, { ...EMPTY_TASK_FILTERS, query: "ana" })).toEqual([child]);
     expect(filterTasks(tasks, { ...EMPTY_TASK_FILTERS, status: "IN_PROGRESS" })).toEqual([child]);
     expect(filterTasks(tasks, { ...EMPTY_TASK_FILTERS, priority: "HIGH" })).toEqual([parent]);
-    expect(filterTasks(tasks, { ...EMPTY_TASK_FILTERS, completion: "COMPLETED" })).toEqual([successor]);
-    expect(filterTasks(tasks, { ...EMPTY_TASK_FILTERS, completion: "OPEN" })).toEqual([parent, child]);
     expect(filterTasks(tasks, { ...EMPTY_TASK_FILTERS, dateFrom: "2026-09-01" })).toEqual([successor]);
     expect(filterTasks(tasks, { ...EMPTY_TASK_FILTERS, tag: "react" })).toEqual([child]);
+    expect(filterTasks(tasks, { ...EMPTY_TASK_FILTERS, assignees: ["Ana"] })).toEqual([child]);
+    expect(filterTasks(tasks, { ...EMPTY_TASK_FILTERS, assignees: ["Ana", UNASSIGNED_FILTER_VALUE] })).toEqual(tasks);
+    const criticalities = new Map([[successor.id, {
+      taskId: successor.id,
+      totalSlackDays: 0,
+      isCritical: true,
+      isNearCritical: false,
+    }]]);
+    expect(filterTasks(tasks, { ...EMPTY_TASK_FILTERS, criticality: "CRITICAL" }, criticalities)).toEqual([successor]);
   });
 
   it("inclui ancestrais somente como contexto de hierarquia", () => {

@@ -258,6 +258,23 @@ async function scheduleTask(title: string, startDate: string, duration: string):
   await waitFor(() => { expect(taskRow(title)).not.toHaveClass("dirty"); }, { timeout: 5_000 });
 }
 
+async function addPredecessor(
+  successorTitle: string,
+  predecessorOutlineLabel: string,
+): Promise<void> {
+  const row = taskRow(successorTitle);
+  const openButtons = within(row).getAllByRole("button", {
+    name: `Adicionar predecessoras a ${successorTitle}`,
+  });
+  const openButton = openButtons[0];
+  if (openButton === undefined) throw new Error("Botão de predecessoras não encontrado.");
+  fireEvent.click(openButton);
+  const dialog = await screen.findByRole("dialog", { name: "Adicionar predecessoras" });
+  fireEvent.click(within(dialog).getByRole("checkbox", { name: predecessorOutlineLabel }));
+  fireEvent.click(within(dialog).getByRole("button", { name: "Adicionar 1 predecessora" }));
+  await waitFor(() => { expect(dialog).not.toBeInTheDocument(); });
+}
+
 describe("jornada E2E mínima da aplicação", () => {
   it("planeja, propaga, alterna views, duplica, exporta e importa semanticamente", async () => {
     const repository = new JourneyRepository();
@@ -282,11 +299,9 @@ describe("jornada E2E mínima da aplicação", () => {
     const taskA = repository.tasks.find(({ title }) => title === "Tarefa A");
     const taskB = repository.tasks.find(({ title }) => title === "Tarefa B");
     if (taskA === undefined || taskB === undefined) throw new Error("Cadeia de tarefas incompleta.");
-    fireEvent.change(screen.getByLabelText("Nova predecessora de Tarefa B"), { target: { value: taskA.id } });
-    fireEvent.click(screen.getByLabelText("Confirmar predecessora de Tarefa B"));
+    await addPredecessor("Tarefa B", "1. Tarefa A");
     await waitFor(() => { expect(repository.dependencies).toHaveLength(1); });
-    fireEvent.change(screen.getByLabelText("Nova predecessora de Tarefa C"), { target: { value: taskB.id } });
-    fireEvent.click(screen.getByLabelText("Confirmar predecessora de Tarefa C"));
+    await addPredecessor("Tarefa C", "2. Tarefa B");
     await waitFor(() => { expect(repository.dependencies).toHaveLength(2); });
 
     const rowA = taskRow("Tarefa A");

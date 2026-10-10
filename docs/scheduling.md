@@ -228,9 +228,47 @@ O Gantt é uma superfície de comando, não uma segunda fonte de cronograma:
 - o botão direito na linha abre **Excluir dependência**. O menu genérico do
   WebView2 é suprimido dentro do gráfico, e os identificadores visuais da
   biblioteca são convertidos de volta aos UUIDs persistidos;
-- conclusão e cronograma alterados pelo Gantt podem ser desfeitos/refeitos pelos
-  botões da view ou por `Ctrl+Z`/`Ctrl+Y`; a cascata é recalculada na mesma
-  transação.
+- edições salvas na Tabela, no Kanban e no Gantt podem ser desfeitas/refeitas
+  por `Ctrl+Z`/`Ctrl+Shift+Z`; os botões do Gantt usam o mesmo histórico. A
+  restauração inclui exatamente a cascata já calculada e é persistida em uma
+  única transação.
+- a Tabela pode criar várias relações FS para a mesma sucessora em um lote; a
+  prévia executa o scheduler sobre o conjunto completo e a confirmação persiste
+  relações e datas uma única vez. `Ctrl+Z` remove o lote inteiro e
+  `Ctrl+Shift+Z` o restaura.
+- duas ou mais predecessoras podem ser gerenciadas em lote: um intervalo comum
+  ou a remoção do conjunto é persistido com a cascata em uma transação e forma
+  uma única operação reversível.
+
+## Caminho crítico e folga total
+
+O caminho crítico é uma análise pura, sem alterar datas. Quando habilitado no
+projeto, ele considera tarefas-folha programadas, dependências FS e o calendário
+efetivo de cada tarefa. A passagem reversa parte do **término previsto da rede**
+e calcula a folga total em dias úteis. Tarefas com folga zero pertencem ao
+caminho crítico; folgas entre um e dois dias úteis são classificadas como
+próximas do crítico.
+
+Redes desconectadas são comparadas ao mesmo término previsto, portanto uma cadeia
+que termina antes recebe folga. Separadamente, a **meta final do projeto** é o
+maior prazo-limite entre as tarefas não canceladas. A diferença entre o término
+previsto e a meta é apresentada como margem global positiva, nula ou negativa,
+sem alterar a criticidade das tarefas. Tarefas-resumo recebem a menor folga encontrada
+entre suas folhas somente para fins de apresentação. Tarefas canceladas e itens
+sem cronograma completo não entram no cálculo. Quando não existe ao menos uma
+relação FS entre tarefas programadas, a interface explica que a rede é
+insuficiente em vez de produzir um resultado enganoso.
+
+A Tabela apresenta um marcador junto ao título. O Gantt usa contorno vermelho
+contínuo nas barras críticas e violeta mineral tracejado nas quase críticas,
+ambos com espessura reforçada e uma
+legenda textual que informa também as respectivas faixas de folga. O filtro
+compartilhado oferece **Caminho crítico** e **Próximas do crítico**. O cálculo
+está coberto por `tests/unit/domain/critical-path.test.ts`.
+O diálogo de explicação reúne **Término previsto**, **Meta final** e **Margem
+global**. Se a análise estiver indisponível, ele não exibe apenas um estado
+genérico: informa se faltam datas, dependências programadas ou um calendário
+utilizado pelo projeto.
 
 Todo gesto final passa por validação, scheduler e persistência transacional. Em
 falha, a projeção é reconstruída a partir do estado persistido. Eventos internos
@@ -242,7 +280,7 @@ como edições do usuário.
 - dependências SS, FF e SF;
 - dependências entre projetos;
 - inferência de uma data anterior após remover a última predecessora;
-- caminho crítico e nivelamento de recursos continuam fora do Gantt da Fase 4;
+- nivelamento de recursos continua fora do escopo;
 - mover árvores completas de tarefas-resumo permanece fora do escopo.
 
 ## Importação de feriados oficiais

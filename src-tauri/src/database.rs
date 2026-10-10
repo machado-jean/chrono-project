@@ -4,7 +4,7 @@ use tauri_plugin_sql::{Migration, MigrationKind};
 
 pub const PRODUCTION_DATABASE_URL: &str = "sqlite:chronoproject.sqlite";
 pub const DATABASE_FILENAME: &str = "chronoproject.sqlite";
-pub const DATABASE_SCHEMA_VERSION: i64 = 8;
+pub const DATABASE_SCHEMA_VERSION: i64 = 9;
 pub const SCHEDULING_MIGRATION_VERSION: i64 = 3;
 pub const PERSISTENT_GANTT_HISTORY_MIGRATION_VERSION: i64 = 7;
 
@@ -19,6 +19,8 @@ pub(crate) const PERSISTENT_GANTT_HISTORY_SCHEMA: &str =
     include_str!("../migrations/0007_persistent_gantt_history.sql");
 pub(crate) const TASK_COMPLETION_SCHEMA: &str =
     include_str!("../migrations/0008_task_completion.sql");
+pub(crate) const PROJECT_CRITICAL_PATH_SCHEMA: &str =
+    include_str!("../migrations/0009_project_critical_path.sql");
 
 pub fn uses_shared_development_database() -> bool {
     !uses_e2e_database() && cfg!(any(debug_assertions, feature = "shared-dev-data"))
@@ -151,9 +153,15 @@ pub fn migrations() -> Vec<Migration> {
             kind: MigrationKind::Up,
         },
         Migration {
-            version: DATABASE_SCHEMA_VERSION,
+            version: 8,
             description: "record factual task completion dates",
             sql: TASK_COMPLETION_SCHEMA,
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: DATABASE_SCHEMA_VERSION,
+            description: "add critical path preference",
+            sql: PROJECT_CRITICAL_PATH_SCHEMA,
             kind: MigrationKind::Up,
         },
     ]
@@ -168,8 +176,8 @@ mod tests {
     use super::{
         database_path_for_mode, migrations, sqlite_url, CORE_SCHEMA, DATABASE_FILENAME,
         DATABASE_SCHEMA_VERSION, INITIAL_SCHEMA, PERSISTENT_GANTT_HISTORY_MIGRATION_VERSION,
-        PERSISTENT_GANTT_HISTORY_SCHEMA, PLAN_CONTROL_SCHEMA, REUSE_SCHEMA,
-        SCHEDULING_MIGRATION_VERSION, SCHEDULING_SCHEMA, SUMMARY_PREDECESSORS_SCHEMA,
+        PERSISTENT_GANTT_HISTORY_SCHEMA, PLAN_CONTROL_SCHEMA, PROJECT_CRITICAL_PATH_SCHEMA,
+        REUSE_SCHEMA, SCHEDULING_MIGRATION_VERSION, SCHEDULING_SCHEMA, SUMMARY_PREDECESSORS_SCHEMA,
         TASK_COMPLETION_SCHEMA,
     };
 
@@ -260,6 +268,10 @@ mod tests {
             .execute(&mut database)
             .await
             .expect("task completion migration should execute");
+        sqlx::raw_sql(PROJECT_CRITICAL_PATH_SCHEMA)
+            .execute(&mut database)
+            .await
+            .expect("project critical path migration should execute");
 
         let schema_version: String =
             sqlx::query_scalar("SELECT value FROM app_metadata WHERE key = 'schema_version'")
@@ -545,6 +557,10 @@ mod tests {
             .execute(&mut database)
             .await
             .expect("task completion migration should execute");
+        sqlx::raw_sql(PROJECT_CRITICAL_PATH_SCHEMA)
+            .execute(&mut database)
+            .await
+            .expect("project critical path migration should execute");
 
         let version: String =
             sqlx::query_scalar("SELECT value FROM app_metadata WHERE key = 'schema_version'")
@@ -567,7 +583,7 @@ mod tests {
         .fetch_one(&mut database)
         .await
         .expect("legacy completion should be normalized");
-        assert_eq!(version, "8");
+        assert_eq!(version, DATABASE_SCHEMA_VERSION.to_string());
         assert_eq!(dependency_count, 1);
         assert_eq!(history_table_count, 1);
         assert_eq!(completed_task, (100, Some("2026-10-02".into())));
@@ -622,6 +638,10 @@ mod tests {
             .execute(&mut database)
             .await
             .expect("schema 8 should apply to the copy");
+        sqlx::raw_sql(PROJECT_CRITICAL_PATH_SCHEMA)
+            .execute(&mut database)
+            .await
+            .expect("schema 9 should apply to the copy");
         let integrity: String = sqlx::query_scalar("PRAGMA quick_check")
             .fetch_one(&mut database)
             .await
@@ -665,6 +685,7 @@ mod tests {
                 5,
                 6,
                 PERSISTENT_GANTT_HISTORY_MIGRATION_VERSION,
+                8,
                 DATABASE_SCHEMA_VERSION
             ]
         );

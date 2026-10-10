@@ -7,7 +7,7 @@ export interface VisibleTask {
   readonly hasChildren: boolean;
 }
 
-export const MAX_TASK_HIERARCHY_LEVELS = 4;
+export const MAX_TASK_HIERARCHY_LEVELS = 5;
 
 export function taskHierarchyDepth(tasks: readonly Task[], taskId: string): number {
   const tasksById = new Map(tasks.map((task) => [task.id, task]));

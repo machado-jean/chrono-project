@@ -1,12 +1,15 @@
 import type { Task, TaskPriority, TaskStatus } from "../../domain/tasks/task";
+import type { TaskCriticality } from "../../domain/scheduling/critical-path";
 
-export type CompletionFilter = "ALL" | "COMPLETED" | "OPEN";
+export type CriticalityFilter = "ALL" | "CRITICAL" | "NEAR_CRITICAL";
+export const UNASSIGNED_FILTER_VALUE = "__UNASSIGNED__";
 
 export interface TaskFilters {
   readonly query: string;
   readonly status: TaskStatus | "ALL";
   readonly priority: TaskPriority | "ALL";
-  readonly completion: CompletionFilter;
+  readonly criticality: CriticalityFilter;
+  readonly assignees: readonly string[];
   readonly dateFrom: string;
   readonly dateTo: string;
   readonly tag: string;
@@ -16,7 +19,8 @@ export const EMPTY_TASK_FILTERS: TaskFilters = {
   query: "",
   status: "ALL",
   priority: "ALL",
-  completion: "ALL",
+  criticality: "ALL",
+  assignees: [],
   dateFrom: "",
   dateTo: "",
   tag: "",
@@ -48,20 +52,38 @@ function matchesDateRange(task: Task, dateFrom: string, dateTo: string): boolean
   return true;
 }
 
-export function taskMatchesFilters(task: Task, filters: TaskFilters): boolean {
+export function taskMatchesFilters(
+  task: Task,
+  filters: TaskFilters,
+  criticalityByTaskId: ReadonlyMap<string, TaskCriticality> = new Map(),
+): boolean {
   if (!matchesText(task, filters.query)) return false;
   if (filters.status !== "ALL" && task.status !== filters.status) return false;
   if (filters.priority !== "ALL" && task.priority !== filters.priority) return false;
-  if (filters.completion === "COMPLETED" && task.status !== "COMPLETED") return false;
-  if (filters.completion === "OPEN" && task.status === "COMPLETED") return false;
+  const criticality = criticalityByTaskId.get(task.id);
+  if (filters.criticality === "CRITICAL" && criticality?.isCritical !== true) return false;
+  if (filters.criticality === "NEAR_CRITICAL" && criticality?.isNearCritical !== true) return false;
+  if (filters.assignees.length > 0) {
+    const matchesUnassigned = task.assignee === null &&
+      filters.assignees.includes(UNASSIGNED_FILTER_VALUE);
+    const matchesNamed = task.assignee !== null && filters.assignees.some(
+      (assignee) => assignee !== UNASSIGNED_FILTER_VALUE &&
+        normalized(assignee) === normalized(task.assignee ?? ""),
+    );
+    if (!matchesUnassigned && !matchesNamed) return false;
+  }
   if (!matchesDateRange(task, filters.dateFrom, filters.dateTo)) return false;
 
   const tag = normalized(filters.tag);
   return tag.length === 0 || task.tags.some((candidate) => normalized(candidate).includes(tag));
 }
 
-export function filterTasks(tasks: readonly Task[], filters: TaskFilters): readonly Task[] {
-  return tasks.filter((task) => taskMatchesFilters(task, filters));
+export function filterTasks(
+  tasks: readonly Task[],
+  filters: TaskFilters,
+  criticalityByTaskId: ReadonlyMap<string, TaskCriticality> = new Map(),
+): readonly Task[] {
+  return tasks.filter((task) => taskMatchesFilters(task, filters, criticalityByTaskId));
 }
 
 export function includeTaskAncestors(
@@ -86,7 +108,8 @@ export function includeTaskAncestors(
 
 export function hasActiveTaskFilters(filters: TaskFilters): boolean {
   return Object.entries(filters).some(([key, value]) => {
-    if (key === "status" || key === "priority" || key === "completion") return value !== "ALL";
+    if (key === "status" || key === "priority" || key === "criticality") return value !== "ALL";
+    if (key === "assignees") return Array.isArray(value) && value.length > 0;
     return value !== "";
   });
 }

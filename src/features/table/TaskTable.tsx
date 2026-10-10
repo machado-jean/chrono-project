@@ -8,12 +8,15 @@ import {
   type ScheduleHealth,
 } from "../../domain/planning/baseline";
 import type { TaskDependency } from "../../domain/scheduling/dependency";
+import { validateGraph } from "../../domain/scheduling/graph";
 import {
   previewDependencyImpact,
+  previewDependenciesImpact,
   type DependencyImpactPreview,
 } from "../../domain/scheduling/dependency-impact";
 import { applyScheduleEdit, type ScheduleEdit } from "../../domain/scheduling/schedule-edit";
 import type { SchedulingConflict } from "../../domain/scheduling/scheduler";
+import type { TaskCriticality } from "../../domain/scheduling/critical-path";
 import { requireDateOnly } from "../../domain/shared/validation";
 import { ContextMenu, type ContextMenuItem } from "../../components/ContextMenu";
 import {
@@ -57,6 +60,7 @@ interface TaskTableProps {
   readonly dependencies: readonly TaskDependency[];
   readonly conflicts: readonly SchedulingConflict[];
   readonly baselineTasks: readonly BaselineTask[];
+  readonly criticalityByTaskId: ReadonlyMap<string, TaskCriticality>;
   readonly disabled: boolean;
   readonly onCreate: (input: { readonly title: string; readonly parentId: string | null; readonly parentDependencyPolicy?: "KEEP" | "TRANSFER" | "REMOVE" }) => Promise<Task | null>;
   readonly onSave: (
@@ -69,8 +73,10 @@ interface TaskTableProps {
   ) => Promise<boolean>;
   readonly onMove: (taskId: string, direction: "up" | "down") => Promise<boolean>;
   readonly onDelete: (taskId: string) => Promise<boolean>;
-  readonly onCreateDependency: (input: { readonly predecessorId: string; readonly successorId: string; readonly lagDays: number }) => Promise<TaskDependency | null>;
+  readonly onCreateDependencies: (inputs: readonly { readonly predecessorId: string; readonly successorId: string; readonly lagDays: number }[]) => Promise<readonly TaskDependency[] | null>;
+  readonly onSaveDependencies: (dependencies: readonly TaskDependency[], historyLabel?: string) => Promise<boolean>;
   readonly onDeleteDependency: (dependencyId: string) => Promise<boolean>;
+  readonly onDeleteDependencies: (dependencyIds: readonly string[], historyLabel?: string) => Promise<boolean>;
   readonly onDuplicate: (taskId: string, includeDescendants: boolean) => Promise<Task | null>;
   readonly onCreateTemplate: (input: {
     readonly rootTaskId: string;
@@ -201,10 +207,12 @@ interface PredecessorCellProps {
   readonly lagDrafts: Readonly<Record<string, number>>;
   readonly isSummary: boolean;
   readonly disabled: boolean;
-  readonly selectRef: RefObject<HTMLSelectElement | null>;
-  readonly onCreate: TaskTableProps["onCreateDependency"];
+  readonly selectRef: RefObject<HTMLButtonElement | null>;
+  readonly onCreateMany: TaskTableProps["onCreateDependencies"];
+  readonly onSaveMany: TaskTableProps["onSaveDependencies"];
   readonly onLagChange: (dependencyId: string, lagDays: number) => void;
   readonly onDelete: TaskTableProps["onDeleteDependency"];
+  readonly onDeleteMany: TaskTableProps["onDeleteDependencies"];
 }
 
 function PredecessorCell({
@@ -217,14 +225,24 @@ function PredecessorCell({
   isSummary,
   disabled,
   selectRef,
-  onCreate,
+  onCreateMany,
+  onSaveMany,
   onLagChange,
   onDelete,
+  onDeleteMany,
 }: PredecessorCellProps) {
-  const [predecessorId, setPredecessorId] = useState("");
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(new Set());
   const [lagDays, setLagDays] = useState(0);
+  const [isAdding, setIsAdding] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
+  const [managerOpen, setManagerOpen] = useState(false);
+  const [managedIds, setManagedIds] = useState<ReadonlySet<string>>(new Set());
+  const [managedLagDaysById, setManagedLagDaysById] = useState<Readonly<Record<string, number>>>({});
+  const [isManaging, setIsManaging] = useState(false);
   const [pendingImpact, setPendingImpact] = useState<{
-    readonly action: "ADD" | "REMOVE";
+    readonly action: "REMOVE";
     readonly dependency: TaskDependency;
     readonly preview: DependencyImpactPreview;
   } | null>(null);
@@ -232,41 +250,92 @@ function PredecessorCell({
   const outlineNumbers = buildTaskOutlineNumbers(tasks);
   const existing = dependencies.filter((dependency) => dependency.successorId === task.id);
   const existingIds = new Set(existing.map((dependency) => dependency.predecessorId));
-  const available = tasks.filter(
-    (candidate) =>
-      candidate.id !== task.id && !existingIds.has(candidate.id),
+  const hierarchyOrder = flattenVisibleTasks(
+    tasks,
+    new Set(tasks.map(({ id }) => id)),
+  ).map(({ task }) => task);
+  const available = hierarchyOrder.filter(
+    (candidate) => {
+      if (candidate.id === task.id || existingIds.has(candidate.id)) return false;
+      const validationDependency: TaskDependency = {
+        id: "00000000-0000-4000-8000-000000000099",
+        projectId: task.projectId,
+        predecessorId: candidate.id,
+        successorId: task.id,
+        type: "FS",
+        lagDays: 0,
+        createdAt: task.updatedAt,
+        updatedAt: task.updatedAt,
+      };
+      try {
+        validateGraph(tasks, [...dependencies, validationDependency]);
+        return true;
+      } catch {
+        return false;
+      }
+    },
   );
+  const normalizedSearch = searchQuery.trim().toLocaleLowerCase("pt-BR");
+  const filteredAvailable = available.filter((candidate) => {
+    const label = taskOutlineLabel(candidate, outlineNumbers).toLocaleLowerCase("pt-BR");
+    return normalizedSearch.length === 0 || label.includes(normalizedSearch);
+  });
+  const selectedTasks = hierarchyOrder.filter((candidate) => selectedIds.has(candidate.id));
+  const previewDependencies = selectedTasks.map((candidate, index): TaskDependency => ({
+    id: `00000000-0000-4000-8000-${String(index + 100).padStart(12, "0")}`,
+    projectId: task.projectId,
+    predecessorId: candidate.id,
+    successorId: task.id,
+    type: "FS",
+    lagDays,
+    createdAt: task.updatedAt,
+    updatedAt: task.updatedAt,
+  }));
+  const batchPreview = previewDependencies.length === 0 ? null : previewDependenciesImpact({
+    tasks,
+    dependencies,
+    calendars,
+    projectCalendarId,
+    dependenciesToChange: previewDependencies,
+    action: "ADD",
+  });
+  const managedDependencies = existing.filter(({ id }) => managedIds.has(id));
+  const removalPreview = managedDependencies.length === 0 ? null : previewDependenciesImpact({
+    tasks,
+    dependencies,
+    calendars,
+    projectCalendarId,
+    dependenciesToChange: managedDependencies,
+    action: "REMOVE",
+  });
 
   if (isSummary) return <span className="summary-dependency-label">Datas derivadas</span>;
 
-  const commitAddDependency = async (): Promise<void> => {
-    if (predecessorId.length === 0) return;
-    const created = await onCreate({ predecessorId, successorId: task.id, lagDays });
-    if (created !== null) {
-      setPredecessorId("");
+  const commitAddDependencies = async (): Promise<void> => {
+    if (selectedTasks.length === 0) return;
+    setIsAdding(true);
+    setAddError(null);
+    try {
+      const created = await onCreateMany(selectedTasks.map(({ id }) => ({
+        predecessorId: id,
+        successorId: task.id,
+        lagDays,
+      })));
+      if (created === null || created.length !== selectedTasks.length) {
+        setAddError("Não foi possível adicionar as predecessoras. Verifique as relações selecionadas.");
+        return;
+      }
+      setSelectedIds(new Set());
+      setSearchQuery("");
       setLagDays(0);
+      setPickerOpen(false);
+    } catch (error) {
+      setAddError(error instanceof Error
+        ? error.message
+        : "Não foi possível adicionar esta predecessora.");
+    } finally {
+      setIsAdding(false);
     }
-  };
-
-  const addDependency = async (): Promise<void> => {
-    if (predecessorId.length === 0) return;
-    const predecessorIsSummary = tasks.some((candidate) => candidate.parentId === predecessorId);
-    if (!predecessorIsSummary) {
-      await commitAddDependency();
-      return;
-    }
-    const timestamp = new Date().toISOString();
-    const dependency: TaskDependency = {
-      id: crypto.randomUUID(), projectId: task.projectId, predecessorId,
-      successorId: task.id, type: "FS", lagDays, createdAt: timestamp, updatedAt: timestamp,
-    };
-    setPendingImpact({
-      action: "ADD",
-      dependency,
-      preview: previewDependencyImpact({
-        tasks, dependencies, calendars, projectCalendarId, dependency, action: "ADD",
-      }),
-    });
   };
 
   const deleteDependency = async (dependency: TaskDependency): Promise<void> => {
@@ -290,8 +359,48 @@ function PredecessorCell({
     const pending = pendingImpact;
     if (pending === null) return;
     setPendingImpact(null);
-    if (pending.action === "ADD") await commitAddDependency();
-    else await onDelete(pending.dependency.id);
+    await onDelete(pending.dependency.id);
+  };
+
+  const applyManagedLag = async (): Promise<void> => {
+    if (managedDependencies.length === 0) return;
+    setIsManaging(true);
+    setAddError(null);
+    try {
+      const saved = await onSaveMany(
+        managedDependencies.map((dependency) => ({
+          ...dependency,
+          lagDays: managedLagDaysById[dependency.id] ?? dependency.lagDays,
+        })),
+        `${String(managedDependencies.length)} intervalo${managedDependencies.length === 1 ? "" : "s"} de predecessoras atualizado${managedDependencies.length === 1 ? "" : "s"} em ${taskOutlineLabel(task, outlineNumbers)}`,
+      );
+      if (!saved) throw new Error("Não foi possível atualizar as predecessoras selecionadas.");
+      setManagedIds(new Set());
+      setManagerOpen(false);
+    } catch (error) {
+      setAddError(error instanceof Error ? error.message : "Não foi possível atualizar as predecessoras.");
+    } finally {
+      setIsManaging(false);
+    }
+  };
+
+  const removeManagedDependencies = async (): Promise<void> => {
+    if (managedDependencies.length === 0) return;
+    setIsManaging(true);
+    setAddError(null);
+    try {
+      const removed = await onDeleteMany(
+        managedDependencies.map(({ id }) => id),
+        `${String(managedDependencies.length)} predecessora${managedDependencies.length === 1 ? "" : "s"} removida${managedDependencies.length === 1 ? "" : "s"} de ${taskOutlineLabel(task, outlineNumbers)}`,
+      );
+      if (!removed) throw new Error("Não foi possível remover as predecessoras selecionadas.");
+      setManagedIds(new Set());
+      setManagerOpen(false);
+    } catch (error) {
+      setAddError(error instanceof Error ? error.message : "Não foi possível remover as predecessoras.");
+    } finally {
+      setIsManaging(false);
+    }
   };
 
   return (
@@ -317,13 +426,140 @@ function PredecessorCell({
         </ul>
       )}
       <div className="dependency-add">
-        <select ref={selectRef} aria-label={`Nova predecessora de ${task.title}`} value={predecessorId} disabled={disabled || available.length === 0} onChange={(event) => { setPredecessorId(event.target.value); }}>
-          <option value="">Adicionar…</option>
-          {available.map((candidate) => <option key={candidate.id} value={candidate.id}>{taskOutlineLabel(candidate, outlineNumbers)}</option>)}
-        </select>
-        <input type="number" min={0} value={lagDays} aria-label={`Novo intervalo de ${task.title}`} title="Intervalo: 0 inicia no mesmo dia do fim; 1 no próximo dia útil" disabled={disabled || predecessorId.length === 0} onChange={(event) => { setLagDays(Number(event.target.value)); }} />
-        <button className="dependency-add-button" type="button" aria-label={`Confirmar predecessora de ${task.title}`} title="Adicionar predecessora" disabled={disabled || predecessorId.length === 0} onClick={() => { void addDependency(); }}>+</button>
+        <button ref={selectRef} className="dependency-picker-button" type="button" aria-label={`Adicionar predecessoras a ${task.title}`} disabled={disabled || isAdding || available.length === 0} onClick={() => { setPickerOpen(true); setAddError(null); }}>Adicionar…</button>
+        <button className="dependency-add-button" type="button" aria-label={`Adicionar predecessoras a ${task.title}`} title="Adicionar predecessoras" disabled={disabled || isAdding || available.length === 0} onClick={() => { setPickerOpen(true); setAddError(null); }}>+</button>
+        {existing.length < 2 ? null : <button className="dependency-manage-button" type="button" disabled={disabled} onClick={() => {
+          setManagedIds(new Set());
+          setManagedLagDaysById(Object.fromEntries(existing.map((dependency) => [dependency.id, dependency.lagDays])));
+          setManagerOpen(true);
+          setAddError(null);
+        }}>Gerenciar</button>}
       </div>
+      {addError === null ? null : <p className="dependency-add-error" role="alert">{addError}</p>}
+      {pickerOpen ? (
+        <ModalDialog
+          className="template-dialog dependency-picker-dialog"
+          labelledBy="dependency-picker-title"
+          describedBy="dependency-picker-description"
+          closeDisabled={isAdding}
+          onClose={() => { if (!isAdding) setPickerOpen(false); }}
+        >
+          <div>
+            <h2 id="dependency-picker-title">Adicionar predecessoras</h2>
+            <p id="dependency-picker-description">Pesquise e selecione uma ou várias tarefas para {taskOutlineLabel(task, outlineNumbers)}.</p>
+          </div>
+          <label className="dependency-picker-search">
+            <span>Buscar por número ou título</span>
+            <input autoFocus type="search" value={searchQuery} placeholder="Ex.: 1.2.1.3 ou Comando" onChange={(event) => { setSearchQuery(event.target.value); }} />
+          </label>
+          {existing.length === 0 ? null : (
+            <div className="dependency-picker-existing">
+              <strong>Já adicionadas</strong>
+              {existing.map((dependency) => (
+                <span key={dependency.id}>✓ {taskById.has(dependency.predecessorId) ? taskOutlineLabel(taskById.get(dependency.predecessorId) as Task, outlineNumbers) : "Tarefa removida"}</span>
+              ))}
+            </div>
+          )}
+          <fieldset className="dependency-picker-options">
+            <legend>Tarefas disponíveis</legend>
+            {filteredAvailable.length === 0 ? <p>Nenhuma tarefa válida encontrada.</p> : filteredAvailable.map((candidate) => {
+              const summary = tasks.some(({ parentId }) => parentId === candidate.id);
+              return (
+                <label key={candidate.id}>
+                  <input type="checkbox" checked={selectedIds.has(candidate.id)} onChange={(event) => {
+                    setSelectedIds((current) => {
+                      const next = new Set(current);
+                      if (event.target.checked) next.add(candidate.id); else next.delete(candidate.id);
+                      return next;
+                    });
+                  }} />
+                  <span>{taskOutlineLabel(candidate, outlineNumbers)}</span>
+                  {summary ? <small>Resumo</small> : null}
+                </label>
+              );
+            })}
+          </fieldset>
+          <label className="dependency-picker-lag">
+            <span>Intervalo comum (dias úteis)</span>
+            <input type="number" min={0} value={lagDays} disabled={selectedIds.size === 0} onChange={(event) => { setLagDays(Number(event.target.value)); }} />
+          </label>
+          <section className="dependency-picker-preview" aria-live="polite">
+            <strong>Prévia do impacto</strong>
+            {batchPreview === null ? <p>Selecione ao menos uma tarefa.</p> : batchPreview.changes.length === 0 ? <p>As datas atuais não serão alteradas.</p> : (
+              <ul className="dependency-impact-list">{batchPreview.changes.map((change) => (
+                <li key={change.taskId}><strong>{change.title}</strong><span>{change.beforeStartDate === null ? "Sem data" : displayDate(change.beforeStartDate)} – {change.beforeEndDate === null ? "Sem data" : displayDate(change.beforeEndDate)}</span><span aria-hidden="true">→</span><span>{change.afterStartDate === null ? "Sem data" : displayDate(change.afterStartDate)} – {change.afterEndDate === null ? "Sem data" : displayDate(change.afterEndDate)}</span></li>
+              ))}</ul>
+            )}
+          </section>
+          {addError === null ? null : <p className="dependency-add-error" role="alert">{addError}</p>}
+          <div className="dialog-actions">
+            <button type="button" disabled={isAdding} onClick={() => { setPickerOpen(false); }}>Cancelar</button>
+            <button className="primary-button" type="button" disabled={isAdding || selectedIds.size === 0} onClick={() => { void commitAddDependencies(); }}>{isAdding ? "Adicionando…" : `Adicionar ${String(selectedIds.size)} predecessora${selectedIds.size === 1 ? "" : "s"}`}</button>
+          </div>
+        </ModalDialog>
+      ) : null}
+      {managerOpen ? (
+        <ModalDialog
+          className="template-dialog dependency-picker-dialog"
+          labelledBy="dependency-manager-title"
+          describedBy="dependency-manager-description"
+          closeDisabled={isManaging}
+          onClose={() => { if (!isManaging) setManagerOpen(false); }}
+        >
+          <div>
+            <h2 id="dependency-manager-title">Gerenciar predecessoras</h2>
+            <p id="dependency-manager-description">Selecione relações para ajustar o intervalo ou remover em uma única operação.</p>
+          </div>
+          <fieldset className="dependency-picker-options">
+            <legend>Predecessoras atuais</legend>
+            {existing.map((dependency) => {
+              const predecessorLabel = taskById.has(dependency.predecessorId)
+                ? taskOutlineLabel(taskById.get(dependency.predecessorId) as Task, outlineNumbers)
+                : "Tarefa removida";
+              return (
+                <div className="dependency-manager-row" key={dependency.id}>
+                  <label className="dependency-manager-selection">
+                    <input type="checkbox" checked={managedIds.has(dependency.id)} onChange={(event) => {
+                      setManagedIds((current) => {
+                        const next = new Set(current);
+                        if (event.target.checked) next.add(dependency.id); else next.delete(dependency.id);
+                        return next;
+                      });
+                    }} />
+                    <span>{predecessorLabel}</span>
+                  </label>
+                  <label className="dependency-manager-lag">
+                    <span>Intervalo</span>
+                    <input
+                      type="number"
+                      min={0}
+                      aria-label={`Intervalo de ${predecessorLabel}`}
+                      value={managedLagDaysById[dependency.id] ?? dependency.lagDays}
+                      disabled={isManaging}
+                      onChange={(event) => {
+                        const value = Number(event.target.value);
+                        setManagedLagDaysById((current) => ({ ...current, [dependency.id]: value }));
+                        setManagedIds((current) => new Set(current).add(dependency.id));
+                      }}
+                    />
+                    <small>dias úteis</small>
+                  </label>
+                </div>
+              );
+            })}
+          </fieldset>
+          <section className="dependency-picker-preview" aria-live="polite">
+            <strong>Impacto da remoção</strong>
+            {removalPreview === null ? <p>Selecione ao menos uma predecessora.</p> : removalPreview.changes.length === 0 ? <p>Remover a seleção não altera as datas atuais.</p> : <p>{String(removalPreview.changes.length)} tarefa(s) terá(ão) as datas recalculadas.</p>}
+          </section>
+          {addError === null ? null : <p className="dependency-add-error" role="alert">{addError}</p>}
+          <div className="dialog-actions dependency-manager-actions">
+            <button type="button" disabled={isManaging} onClick={() => { setManagerOpen(false); }}>Cancelar</button>
+            <button type="button" disabled={isManaging || managedIds.size === 0} onClick={() => { void removeManagedDependencies(); }}>Remover selecionadas</button>
+            <button className="primary-button" type="button" disabled={isManaging || managedIds.size === 0} onClick={() => { void applyManagedLag(); }}>Aplicar intervalos</button>
+          </div>
+        </ModalDialog>
+      ) : null}
       {pendingImpact === null ? null : (
         <ModalDialog
           className="template-dialog dependency-impact-dialog"
@@ -334,7 +570,7 @@ function PredecessorCell({
           <div>
             <h2 id="dependency-impact-title">Prévia do impacto no cronograma</h2>
             <p id="dependency-impact-description">
-              {pendingImpact.action === "ADD" ? "Adicionar" : "Remover"} a tarefa-resumo como predecessora
+              Remover a tarefa-resumo como predecessora
               {pendingImpact.preview.changes.length === 0
                 ? " não altera as datas atuais."
                 : ` altera ${String(pendingImpact.preview.changes.length)} tarefa${pendingImpact.preview.changes.length === 1 ? "" : "s"}.`}
@@ -355,7 +591,7 @@ function PredecessorCell({
           <div className="dialog-actions">
             <button type="button" onClick={() => { setPendingImpact(null); }}>Cancelar</button>
             <button className="primary-button" type="button" onClick={() => { void confirmImpact(); }}>
-              {pendingImpact.action === "ADD" ? "Adicionar predecessora" : "Remover predecessora"}
+              Remover predecessora
             </button>
           </div>
         </ModalDialog>
@@ -374,6 +610,7 @@ interface TaskRowProps {
   readonly dependencies: readonly TaskDependency[];
   readonly conflicts: readonly SchedulingConflict[];
   readonly baselineTask: BaselineTask | null;
+  readonly criticality: TaskCriticality | null;
   readonly showBaselineColumns: boolean;
   readonly todayDate: string;
   readonly selected: boolean;
@@ -387,8 +624,10 @@ interface TaskRowProps {
   readonly onSave: TaskTableProps["onSave"];
   readonly onMove: (direction: "up" | "down") => void;
   readonly onDelete: () => void;
-  readonly onCreateDependency: TaskTableProps["onCreateDependency"];
+  readonly onCreateDependencies: TaskTableProps["onCreateDependencies"];
+  readonly onSaveDependencies: TaskTableProps["onSaveDependencies"];
   readonly onDeleteDependency: TaskTableProps["onDeleteDependency"];
+  readonly onDeleteDependencies: TaskTableProps["onDeleteDependencies"];
   readonly onDuplicate: (includeDescendants: boolean) => void;
   readonly onPrepareTemplate: () => void;
 }
@@ -525,6 +764,7 @@ function TaskRow({
   dependencies,
   conflicts,
   baselineTask,
+  criticality,
   showBaselineColumns,
   todayDate,
   selected,
@@ -538,8 +778,10 @@ function TaskRow({
   onSave,
   onMove,
   onDelete,
-  onCreateDependency,
+  onCreateDependencies,
+  onSaveDependencies,
   onDeleteDependency,
+  onDeleteDependencies,
   onDuplicate,
   onPrepareTemplate,
 }: TaskRowProps) {
@@ -555,7 +797,7 @@ function TaskRow({
   const detailsButtonRef = useRef<HTMLButtonElement>(null);
   const contextMenuButtonRef = useRef<HTMLButtonElement>(null);
   const contextMenuOriginRef = useRef<HTMLElement | null>(null);
-  const predecessorSelectRef = useRef<HTMLSelectElement>(null);
+  const predecessorSelectRef = useRef<HTMLButtonElement>(null);
   const draftRef = useRef(row.task);
   const tagsTextRef = useRef(row.task.tags.join(", "));
   const lagDraftsRef = useRef<Readonly<Record<string, number>>>({});
@@ -596,7 +838,7 @@ function TaskRow({
   );
   const subtaskTitle = canHaveSubtask
     ? "Criar subtarefa"
-    : "A hierarquia já atingiu o limite de quatro níveis.";
+    : "A hierarquia já atingiu o limite de cinco níveis.";
   const dependencyUpdates = dependencies
     .filter((dependency) => dependency.successorId === row.task.id)
     .flatMap((dependency) => {
@@ -915,6 +1157,11 @@ function TaskRow({
           <span className="task-outline-number" aria-label={`Estrutura ${outlineNumber}`}>{outlineNumber}.</span>
           <input className="cell-input title-input" aria-label="Título da tarefa" value={titleWithoutMatchingOutline(visibleDraft.title, outlineNumber)} disabled={disabled} onChange={(event) => { update({ title: event.target.value }); }} />
           {row.hasChildren ? <span className="summary-badge">Resumo</span> : null}
+          {criticality === null ? null : criticality.isCritical ? (
+            <span className="criticality-badge critical" title="Folga zero na rede: esta tarefa pertence ao caminho que controla o término previsto">◆ Crítica</span>
+          ) : criticality.isNearCritical ? (
+            <span className="criticality-badge near" title={`${String(criticality.totalSlackDays)} dia(s) útil(eis) de folga total`}>◇ +{String(criticality.totalSlackDays)}d</span>
+          ) : null}
           <button
             className={`schedule-lock-button${datesLocked ? " locked" : ""}`}
             type="button"
@@ -933,7 +1180,7 @@ function TaskRow({
         </div>
         {taskConflicts.map((conflict) => <p className="conflict-message" key={`${conflict.kind}-${conflict.requiredStartDate}`}>{conflict.message}</p>)}
       </td>
-      <td><PredecessorCell task={row.task} tasks={tasks} dependencies={dependencies} calendars={calendars} projectCalendarId={projectCalendarId} lagDrafts={lagDrafts} isSummary={row.hasChildren} disabled={disabled} selectRef={predecessorSelectRef} onCreate={onCreateDependency} onLagChange={updateLag} onDelete={onDeleteDependency} /></td>
+      <td><PredecessorCell task={row.task} tasks={tasks} dependencies={dependencies} calendars={calendars} projectCalendarId={projectCalendarId} lagDrafts={lagDrafts} isSummary={row.hasChildren} disabled={disabled} selectRef={predecessorSelectRef} onCreateMany={onCreateDependencies} onSaveMany={onSaveDependencies} onLagChange={updateLag} onDelete={onDeleteDependency} onDeleteMany={onDeleteDependencies} /></td>
       <td><select className="cell-select" aria-label="Status da tarefa" value={visibleDraft.status} disabled={disabled} onChange={(event) => { update({ status: event.target.value as TaskStatus }, true); }}>{TASK_STATUSES.map((status) => <option value={status} key={status}>{TASK_STATUS_LABELS[status]}</option>)}</select></td>
       <td><select className="cell-select" aria-label="Prioridade da tarefa" value={visibleDraft.priority} disabled={disabled} onChange={(event) => { update({ priority: event.target.value as TaskPriority }, true); }}>{TASK_PRIORITIES.map((priority) => <option value={priority} key={priority}>{TASK_PRIORITY_LABELS[priority]}</option>)}</select></td>
       <td><div className="progress-editor"><input className="cell-input number-input" type="number" min={0} max={100} aria-label="Progresso da tarefa" title={visibleDraft.status === "COMPLETED" ? "Reabra a atividade para alterar o progresso" : ""} value={visibleDraft.progress} disabled={disabled || visibleDraft.status === "COMPLETED"} onChange={(event) => { update({ progress: Number(event.target.value) }); }} /><span>%</span></div></td>
@@ -976,27 +1223,45 @@ function TaskRow({
         <td className="selection-cell" />
         <td colSpan={16}>
           <div className="task-details" id={detailsId} style={{ marginLeft: `${String(row.depth * 1.25)}rem` }} onKeyDown={closeDetailsOnEscape}>
-            <label>
-              <span className="detail-label">
-                Código
-                <span className="field-help" tabIndex={0} aria-label="Ajuda sobre o código visual" aria-describedby={codeHelpId} title="Identificador visual opcional, como DEV-01 ou 1.2. Ele não altera o UUID interno da tarefa.">
-                  i
-                  <span className="field-help-text" id={codeHelpId} role="tooltip">Identificador visual opcional, como DEV-01 ou 1.2. Ele não altera o UUID interno da tarefa.</span>
-                </span>
-              </span>
-              <input aria-label="Código visual da tarefa" disabled={disabled} value={visibleDraft.code ?? ""} onChange={(event) => { update({ code: event.target.value || null }); }} />
-            </label>
-            <label>Tarefa-pai<select disabled={disabled} value={visibleDraft.parentId ?? ""} onChange={(event) => { update({ parentId: event.target.value || null }, true); }}><option value="">Sem tarefa-pai</option>{parentOptions.map((task) => <option value={task.id} key={task.id}>{taskOutlineLabel(task, outlineNumbers)}</option>)}</select></label>
-            <label>
-              Datas
-              <button className={`detail-lock-button${datesLocked ? " locked" : ""}`} type="button" disabled={disabled || row.hasChildren} aria-pressed={datesLocked} onClick={toggleDateLock}>
-                <span aria-hidden="true">{datesLocked ? "🔒" : "🔓"}</span>
-                {datesLocked ? "Travadas" : "Automáticas"}
-              </button>
-            </label>
-            <label>Calendário<select disabled={disabled || row.hasChildren} value={visibleDraft.calendarId ?? ""} onChange={(event) => { updateCalendar(event.target.value || null); }}><option value="">Calendário do projeto</option>{calendars.filter((calendar) => calendar.id !== projectCalendarId).map((calendar) => <option value={calendar.id} key={calendar.id}>{calendar.name}</option>)}</select></label>
-            <label className="wide-detail">Descrição<textarea disabled={disabled} rows={2} value={visibleDraft.description ?? ""} onChange={(event) => { update({ description: event.target.value || null }); }} /></label>
-            <label className="wide-detail">Observações<textarea disabled={disabled} rows={2} value={visibleDraft.notes ?? ""} onChange={(event) => { update({ notes: event.target.value || null }); }} /></label>
+            <header className="task-details-header wide-detail">
+              <div>
+                <h3>Detalhes da tarefa</h3>
+                <span>{outlineNumber}. {visibleDraft.title}</span>
+              </div>
+              <span className="task-details-close-hint">Esc para fechar</span>
+              <button type="button" aria-label={`Fechar detalhes de ${visibleDraft.title}`} onClick={() => { setShowDetails(false); detailsButtonRef.current?.focus(); }}>×</button>
+            </header>
+            <section className="task-detail-group wide-detail" aria-labelledby={`${detailsId}-structure`}>
+              <h3 id={`${detailsId}-structure`}>Estrutura e agenda</h3>
+              <div className="task-detail-fields">
+                <label>
+                  <span className="detail-label">
+                    Código
+                    <span className="field-help" tabIndex={0} aria-label="Ajuda sobre o código visual" aria-describedby={codeHelpId} title="Identificador visual opcional, como DEV-01 ou 1.2. Ele não altera o UUID interno da tarefa.">
+                      i
+                      <span className="field-help-text" id={codeHelpId} role="tooltip">Identificador visual opcional, como DEV-01 ou 1.2. Ele não altera o UUID interno da tarefa.</span>
+                    </span>
+                  </span>
+                  <input aria-label="Código visual da tarefa" disabled={disabled} value={visibleDraft.code ?? ""} onChange={(event) => { update({ code: event.target.value || null }); }} />
+                </label>
+                <label>Tarefa-pai<select disabled={disabled} value={visibleDraft.parentId ?? ""} onChange={(event) => { update({ parentId: event.target.value || null }, true); }}><option value="">Sem tarefa-pai</option>{parentOptions.map((task) => <option value={task.id} key={task.id}>{taskOutlineLabel(task, outlineNumbers)}</option>)}</select></label>
+                <label>
+                  Política das datas
+                  <button className={`detail-lock-button${datesLocked ? " locked" : ""}`} type="button" disabled={disabled || row.hasChildren} aria-pressed={datesLocked} onClick={toggleDateLock}>
+                    <span aria-hidden="true">{datesLocked ? "🔒" : "🔓"}</span>
+                    {datesLocked ? "Travadas" : "Automáticas"}
+                  </button>
+                </label>
+                <label>Calendário<select disabled={disabled || row.hasChildren} value={visibleDraft.calendarId ?? ""} onChange={(event) => { updateCalendar(event.target.value || null); }}><option value="">Calendário do projeto</option>{calendars.filter((calendar) => calendar.id !== projectCalendarId).map((calendar) => <option value={calendar.id} key={calendar.id}>{calendar.name}</option>)}</select></label>
+              </div>
+            </section>
+            <section className="task-detail-group wide-detail" aria-labelledby={`${detailsId}-content`}>
+              <h3 id={`${detailsId}-content`}>Conteúdo</h3>
+              <div className="task-detail-text-fields">
+                <label>Descrição<textarea disabled={disabled} rows={3} value={visibleDraft.description ?? ""} onChange={(event) => { update({ description: event.target.value || null }); }} /></label>
+                <label>Observações<textarea disabled={disabled} rows={3} value={visibleDraft.notes ?? ""} onChange={(event) => { update({ notes: event.target.value || null }); }} /></label>
+              </div>
+            </section>
             {manualNonWorkingDate ? <p className="calendar-warning wide-detail">A tarefa manual usa uma data não útil. A data será preservada; escolha “Todos os dias” se ela deve participar automaticamente de fins de semana.</p> : null}
             <div className="task-reuse-actions wide-detail">
               <div>
@@ -1035,14 +1300,17 @@ export function TaskTable({
   dependencies,
   conflicts,
   baselineTasks,
+  criticalityByTaskId,
   disabled,
   onCreate,
   onSave,
   onSetSchedulingMode,
   onMove,
   onDelete,
-  onCreateDependency,
+  onCreateDependencies,
+  onSaveDependencies,
   onDeleteDependency,
+  onDeleteDependencies,
   onDuplicate,
   onCreateTemplate,
 }: TaskTableProps) {
@@ -1324,7 +1592,7 @@ export function TaskTable({
           style={{
             "--task-column-width": `${String(taskColumnWidth)}px`,
             "--predecessors-column-width": `${String(predecessorsColumnWidth)}px`,
-            "--task-table-min-width": `${String((showBaselineColumns ? 2120 : 1780) + taskColumnWidth - DEFAULT_TASK_COLUMN_WIDTH + predecessorsColumnWidth - DEFAULT_PREDECESSORS_COLUMN_WIDTH)}px`,
+            "--task-table-min-width": `${String((showBaselineColumns ? 2240 : 1900) + taskColumnWidth - DEFAULT_TASK_COLUMN_WIDTH + predecessorsColumnWidth - DEFAULT_PREDECESSORS_COLUMN_WIDTH)}px`,
           } as CSSProperties}
         >
           <caption className="sr-only">Tarefas do projeto com cronograma, predecessoras e ações de edição</caption>
@@ -1404,7 +1672,7 @@ export function TaskTable({
             {visibleTasks.length === 0 ? <tr><td className="empty-table" colSpan={showBaselineColumns ? 17 : 14}><strong>{tasks.length === 0 ? "Nenhuma tarefa ainda." : "Nenhuma tarefa corresponde aos filtros."}</strong><span>{tasks.length === 0 ? "Use o campo “Nova tarefa” para começar." : "Limpe ou ajuste os filtros para recuperar as linhas."}</span></td></tr> : visibleTasks.map((row) => {
               const siblings = tasks.filter((task) => task.projectId === row.task.projectId && task.parentId === row.task.parentId).sort((left, right) => left.position - right.position || left.createdAt.localeCompare(right.createdAt));
               const siblingIndex = siblings.findIndex((task) => task.id === row.task.id);
-              return <TaskRow key={row.task.id} row={row} outlineNumber={outlineNumbers.get(row.task.id) ?? ""} outlineNumbers={outlineNumbers} tasks={tasks} calendars={calendars} projectCalendarId={projectCalendarId} dependencies={dependencies} conflicts={conflicts} baselineTask={baselineTasks.find((task) => task.taskId === row.task.id) ?? null} showBaselineColumns={showBaselineColumns} todayDate={todayDate} disabled={disabled} selected={selectedTaskIds.has(row.task.id)} expanded={effectiveExpandedIds.has(row.task.id)} canMoveUp={siblingIndex > 0} canMoveDown={siblingIndex >= 0 && siblingIndex < siblings.length - 1} onSelect={(selected) => { setSelectedTaskIds((current) => { const next = new Set(current); if (selected) next.add(row.task.id); else next.delete(row.task.id); return next; }); }} onToggleExpanded={() => { setExpandedTaskIds((current) => { const next = new Set(current); if (next.has(row.task.id)) next.delete(row.task.id); else next.add(row.task.id); return next; }); }} onPrepareSubtask={() => { prepareSubtask(row.task.id); }} onSave={onSave} onMove={(direction) => { void onMove(row.task.id, direction); }} onCreateDependency={onCreateDependency} onDeleteDependency={onDeleteDependency} onDuplicate={(includeDescendants) => { void onDuplicate(row.task.id, includeDescendants).then((copy) => { if (copy !== null && includeDescendants) setExpandedTaskIds((current) => new Set([...current, copy.id])); }); }} onPrepareTemplate={() => { prepareTemplate(row.task); }} onDelete={() => { if (window.confirm(`Excluir “${row.task.title}” e todas as suas subtarefas? Esta ação não pode ser desfeita.`)) void onDelete(row.task.id); }} />;
+              return <TaskRow key={row.task.id} row={row} outlineNumber={outlineNumbers.get(row.task.id) ?? ""} outlineNumbers={outlineNumbers} tasks={tasks} calendars={calendars} projectCalendarId={projectCalendarId} dependencies={dependencies} conflicts={conflicts} baselineTask={baselineTasks.find((task) => task.taskId === row.task.id) ?? null} criticality={criticalityByTaskId.get(row.task.id) ?? null} showBaselineColumns={showBaselineColumns} todayDate={todayDate} disabled={disabled} selected={selectedTaskIds.has(row.task.id)} expanded={effectiveExpandedIds.has(row.task.id)} canMoveUp={siblingIndex > 0} canMoveDown={siblingIndex >= 0 && siblingIndex < siblings.length - 1} onSelect={(selected) => { setSelectedTaskIds((current) => { const next = new Set(current); if (selected) next.add(row.task.id); else next.delete(row.task.id); return next; }); }} onToggleExpanded={() => { setExpandedTaskIds((current) => { const next = new Set(current); if (next.has(row.task.id)) next.delete(row.task.id); else next.add(row.task.id); return next; }); }} onPrepareSubtask={() => { prepareSubtask(row.task.id); }} onSave={onSave} onMove={(direction) => { void onMove(row.task.id, direction); }} onCreateDependencies={onCreateDependencies} onSaveDependencies={onSaveDependencies} onDeleteDependency={onDeleteDependency} onDeleteDependencies={onDeleteDependencies} onDuplicate={(includeDescendants) => { void onDuplicate(row.task.id, includeDescendants).then((copy) => { if (copy !== null && includeDescendants) setExpandedTaskIds((current) => new Set([...current, copy.id])); }); }} onPrepareTemplate={() => { prepareTemplate(row.task); }} onDelete={() => { if (window.confirm(`Excluir “${row.task.title}” e todas as suas subtarefas? Você poderá desfazer esta operação enquanto o aplicativo permanecer aberto.`)) void onDelete(row.task.id); }} />;
             })}
           </tbody>
         </table>

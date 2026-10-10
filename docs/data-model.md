@@ -2,7 +2,7 @@
 
 ## Versão atual
 
-O schema atual é a versão **8**.
+O schema atual é a versão **9**.
 
 | Migration | Conteúdo |
 | --- | --- |
@@ -14,8 +14,21 @@ O schema atual é a versão **8**.
 | `0006_summary_predecessors.sql` | resumo como predecessora e novos triggers de integridade; versão 6 |
 | `0007_persistent_gantt_history.sql` | pilhas persistentes de desfazer/refazer do Gantt por projeto; versão 7 |
 | `0008_task_completion.sql` | data real, normalização e índice de conclusão das tarefas; versão 8 |
+| `0009_project_critical_path.sql` | preferência persistente do caminho crítico; versão 9 |
 
 As tabelas usam modo `STRICT`. Chaves externas são habilitadas em todas as conexões. Migrations são crescentes e não devem ser alteradas depois de publicadas.
+
+## Meta do projeto
+
+`projects.critical_path_enabled` controla se a análise deve aparecer. A meta é
+derivada em memória como o maior `deadline_date` entre as tarefas não canceladas;
+não existe uma segunda data manual concorrente. Projetos existentes migram com
+a análise desativada. A preferência acompanha duplicação, exportação, importação
+e backup do projeto. A meta não determina a criticidade: ela é comparada ao
+término previsto apenas para produzir a margem global do projeto.
+
+Não existe uma coluna de meta manual no projeto. A aplicação deriva a meta das
+tarefas, evitando duas fontes de verdade concorrentes.
 
 ## Calendário
 
@@ -68,7 +81,7 @@ Invariantes principais:
 - datas em `YYYY-MM-DD`, duração inteira maior ou igual a 1 e fim não anterior ao início;
 - pai e filho no mesmo projeto;
 - sem auto-parentesco ou ciclos de hierarquia;
-- no máximo quatro níveis de hierarquia, contando a tarefa-raiz;
+- no máximo cinco níveis de hierarquia, contando a tarefa-raiz;
 - exclusão de uma tarefa remove toda a árvore em transação.
 
 Tags permanecem normalizadas em `tags` e `task_tags`, sem JSON duplicado dentro de `tasks`.

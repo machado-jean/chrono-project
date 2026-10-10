@@ -19,7 +19,7 @@ use zip::{write::SimpleFileOptions, CompressionMethod, ZipArchive, ZipWriter};
 use crate::{
     database::{
         DATABASE_SCHEMA_VERSION, PERSISTENT_GANTT_HISTORY_SCHEMA, PLAN_CONTROL_SCHEMA,
-        SUMMARY_PREDECESSORS_SCHEMA, TASK_COMPLETION_SCHEMA,
+        PROJECT_CRITICAL_PATH_SCHEMA, SUMMARY_PREDECESSORS_SCHEMA, TASK_COMPLETION_SCHEMA,
     },
     persistence::{
         self, BaselineBundleRecord, BaselineTaskRecord, CalendarRecord, DependencyRecord,
@@ -1014,6 +1014,7 @@ async fn load_validated_database(path: &Path) -> PortabilityResult<WorkspaceData
         && version != "5"
         && version != "6"
         && version != "7"
+        && version != "8"
         && version != DATABASE_SCHEMA_VERSION.to_string()
     {
         return Err(format!(
@@ -1024,7 +1025,7 @@ async fn load_validated_database(path: &Path) -> PortabilityResult<WorkspaceData
         .close()
         .await
         .map_err(|error| error.to_string())?;
-    if version == "4" || version == "5" || version == "6" || version == "7" {
+    if version == "4" || version == "5" || version == "6" || version == "7" || version == "8" {
         return load_upgraded_legacy_copy(path, &version).await;
     }
     load_workspace_read_only(path).await
@@ -1046,7 +1047,8 @@ async fn load_upgraded_legacy_copy(path: &Path, version: &str) -> PortabilityRes
         let writable = SqlitePool::connect_with(options)
             .await
             .map_err(|error| format!("Falha ao abrir pacote antigo para upgrade: {error}"))?;
-        if version == "4" {
+        let version_number = version.parse::<i64>().map_err(|error| error.to_string())?;
+        if version_number < 5 {
             sqlx::raw_sql(PLAN_CONTROL_SCHEMA)
                 .execute(&writable)
                 .await
@@ -1054,7 +1056,7 @@ async fn load_upgraded_legacy_copy(path: &Path, version: &str) -> PortabilityRes
                     format!("Falha ao atualizar pacote antigo para o schema 5: {error}")
                 })?;
         }
-        if version == "4" || version == "5" {
+        if version_number < 6 {
             sqlx::raw_sql(SUMMARY_PREDECESSORS_SCHEMA)
                 .execute(&writable)
                 .await
@@ -1062,7 +1064,7 @@ async fn load_upgraded_legacy_copy(path: &Path, version: &str) -> PortabilityRes
                     format!("Falha ao atualizar pacote antigo para o schema 6: {error}")
                 })?;
         }
-        if version != "7" {
+        if version_number < 7 {
             sqlx::raw_sql(PERSISTENT_GANTT_HISTORY_SCHEMA)
                 .execute(&writable)
                 .await
@@ -1070,12 +1072,22 @@ async fn load_upgraded_legacy_copy(path: &Path, version: &str) -> PortabilityRes
                     format!("Falha ao atualizar pacote antigo para o schema 7: {error}")
                 })?;
         }
-        sqlx::raw_sql(TASK_COMPLETION_SCHEMA)
-            .execute(&writable)
-            .await
-            .map_err(|error| {
-                format!("Falha ao atualizar pacote antigo para o schema 8: {error}")
-            })?;
+        if version_number < 8 {
+            sqlx::raw_sql(TASK_COMPLETION_SCHEMA)
+                .execute(&writable)
+                .await
+                .map_err(|error| {
+                    format!("Falha ao atualizar pacote antigo para o schema 8: {error}")
+                })?;
+        }
+        if version_number < 9 {
+            sqlx::raw_sql(PROJECT_CRITICAL_PATH_SCHEMA)
+                .execute(&writable)
+                .await
+                .map_err(|error| {
+                    format!("Falha ao atualizar pacote antigo para o schema 9: {error}")
+                })?;
+        }
         writable.close().await;
         load_workspace_read_only(&upgraded_path).await
     }
@@ -1629,7 +1641,8 @@ mod tests {
     use crate::{
         database::{
             CORE_SCHEMA, INITIAL_SCHEMA, PERSISTENT_GANTT_HISTORY_SCHEMA, PLAN_CONTROL_SCHEMA,
-            REUSE_SCHEMA, SCHEDULING_SCHEMA, SUMMARY_PREDECESSORS_SCHEMA, TASK_COMPLETION_SCHEMA,
+            PROJECT_CRITICAL_PATH_SCHEMA, REUSE_SCHEMA, SCHEDULING_SCHEMA,
+            SUMMARY_PREDECESSORS_SCHEMA, TASK_COMPLETION_SCHEMA,
         },
         persistence::{
             self, BaselineBundleRecord, BaselineTaskRecord, DependencyRecord,
@@ -1699,6 +1712,7 @@ mod tests {
             SUMMARY_PREDECESSORS_SCHEMA,
             PERSISTENT_GANTT_HISTORY_SCHEMA,
             TASK_COMPLETION_SCHEMA,
+            PROJECT_CRITICAL_PATH_SCHEMA,
         ] {
             sqlx::raw_sql(migration)
                 .execute(&pool)
@@ -1734,6 +1748,7 @@ mod tests {
             calendar_id: "00000000-0000-4000-8000-000000000001".into(),
             position: 0,
             is_archived: false,
+            critical_path_enabled: false,
             created_at: "2026-08-01T10:00:00Z".into(),
             updated_at: updated_at.into(),
         }
@@ -1836,9 +1851,18 @@ mod tests {
         name: &str,
         updated_at: &str,
     ) {
-        persistence::save_project(pool, &project(project_id, name, updated_at))
-            .await
-            .expect("legacy project should be seeded");
+        sqlx::query(
+            "INSERT INTO projects (
+                id, name, description, status, calendar_id, position, is_archived, created_at, updated_at
+             ) VALUES (?, ?, NULL, 'ACTIVE', '00000000-0000-4000-8000-000000000001', 0, 0, ?, ?)",
+        )
+        .bind(project_id)
+        .bind(name)
+        .bind("2026-08-01T10:00:00Z")
+        .bind(updated_at)
+        .execute(pool)
+        .await
+        .expect("legacy project should be seeded");
         sqlx::query(
             "INSERT INTO tasks (
                 id, project_id, title, status, priority, progress,

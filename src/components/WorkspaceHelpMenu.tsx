@@ -198,6 +198,8 @@ export function WorkspaceHelpMenu({ automatic = true }: WorkspaceHelpMenuProps) 
         </header>
         <dl className="shortcut-list">
           <div><dt><kbd>Ctrl + /</kbd></dt><dd>Abrir esta lista de atalhos</dd></div>
+          <div><dt><kbd>Ctrl + Z</kbd></dt><dd>Desfazer a última edição salva de tarefa</dd></div>
+          <div><dt><kbd>Ctrl + Shift + Z</kbd></dt><dd>Refazer a última edição desfeita</dd></div>
           <div><dt><kbd>Ctrl + Shift + L</kbd></dt><dd>Travar ou destravar as tarefas selecionadas na Tabela</dd></div>
           <div><dt><kbd>Esc</kbd></dt><dd>Fechar menu, diálogo ou detalhes da tarefa</dd></div>
           <div><dt><kbd>Tab</kbd></dt><dd>Avançar entre os controles</dd></div>

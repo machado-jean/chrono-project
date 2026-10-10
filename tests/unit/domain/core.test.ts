@@ -37,6 +37,7 @@ function project(overrides: Partial<Project> = {}): Project {
     calendarId: DEFAULT_CALENDAR_ID,
     position: 0,
     isArchived: false,
+    criticalPathEnabled: false,
     createdAt: NOW,
     updatedAt: NOW,
     ...overrides,
@@ -192,17 +193,25 @@ describe("hierarquia de tarefas", () => {
     ]);
   });
 
-  it("limita a hierarquia a quatro níveis", () => {
+  it("limita a hierarquia a cinco níveis", () => {
     const fourthId = "20000000-0000-4000-8000-000000000004";
     const fifthId = "20000000-0000-4000-8000-000000000005";
+    const sixthId = "20000000-0000-4000-8000-000000000006";
     const fourLevels = [
       ...tasks,
       task({ id: fourthId, parentId: TASK_C_ID, title: "Quarto nível" }),
     ];
+    const fiveLevels = [
+      ...fourLevels,
+      task({ id: fifthId, parentId: fourthId, title: "Quinto nível" }),
+    ];
 
     expect(() => {
+      assertValidParentAssignment(fiveLevels, sixthId, PROJECT_ID, fifthId);
+    }).toThrow("no máximo 5 níveis");
+    expect(() => {
       assertValidParentAssignment(fourLevels, fifthId, PROJECT_ID, fourthId);
-    }).toThrow("no máximo 4 níveis");
+    }).not.toThrow();
     expect(() => {
       assertValidParentAssignment(tasks, fourthId, PROJECT_ID, TASK_C_ID);
     }).not.toThrow();

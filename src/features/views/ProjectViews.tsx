@@ -5,10 +5,10 @@ import type { Project } from "../../domain/projects/project";
 import type { BaselineTask } from "../../domain/planning/baseline";
 import type { TaskDependency } from "../../domain/scheduling/dependency";
 import type { SchedulingConflict } from "../../domain/scheduling/scheduler";
+import type { CriticalPathAnalysis } from "../../domain/scheduling/critical-path";
 import type { Task } from "../../domain/tasks/task";
 import type { SchedulingMode } from "../../domain/tasks/task";
 import type { TaskSaveResult } from "../../domain/tasks/task-save";
-import type { GanttHistoryState } from "../../domain/history/gantt-history";
 import { TaskKanban } from "../kanban/TaskKanban";
 import { TaskTable } from "../table/TaskTable";
 import { TaskFilterBar } from "./TaskFilterBar";
@@ -30,6 +30,7 @@ interface ProjectViewsProps {
   readonly dependencies: readonly TaskDependency[];
   readonly conflicts: readonly SchedulingConflict[];
   readonly activeBaselineTasks: readonly BaselineTask[];
+  readonly criticalPath: CriticalPathAnalysis;
   readonly filters: TaskFilters;
   readonly filtersActive: boolean;
   readonly matchingTasks: readonly Task[];
@@ -42,8 +43,10 @@ interface ProjectViewsProps {
     dependencyUpdates?: readonly TaskDependency[],
   ) => Promise<TaskSaveResult>;
   readonly onSetSchedulingMode: (taskIds: readonly string[], mode: SchedulingMode) => Promise<boolean>;
-  readonly onLoadGanttHistory: (projectId: string) => Promise<GanttHistoryState>;
-  readonly onSaveGanttHistory: (projectId: string, state: GanttHistoryState) => Promise<void>;
+  readonly canUndoTaskEdit: boolean;
+  readonly canRedoTaskEdit: boolean;
+  readonly onUndoTaskEdit: () => Promise<boolean>;
+  readonly onRedoTaskEdit: () => Promise<boolean>;
   readonly onMove: (taskId: string, direction: "up" | "down") => Promise<boolean>;
   readonly onDelete: (taskId: string) => Promise<boolean>;
   readonly onCreateDependency: (input: {
@@ -51,7 +54,14 @@ interface ProjectViewsProps {
     readonly successorId: string;
     readonly lagDays: number;
   }) => Promise<TaskDependency | null>;
+  readonly onCreateDependencies: (inputs: readonly {
+    readonly predecessorId: string;
+    readonly successorId: string;
+    readonly lagDays: number;
+  }[]) => Promise<readonly TaskDependency[] | null>;
+  readonly onSaveDependencies: (dependencies: readonly TaskDependency[], historyLabel?: string) => Promise<boolean>;
   readonly onDeleteDependency: (dependencyId: string) => Promise<boolean>;
+  readonly onDeleteDependencies: (dependencyIds: readonly string[], historyLabel?: string) => Promise<boolean>;
   readonly onDuplicateTask: (taskId: string, includeDescendants: boolean) => Promise<Task | null>;
   readonly onCreateTemplate: (input: {
     readonly rootTaskId: string;
@@ -128,6 +138,7 @@ export function ProjectViews({
   dependencies,
   conflicts,
   activeBaselineTasks,
+  criticalPath,
   filters,
   filtersActive,
   matchingTasks,
@@ -137,18 +148,33 @@ export function ProjectViews({
   onCreate,
   onSave,
   onSetSchedulingMode,
-  onLoadGanttHistory,
-  onSaveGanttHistory,
+  canUndoTaskEdit,
+  canRedoTaskEdit,
+  onUndoTaskEdit,
+  onRedoTaskEdit,
   onMove,
   onDelete,
   onCreateDependency,
+  onCreateDependencies,
+  onSaveDependencies,
   onDeleteDependency,
+  onDeleteDependencies,
   onDuplicateTask,
   onCreateTemplate,
 }: ProjectViewsProps) {
   const ganttTasks = useMemo(
     () => tasks.filter((task) => visibleTaskIds.has(task.id)),
     [tasks, visibleTaskIds],
+  );
+  const assignees = useMemo(
+    () => [...new Set(tasks.flatMap((task) => task.assignee === null ? [] : [task.assignee.trim()]))]
+      .filter((assignee) => assignee.length > 0)
+      .sort((left, right) => left.localeCompare(right, "pt-BR")),
+    [tasks],
+  );
+  const criticalityByTaskId = useMemo(
+    () => new Map(criticalPath.tasks.map((entry) => [entry.taskId, entry])),
+    [criticalPath],
   );
 
   return (
@@ -158,8 +184,19 @@ export function ProjectViews({
         filters={filters}
         resultCount={matchingTasks.length}
         totalCount={tasks.length}
+        availableAssignees={assignees}
+        criticalPathAvailable={criticalPath.available}
         onChange={onFiltersChange}
       />
+      {filters.criticality === "ALL" ? null : (
+        <div className={`critical-path-notice${criticalPath.available ? " available" : ""}`} role="status">
+          {criticalPath.available
+            ? filters.criticality === "CRITICAL"
+              ? "Caminho crítico: sequência de tarefas com folga zero que controla o término previsto."
+              : "Próximas do crítico: tarefas com apenas 1 ou 2 dias úteis de folga na rede."
+            : criticalPath.reason}
+        </div>
+      )}
 
       <div
         id={`view-panel-${activeView.toLocaleLowerCase()}`}
@@ -176,14 +213,17 @@ export function ProjectViews({
               dependencies={dependencies}
               conflicts={conflicts}
               baselineTasks={activeBaselineTasks}
+              criticalityByTaskId={criticalityByTaskId}
               disabled={disabled}
               onCreate={onCreate}
               onSave={(task, updates) => onSave(task, updates)}
               onSetSchedulingMode={onSetSchedulingMode}
               onMove={onMove}
               onDelete={onDelete}
-              onCreateDependency={onCreateDependency}
+              onCreateDependencies={onCreateDependencies}
+              onSaveDependencies={onSaveDependencies}
               onDeleteDependency={onDeleteDependency}
+              onDeleteDependencies={onDeleteDependencies}
               onDuplicate={onDuplicateTask}
               onCreateTemplate={onCreateTemplate}
             />
@@ -213,11 +253,13 @@ export function ProjectViews({
                 projectCalendarId={projectCalendarId}
                 dependencies={dependencies}
                 baselineTasks={activeBaselineTasks}
+                criticalityByTaskId={criticalityByTaskId}
                 disabled={disabled}
-                projectId={project.id}
                 onSave={onSave}
-                onLoadHistory={onLoadGanttHistory}
-                onSaveHistory={onSaveGanttHistory}
+                canUndo={canUndoTaskEdit}
+                canRedo={canRedoTaskEdit}
+                onUndo={onUndoTaskEdit}
+                onRedo={onRedoTaskEdit}
                 onCreateDependency={onCreateDependency}
                 onDeleteDependency={onDeleteDependency}
               />

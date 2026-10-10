@@ -1,5 +1,9 @@
 # Auditoria de UX e acessibilidade
 
+Os menus superiores seguem o comportamento esperado de uma aplicação desktop:
+somente um permanece aberto, `Esc` fecha e devolve o foco ao comando, e um
+clique fora da barra fecha qualquer menu aberto sem executar ações.
+
 ## Escopo
 
 Esta auditoria fecha o incremento local de UX e acessibilidade da Fase 7. Ela
@@ -29,6 +33,22 @@ foco visível, nomes acessíveis, alternativas ao arrasto, redução de moviment
 largura mínima, escalas do Windows e legibilidade com projetos densos.
 
 ## Correções incorporadas
+
+- A janela Windows usa uma barra de título integrada ao Chrono Project, com
+  região de arraste nativa e comandos nomeados para minimizar,
+  maximizar/restaurar e fechar. Os controles preservam foco visível e o duplo
+  clique na área livre alterna o estado maximizado.
+- O caminho crítico pode ser ativado por projeto por um switch com `role` e
+  `aria-checked` no cabeçalho, ao lado do plano de referência. O botão de
+  informação e a primeira ativação abrem um diálogo com foco preso e fechamento
+  por `Esc`. O diagrama descreve uma bifurcação e convergência reais, com título
+  e descrição acessíveis. A meta
+  automática é textual e o diagrama de múltiplos caminhos possui explicação
+  equivalente; os indicadores não dependem apenas de cor. O resumo apresenta
+  **Término previsto**, **Meta final** e **Margem global** como informações
+  distintas. Quando o cálculo não está disponível, o diálogo informa o motivo
+  exato e a ação necessária, como adicionar dependências entre tarefas
+  programadas.
 
 - Um link **Ir para o conteúdo principal** permite ignorar a lista de projetos.
 - O projeto selecionado expõe `aria-current="page"`.
@@ -73,12 +93,18 @@ largura mínima, escalas do Windows e legibilidade com projetos densos.
   Tarefas manuais anunciam **Datas travadas**, bloqueiam os gestos e continuam
   editáveis por valores exatos no inspetor.
 - Feedback visível e região de status anunciam gravação, limites FS e quantidade
-  de lags alterados. Botões **Desfazer**/**Refazer** complementam `Ctrl+Z` e
-  `Ctrl+Y` fora de campos de formulário.
+  de lags alterados. No Gantt, botões **Desfazer**/**Refazer** complementam o
+  histórico unificado de Tabela, Kanban e Gantt, acessível por `Ctrl+Z` e
+  `Ctrl+Shift+Z`. Campos de texto mantêm o desfazer nativo.
+- Uma linha com alteração ainda não gravada usa um filete âmbar e um realce
+  discreto apenas na célula da tarefa; a tabela inteira não é pintada como erro.
 - A seleção em massa oferece botões nomeados para travar e destravar datas;
   `Ctrl+Shift+L` fornece o mesmo comando fora de campos editáveis.
 - Relações com tarefa-resumo abrem uma prévia modal do impacto, com foco preso,
   cancelamento por `Esc` e datas anteriores/novas apresentadas em texto.
+- O seletor de predecessoras oferece pesquisa nomeada, checkboxes, indicação
+  textual de tarefas-resumo, relações já existentes e prévia em texto. O menu
+  **Editar** expõe Desfazer/Refazer com atalhos e descrição da operação.
 - O menu de contexto do Gantt é o fluxo principal para adicionar predecessora
   FS e excluir uma relação. A lista aceita folhas e resumos como origem, mantém
   somente folhas como destino e `Esc` fecha esse menu.

@@ -42,6 +42,8 @@ pub struct ProjectRecord {
     pub calendar_id: String,
     pub position: i64,
     pub is_archived: bool,
+    #[serde(default)]
+    pub critical_path_enabled: bool,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -301,7 +303,7 @@ pub async fn load_workspace(pool: &SqlitePool) -> Result<WorkspaceData, sqlx::Er
     }
 
     let projects = sqlx::query_as::<_, ProjectRecord>(
-        "SELECT id, name, description, status, calendar_id, position, is_archived, \
+        "SELECT id, name, description, status, calendar_id, position, is_archived, critical_path_enabled, \
          created_at, updated_at FROM projects ORDER BY is_archived, position, created_at",
     )
     .fetch_all(pool)
@@ -481,8 +483,8 @@ pub(crate) async fn save_project_record(
 ) -> Result<(), sqlx::Error> {
     sqlx::query(
         "INSERT INTO projects (
-            id, name, description, status, calendar_id, position, is_archived, created_at, updated_at
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            id, name, description, status, calendar_id, position, is_archived, critical_path_enabled, created_at, updated_at
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(id) DO UPDATE SET
             name = excluded.name,
             description = excluded.description,
@@ -490,6 +492,7 @@ pub(crate) async fn save_project_record(
             calendar_id = excluded.calendar_id,
             position = excluded.position,
             is_archived = excluded.is_archived,
+            critical_path_enabled = excluded.critical_path_enabled,
             updated_at = excluded.updated_at",
     )
     .bind(&project.id)
@@ -499,6 +502,7 @@ pub(crate) async fn save_project_record(
     .bind(&project.calendar_id)
     .bind(project.position)
     .bind(project.is_archived)
+    .bind(project.critical_path_enabled)
     .bind(&project.created_at)
     .bind(&project.updated_at)
     .execute(&mut **transaction)
@@ -1049,7 +1053,8 @@ mod tests {
     };
     use crate::database::{
         CORE_SCHEMA, INITIAL_SCHEMA, PERSISTENT_GANTT_HISTORY_SCHEMA, PLAN_CONTROL_SCHEMA,
-        REUSE_SCHEMA, SCHEDULING_SCHEMA, SUMMARY_PREDECESSORS_SCHEMA, TASK_COMPLETION_SCHEMA,
+        PROJECT_CRITICAL_PATH_SCHEMA, REUSE_SCHEMA, SCHEDULING_SCHEMA, SUMMARY_PREDECESSORS_SCHEMA,
+        TASK_COMPLETION_SCHEMA,
     };
 
     const PROJECT_ID: &str = "10000000-0000-4000-8000-000000000001";
@@ -1095,6 +1100,10 @@ mod tests {
             .execute(&pool)
             .await
             .expect("task completion migration should execute");
+        sqlx::raw_sql(PROJECT_CRITICAL_PATH_SCHEMA)
+            .execute(&pool)
+            .await
+            .expect("project critical path migration should execute");
         pool
     }
 
@@ -1136,6 +1145,7 @@ mod tests {
             calendar_id: "00000000-0000-4000-8000-000000000001".into(),
             position: 0,
             is_archived: false,
+            critical_path_enabled: false,
             created_at: NOW.into(),
             updated_at: NOW.into(),
         }

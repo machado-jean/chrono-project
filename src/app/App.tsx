@@ -1,8 +1,9 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import chronoMark from "../assets/chrono-mark.png";
 import { ProjectHeader } from "../features/projects/ProjectHeader";
 import { ProjectBaselineControl } from "../features/planning/ProjectBaselineControl";
+import { CriticalPathControl } from "../features/planning/CriticalPathControl";
 import { ProjectPdfExport } from "../features/reporting/ProjectPdfExport";
 import { ProjectActionsMenu } from "../features/projects/ProjectActionsMenu";
 import { CalendarSettings } from "../features/projects/CalendarSettings";
@@ -27,6 +28,7 @@ import { TASK_PRIORITY_LABELS, TASK_STATUS_LABELS } from "../domain/tasks/task";
 import { collectTaskTreeIds } from "../domain/tasks/hierarchy";
 import type { TaskDependency } from "../domain/scheduling/dependency";
 import type { TaskSaveResult } from "../domain/tasks/task-save";
+import { analyzeCriticalPath, type CriticalPathAnalysis } from "../domain/scheduling/critical-path";
 import {
   EMPTY_TASK_FILTERS,
   filterTasks,
@@ -73,7 +75,10 @@ function App({ repository }: AppProps) {
   const [completionError, setCompletionError] = useState<string | null>(null);
   const [completionDate, setCompletionDate] = useState(localTodayDate);
   const [reopenProgress, setReopenProgress] = useState("99");
+  const [criticalPathHelpOpen, setCriticalPathHelpOpen] = useState(false);
   const workspace = useWorkspace(activeRepository);
+  const undoTaskEdit = workspace.undoTaskEdit;
+  const redoTaskEdit = workspace.redoTaskEdit;
   const projectPeers = workspace.selectedProject === null
     ? []
     : workspace.projects
@@ -88,10 +93,46 @@ function App({ repository }: AppProps) {
   const selectedCalendar = workspace.calendars.find(
     (calendar) => calendar.id === workspace.selectedProject?.calendarId,
   );
-  const filtersActive = hasActiveTaskFilters(taskFilters);
+  const projectTargetEndDate = useMemo(
+    () => workspace.selectedProjectTasks.reduce<string | null>((latest, task) => {
+      if (task.status === "CANCELLED" || task.deadlineDate === null) return latest;
+      return latest === null || task.deadlineDate > latest ? task.deadlineDate : latest;
+    }, null),
+    [workspace.selectedProjectTasks],
+  );
+  const criticalPath = useMemo((): CriticalPathAnalysis => {
+    if (workspace.selectedProject?.criticalPathEnabled !== true) {
+      return {
+        available: false,
+        reason: "Ative o caminho crítico nas configurações do projeto.",
+        projectEndDate: null,
+        targetEndDate: projectTargetEndDate,
+        projectTargetSlackDays: null,
+        tasks: [],
+      };
+    }
+    return analyzeCriticalPath({
+      tasks: workspace.selectedProjectTasks,
+      dependencies: workspace.selectedProjectDependencies,
+      calendars: workspace.calendars,
+      projectCalendarId: workspace.selectedProject.calendarId,
+      targetEndDate: projectTargetEndDate,
+    });
+  }, [projectTargetEndDate, workspace.calendars, workspace.selectedProject, workspace.selectedProjectDependencies, workspace.selectedProjectTasks]);
+  const criticalityByTaskId = useMemo(
+    () => new Map(criticalPath.tasks.map((entry) => [entry.taskId, entry])),
+    [criticalPath],
+  );
+  const effectiveTaskFilters = useMemo<TaskFilters>(
+    () => criticalPath.available || taskFilters.criticality === "ALL"
+      ? taskFilters
+      : { ...taskFilters, criticality: "ALL" },
+    [criticalPath.available, taskFilters],
+  );
+  const filtersActive = hasActiveTaskFilters(effectiveTaskFilters);
   const matchingTasks = useMemo(
-    () => filterTasks(workspace.selectedProjectTasks, taskFilters),
-    [taskFilters, workspace.selectedProjectTasks],
+    () => filterTasks(workspace.selectedProjectTasks, effectiveTaskFilters, criticalityByTaskId),
+    [criticalityByTaskId, effectiveTaskFilters, workspace.selectedProjectTasks],
   );
   const visibleTaskIds = useMemo(
     () => includeTaskAncestors(workspace.selectedProjectTasks, matchingTasks),
@@ -186,6 +227,30 @@ function App({ repository }: AppProps) {
     }
   };
 
+  useEffect(() => {
+    const hasNativeTextUndo = (target: EventTarget | null): boolean => {
+      if (!(target instanceof HTMLElement)) return false;
+      if (target.isContentEditable || target instanceof HTMLTextAreaElement) return true;
+      if (!(target instanceof HTMLInputElement)) return false;
+      return target.type !== "checkbox" && target.type !== "radio" && target.type !== "button";
+    };
+    const handleTaskHistoryShortcut = (event: KeyboardEvent): void => {
+      if (!(event.ctrlKey || event.metaKey) || event.altKey) return;
+      if (hasNativeTextUndo(event.target)) return;
+      const key = event.key.toLocaleLowerCase();
+      const undo = key === "z" && !event.shiftKey;
+      const redo = key === "z" && event.shiftKey;
+      if (!undo && !redo) return;
+      event.preventDefault();
+      event.stopPropagation();
+      void (undo ? undoTaskEdit() : redoTaskEdit());
+    };
+    window.addEventListener("keydown", handleTaskHistoryShortcut, { capture: true });
+    return () => {
+      window.removeEventListener("keydown", handleTaskHistoryShortcut, { capture: true });
+    };
+  }, [redoTaskEdit, undoTaskEdit]);
+
   return (
     <div className={`app-shell${sidebarCollapsed ? " sidebar-collapsed" : ""}`}>
       <TextContextMenu />
@@ -217,6 +282,13 @@ function App({ repository }: AppProps) {
               disabled={workspace.isSaving}
               canMoveUp={selectedProjectIndex > 0}
               canMoveDown={selectedProjectIndex >= 0 && selectedProjectIndex < projectPeers.length - 1}
+              canUndo={workspace.canUndoTaskEdit}
+              canRedo={workspace.canRedoTaskEdit}
+              undoLabel={workspace.undoTaskEditLabel}
+              redoLabel={workspace.redoTaskEditLabel}
+              historyEntries={workspace.taskEditHistoryEntries}
+              onUndo={workspace.undoTaskEdit}
+              onRedo={workspace.redoTaskEdit}
               onSave={workspace.saveProject}
               onMove={workspace.moveProject}
               onDelete={workspace.removeProject}
@@ -304,6 +376,15 @@ function App({ repository }: AppProps) {
                     onCreate={workspace.createBaseline}
                     onDelete={workspace.removeProjectBaselines}
                   />
+                  <CriticalPathControl
+                    project={workspace.selectedProject}
+                    targetEndDate={projectTargetEndDate}
+                    analysis={criticalPath}
+                    open={criticalPathHelpOpen}
+                    disabled={workspace.isSaving || workspace.selectedProject.isArchived}
+                    onOpenChange={setCriticalPathHelpOpen}
+                    onSave={workspace.saveProject}
+                  />
                   <ProjectPdfExport
                     project={workspace.selectedProject}
                     tasks={workspace.selectedProjectTasks}
@@ -333,7 +414,8 @@ function App({ repository }: AppProps) {
                 workspace.selectedProjectTasks.some((task) => task.id === conflict.taskId),
               )}
               activeBaselineTasks={workspace.activeBaselineTasks}
-              filters={taskFilters}
+              criticalPath={criticalPath}
+              filters={effectiveTaskFilters}
               filtersActive={filtersActive}
               matchingTasks={matchingTasks}
               visibleTaskIds={visibleTaskIds}
@@ -342,12 +424,17 @@ function App({ repository }: AppProps) {
               onCreate={workspace.createTask}
               onSave={saveTaskWithCompletionReview}
               onSetSchedulingMode={workspace.setTasksSchedulingMode}
-              onLoadGanttHistory={workspace.loadGanttHistory}
-              onSaveGanttHistory={workspace.saveGanttHistory}
+              canUndoTaskEdit={workspace.canUndoTaskEdit}
+              canRedoTaskEdit={workspace.canRedoTaskEdit}
+              onUndoTaskEdit={workspace.undoTaskEdit}
+              onRedoTaskEdit={workspace.redoTaskEdit}
               onMove={workspace.moveTask}
               onDelete={workspace.removeTaskTree}
               onCreateDependency={workspace.createDependency}
+              onCreateDependencies={workspace.createDependencies}
+              onSaveDependencies={workspace.saveDependencies}
               onDeleteDependency={workspace.removeDependency}
+              onDeleteDependencies={workspace.removeDependencies}
               onDuplicateTask={workspace.duplicateTask}
               onCreateTemplate={workspace.createTemplate}
             />

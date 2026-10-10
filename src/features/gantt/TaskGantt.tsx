@@ -24,11 +24,7 @@ import { addCalendarDays } from "../../domain/calendars/date-only";
 import { applyScheduleEdit } from "../../domain/scheduling/schedule-edit";
 import { applyGanttDateEdit, planGanttFsMove, type GanttDateEditMode } from "../../domain/scheduling/gantt-edit";
 import type { TaskDependency } from "../../domain/scheduling/dependency";
-import {
-  EMPTY_GANTT_HISTORY,
-  type GanttHistoryEntry,
-  type GanttHistoryState,
-} from "../../domain/history/gantt-history";
+import type { TaskCriticality } from "../../domain/scheduling/critical-path";
 import {
   TASK_STATUSES,
   TASK_STATUS_LABELS,
@@ -47,19 +43,22 @@ import {
 } from "./gantt-adapter";
 
 type GanttScale = "DAY" | "WEEK" | "MONTH";
+const GANTT_CELL_HEIGHT = 48;
 
 interface TaskGanttProps {
-  readonly projectId: string;
   readonly tasks: readonly Task[];
   readonly allProjectTasks: readonly Task[];
   readonly calendars: readonly Calendar[];
   readonly projectCalendarId: string;
   readonly dependencies: readonly TaskDependency[];
   readonly baselineTasks: readonly BaselineTask[];
+  readonly criticalityByTaskId: ReadonlyMap<string, TaskCriticality>;
   readonly disabled: boolean;
   readonly onSave: (task: Task, dependencyUpdates?: readonly TaskDependency[]) => Promise<TaskSaveResult>;
-  readonly onLoadHistory: (projectId: string) => Promise<GanttHistoryState>;
-  readonly onSaveHistory: (projectId: string, state: GanttHistoryState) => Promise<void>;
+  readonly canUndo: boolean;
+  readonly canRedo: boolean;
+  readonly onUndo: () => Promise<boolean>;
+  readonly onRedo: () => Promise<boolean>;
   readonly onCreateDependency: (input: {
     readonly predecessorId: string;
     readonly successorId: string;
@@ -93,7 +92,7 @@ function ensureFullVerticalScrollRange(
   if (pseudoRows === null) return;
   const state = api?.getState() as GanttVirtualScrollState | undefined;
   const taskCount = Math.max(state?._tasks?.length ?? 0, fallbackTaskCount);
-  const cellHeight = state?.cellHeight ?? 42;
+  const cellHeight = state?.cellHeight ?? GANTT_CELL_HEIGHT;
   const scaleHeight = state?._scales?.height ?? 0;
   const requiredHeight = scaleHeight + taskCount * cellHeight;
   pseudoRows.style.setProperty("min-height", `${String(requiredHeight)}px`, "important");
@@ -106,7 +105,7 @@ function calculateVerticalMaximum(
 ): number {
   const state = api?.getState() as GanttVirtualScrollState | undefined;
   const taskCount = Math.max(state?._tasks?.length ?? 0, fallbackTaskCount);
-  const cellHeight = state?.cellHeight ?? 42;
+  const cellHeight = state?.cellHeight ?? GANTT_CELL_HEIGHT;
   const scaleHeight = state?._scales?.height ?? 0;
   const viewportHeight = fallbackViewportHeight > 0
     ? fallbackViewportHeight
@@ -168,18 +167,32 @@ function displayDate(date: string): string {
   return `${day ?? ""}/${month ?? ""}/${year ?? ""}`;
 }
 
+function describeTaskCriticality(criticality: TaskCriticality): string {
+  const days = criticality.totalSlackDays;
+  const absoluteDays = Math.abs(days);
+  const unit = absoluteDays === 1 ? "dia útil" : "dias úteis";
+  const slack = days < 0
+    ? `${String(absoluteDays)} ${unit} além da meta`
+    : `${String(days)} ${unit} de folga`;
+  if (criticality.isCritical) return `Crítica · ${slack}`;
+  if (criticality.isNearCritical) return `Quase crítica · ${slack}`;
+  return slack;
+}
+
 export function TaskGantt({
-  projectId,
   tasks,
   allProjectTasks,
   calendars,
   projectCalendarId,
   dependencies,
   baselineTasks,
+  criticalityByTaskId,
   disabled,
   onSave,
-  onLoadHistory,
-  onSaveHistory,
+  canUndo,
+  canRedo,
+  onUndo,
+  onRedo,
   onCreateDependency,
   onDeleteDependency,
 }: TaskGanttProps) {
@@ -193,9 +206,6 @@ export function TaskGantt({
   const [announcement, setAnnouncement] = useState("");
   const [savingVisualEdit, setSavingVisualEdit] = useState(false);
   const [ganttRevision, setGanttRevision] = useState(0);
-  const undoStack = useRef<GanttHistoryEntry[]>([]);
-  const redoStack = useRef<GanttHistoryEntry[]>([]);
-  const historySaveQueue = useRef<Promise<void>>(Promise.resolve());
   const contextMenuRef = useRef<HTMLDivElement>(null);
   const chartShellRef = useRef<HTMLDivElement>(null);
   const verticalOffsetRef = useRef(0);
@@ -203,7 +213,6 @@ export function TaskGantt({
   const [verticalMaximum, setVerticalMaximum] = useState(0);
   const [timelineOffset, setTimelineOffset] = useState(0);
   const [timelineMaximum, setTimelineMaximum] = useState(0);
-  const [historyState, setHistoryState] = useState({ canUndo: false, canRedo: false, revision: 0 });
   const [contextMenu, setContextMenu] = useState<GanttContextMenuState | null>(null);
   const [contextPredecessorId, setContextPredecessorId] = useState("");
   const projection = useMemo(
@@ -234,6 +243,9 @@ export function TaskGantt({
     ? null
     : dependenciesById.get(focusedDependencyId) ?? null;
   const selectedTask = tasks.find((task) => task.id === selectedTaskId) ?? null;
+  const selectedTaskCriticality = selectedTask === null
+    ? null
+    : criticalityByTaskId.get(selectedTask.id) ?? null;
   const summaryIds = useMemo(
     () => new Set(allProjectTasks.flatMap((task) => task.parentId === null ? [] : [task.parentId])),
     [allProjectTasks],
@@ -277,16 +289,23 @@ export function TaskGantt({
     const chart = chartShellRef.current;
     if (chart === null) return;
     const applyHierarchyColors = (): void => {
-      for (const task of projection.tasks) {
-        const element = chart.querySelector<HTMLElement>(`[data-task-id="${String(task.id)}"]`);
-        if (element !== null) element.dataset.hierarchyLevel = String(task.hierarchyLevel ?? 0);
+      const projectedById = new Map(projection.tasks.map((task) => [String(task.id), task]));
+      for (const element of chart.querySelectorAll<HTMLElement>("[data-task-id]")) {
+        const taskId = ganttDomId(element.dataset.taskId ?? null);
+        if (taskId === null) continue;
+        const task = projectedById.get(taskId);
+        if (task === undefined) continue;
+        element.dataset.hierarchyLevel = String(task.hierarchyLevel ?? 0);
+        const criticality = criticalityByTaskId.get(taskId);
+        element.classList.toggle("critical-path-task", criticality?.isCritical === true);
+        element.classList.toggle("near-critical-task", criticality?.isNearCritical === true);
       }
     };
     applyHierarchyColors();
     const observer = new MutationObserver(applyHierarchyColors);
     observer.observe(chart, { childList: true, subtree: true });
     return () => { observer.disconnect(); };
-  }, [ganttRevision, projection.tasks]);
+  }, [criticalityByTaskId, ganttRevision, projection.tasks]);
 
   useEffect(() => {
     const shell = chartShellRef.current;
@@ -510,53 +529,6 @@ export function TaskGantt({
     setGanttRevision((revision) => revision + 1);
   }, []);
 
-  const persistHistory = useCallback((): void => {
-    const state = {
-      undoEntries: undoStack.current.slice(-50),
-      redoEntries: redoStack.current.slice(-50),
-    };
-    historySaveQueue.current = historySaveQueue.current
-      .catch(() => undefined)
-      .then(() => onSaveHistory(projectId, state))
-      .catch((error: unknown) => {
-        setLocalError(error instanceof Error
-          ? `A alteração foi aplicada, mas o histórico não pôde ser persistido: ${error.message}`
-          : "A alteração foi aplicada, mas o histórico não pôde ser persistido.");
-      });
-  }, [onSaveHistory, projectId]);
-
-  useEffect(() => {
-    let active = true;
-    undoStack.current = [];
-    redoStack.current = [];
-    void onLoadHistory(projectId)
-      .then((history) => {
-        if (!active) return;
-        undoStack.current = [...history.undoEntries];
-        redoStack.current = [...history.redoEntries];
-        setHistoryState((current) => ({
-          canUndo: undoStack.current.length > 0,
-          canRedo: redoStack.current.length > 0,
-          revision: current.revision + 1,
-        }));
-      })
-      .catch(() => {
-        if (!active) return;
-        undoStack.current = [...EMPTY_GANTT_HISTORY.undoEntries];
-        redoStack.current = [...EMPTY_GANTT_HISTORY.redoEntries];
-        setLocalError("Não foi possível carregar o histórico persistente do Gantt.");
-      });
-    return () => { active = false; };
-  }, [onLoadHistory, projectId]);
-
-  const recordHistory = useCallback((entry: GanttHistoryEntry): void => {
-    undoStack.current.push(entry);
-    if (undoStack.current.length > 50) undoStack.current.shift();
-    redoStack.current = [];
-    setHistoryState((current) => ({ canUndo: true, canRedo: false, revision: current.revision + 1 }));
-    persistHistory();
-  }, [persistHistory]);
-
   const saveVisualTaskEdit = useCallback(async (
     input: TMethodsConfig["update-task"],
   ): Promise<void> => {
@@ -584,13 +556,6 @@ export function TaskGantt({
           setLocalError("Não foi possível salvar a conclusão. Nenhuma alteração foi aplicada.");
           resetGanttProjection();
         } else {
-          recordHistory({
-            label: `Conclusão de ${task.title}`,
-            beforeTask: task,
-            afterTask: { ...task, progress: normalizedProgress },
-            beforeDependencies: [],
-            afterDependencies: [],
-          });
           setAnnouncement(`${task.title}: conclusão atualizada para ${String(normalizedProgress)}%.`);
           setSelectedTaskId(task.id);
           resetGanttProjection();
@@ -660,14 +625,6 @@ export function TaskGantt({
         setLocalError("Não foi possível salvar o cronograma. Nenhuma alteração foi aplicada.");
         resetGanttProjection();
       } else {
-        recordHistory({
-          label: `Cronograma de ${task.title}`,
-          beforeTask: task,
-          afterTask: edited,
-          beforeDependencies: fsMove?.dependencyUpdates.map((updated) =>
-            dependencies.find((dependency) => dependency.id === updated.id) ?? updated) ?? [],
-          afterDependencies: fsMove?.dependencyUpdates ?? [],
-        });
         const lagChanges = fsMove?.dependencyUpdates.length ?? 0;
         const limited = fsMove !== null && fsMove.requestedStartDate !== fsMove.appliedStartDate;
         setAnnouncement(limited
@@ -682,52 +639,24 @@ export function TaskGantt({
     } finally {
       setSavingVisualEdit(false);
     }
-  }, [allProjectTasks, calendars, dependencies, disabled, onSave, projectCalendarId, recordHistory, resetGanttProjection, savingVisualEdit, summaryIds, tasksById]);
+  }, [allProjectTasks, calendars, dependencies, disabled, onSave, projectCalendarId, resetGanttProjection, savingVisualEdit, summaryIds, tasksById]);
 
   const restoreHistory = useCallback(async (direction: "UNDO" | "REDO"): Promise<void> => {
     if (savingVisualEdit || disabled) return;
-    const source = direction === "UNDO" ? undoStack.current : redoStack.current;
-    const destination = direction === "UNDO" ? redoStack.current : undoStack.current;
-    const entry = source.pop();
-    if (entry === undefined) return;
     setSavingVisualEdit(true);
-    const taskToSave = direction === "UNDO" ? entry.beforeTask : entry.afterTask;
-    const dependenciesToSave = direction === "UNDO" ? entry.beforeDependencies : entry.afterDependencies;
     try {
-      if (taskSaveSucceeded(await onSave(taskToSave, dependenciesToSave))) {
-        destination.push(entry);
-        persistHistory();
-        setAnnouncement(`${entry.label}: ${direction === "UNDO" ? "desfeito" : "refeito"}.`);
+      if (await (direction === "UNDO" ? onUndo() : onRedo())) {
+        setAnnouncement(`Última alteração ${direction === "UNDO" ? "desfeita" : "refeita"}.`);
       } else {
-        source.push(entry);
-        setLocalError("Não foi possível restaurar a alteração do Gantt.");
+        setLocalError(`Não há alteração para ${direction === "UNDO" ? "desfazer" : "refazer"}.`);
       }
     } catch (error) {
-      source.push(entry);
-      setLocalError(error instanceof Error ? error.message : "Não foi possível restaurar a alteração do Gantt.");
+      setLocalError(error instanceof Error ? error.message : "Não foi possível restaurar a alteração.");
     } finally {
-      setHistoryState((current) => ({
-        canUndo: undoStack.current.length > 0,
-        canRedo: redoStack.current.length > 0,
-        revision: current.revision + 1,
-      }));
       setSavingVisualEdit(false);
       resetGanttProjection();
     }
-  }, [disabled, onSave, persistHistory, resetGanttProjection, savingVisualEdit]);
-
-  useEffect(() => {
-    const handleHistoryShortcut = (event: KeyboardEvent): void => {
-      if (!(event.ctrlKey || event.metaKey) || event.altKey) return;
-      if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement || event.target instanceof HTMLSelectElement) return;
-      const key = event.key.toLocaleLowerCase();
-      if (key !== "z" && key !== "y") return;
-      event.preventDefault();
-      void restoreHistory(key === "z" && !event.shiftKey ? "UNDO" : "REDO");
-    };
-    window.addEventListener("keydown", handleHistoryShortcut);
-    return () => { window.removeEventListener("keydown", handleHistoryShortcut); };
-  }, [restoreHistory]);
+  }, [disabled, onRedo, onUndo, resetGanttProjection, savingVisualEdit]);
 
   const saveVisualDependency = useCallback(async (link: Partial<ILink>): Promise<void> => {
     if (savingVisualEdit || disabled) return;
@@ -852,15 +781,21 @@ export function TaskGantt({
       </header>
       {savingVisualEdit ? <p className="gantt-saving" role="status">Salvando alteração do Gantt…</p> : null}
       <div className="gantt-history-actions" aria-label="Histórico de alterações do Gantt">
-        <button type="button" disabled={disabled || savingVisualEdit || !historyState.canUndo} onClick={() => { void restoreHistory("UNDO"); }}>Desfazer</button>
-        <button type="button" disabled={disabled || savingVisualEdit || !historyState.canRedo} onClick={() => { void restoreHistory("REDO"); }}>Refazer</button>
-        {announcement.length > 0 ? <span key={historyState.revision} role="status">{announcement}</span> : null}
+        <button type="button" disabled={disabled || savingVisualEdit || !canUndo} onClick={() => { void restoreHistory("UNDO"); }}>Desfazer</button>
+        <button type="button" disabled={disabled || savingVisualEdit || !canRedo} onClick={() => { void restoreHistory("REDO"); }}>Refazer</button>
+        {announcement.length > 0 ? <span key={announcement} role="status">{announcement}</span> : null}
       </div>
       {localError === null ? null : <p className="field-error gantt-error" role="alert">{localError}</p>}
 
       <div className="gantt-legend" aria-label="Legenda do Gantt">
         <span><i className="legend-task" /> Tarefa</span>
         <span><i className="legend-summary" /> Resumo</span>
+        {criticalityByTaskId.size === 0 ? null : (
+          <>
+            <span><i className="legend-critical" aria-hidden="true" /> Crítica</span>
+            <span><i className="legend-near-critical" aria-hidden="true" /> Quase crítica</span>
+          </>
+        )}
         <span><i className="legend-weekend" /> Final de semana</span>
         <span><i className="legend-holiday" /> Feriado</span>
         <span><i className="legend-link" /> Dependência FS</span>
@@ -922,7 +857,7 @@ export function TaskGantt({
                 scales={scaleConfig.scales}
                 {...(dateRange === null ? {} : { start: dateRange.start, end: dateRange.end })}
                 cellWidth={scaleConfig.cellWidth}
-                cellHeight={42}
+                cellHeight={GANTT_CELL_HEIGHT}
                 gridWidth={454}
                 readonly={disabled || savingVisualEdit}
                 zoom
@@ -1056,6 +991,12 @@ export function TaskGantt({
                   </div>
                   <div><dt>Datas</dt><dd>{selectedTask.schedulingMode === "MANUAL" ? "🔒 Travadas" : "🔓 Automáticas"}</dd></div>
                   <div><dt>Progresso</dt><dd>{String(selectedTask.progress)}%</dd></div>
+                  {selectedTaskCriticality === null ? null : (
+                    <div>
+                      <dt>Folga CPM</dt>
+                      <dd>{describeTaskCriticality(selectedTaskCriticality)}</dd>
+                    </div>
+                  )}
                 </dl>
                 <form className="gantt-schedule-form" onSubmit={(event) => { void saveSchedule(event); }}>
                   <label>

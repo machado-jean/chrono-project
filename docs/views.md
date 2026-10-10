@@ -15,6 +15,8 @@ cobre:
 - status;
 - prioridade;
 - concluída ou não concluída;
+- um ou mais responsáveis, incluindo tarefas sem responsável;
+- caminho crítico ou tarefas próximas do crítico, com até dois dias úteis de folga total;
 - sobreposição com intervalo de datas;
 - tag.
 
@@ -31,6 +33,7 @@ Tabela, Kanban e Gantt exibem uma numeração derivada da posição na árvore:
 1.1. Subtarefa
 1.1.1. Subtarefa de terceiro nível
 1.1.1.1. Subtarefa de quarto nível
+1.1.1.1.1. Subtarefa de quinto nível
 2. Próxima tarefa-pai
 ```
 
@@ -39,8 +42,8 @@ recalculada automaticamente ao reordenar ou mover uma tarefa na hierarquia. Se
 um título antigo já começa com o mesmo número, a interface o exibe apenas uma
 vez; o conteúdo persistido não é alterado silenciosamente.
 
-A V1 permite no máximo quatro níveis, contando a tarefa-raiz. A interface deixa
-de oferecer uma tarefa do quarto nível como pai, e domínio, templates e
+A V1 permite no máximo cinco níveis, contando a tarefa-raiz. A interface deixa
+de oferecer uma tarefa do quinto nível como pai, e domínio, templates e
 importação repetem a validação para que o limite não possa ser contornado.
 Ao criar a primeira subtarefa de uma tarefa que participa de uma dependência FS,
 a interface solicita uma decisão explícita: manter as relações de saída no novo
@@ -52,9 +55,10 @@ relações de saída e não altera relações ligadas diretamente às folhas.
 
 ## Tabela
 
-A confirmação de uma nova predecessora usa um botão compacto `+`; seu nome
-acessível preserva o contexto da tarefa e o tooltip informa **Adicionar
-predecessora**. Uma única barra horizontal sincronizada permanece na base
+O comando compacto `+` abre um seletor pesquisável por número ou título, em
+ordem hierárquica, com identificação de resumos e seleção de várias tarefas.
+Relações existentes aparecem separadamente e candidatas inválidas não são
+oferecidas. Uma única barra horizontal sincronizada permanece na base
 visível da área da Tabela, sem exigir que o usuário percorra todas as tarefas
 para alcançar as colunas finais. A barra horizontal nativa do contêiner é
 ocultada; gestos horizontais do touchpad e `Shift` + roda continuam funcionando.
@@ -77,8 +81,13 @@ datas derivados e, por isso, não expõem essa alternância.
 Com uma ou mais tarefas-folha selecionadas, a barra de ações permite travar ou
 destravar todas em uma única transação. `Ctrl+Shift+L` alterna o mesmo estado e
 é ignorado enquanto o foco está em um campo editável. Ao adicionar ou remover
-uma predecessora-resumo, a Tabela apresenta primeiro as datas que serão
-alteradas e só confirma a operação mediante decisão explícita.
+uma ou mais predecessoras, a Tabela apresenta primeiro as datas que serão
+alteradas e só confirma o lote mediante decisão explícita. Relações e cascata
+do scheduler são gravadas na mesma transação.
+Quando a tarefa possui duas ou mais predecessoras, **Gerenciar** permite
+selecionar várias relações, aplicar um intervalo comum ou removê-las em uma
+única transação. A operação produz uma única entrada no histórico e pode ser
+desfeita integralmente.
 
 ### Salvamento automático na Tabela
 
@@ -141,8 +150,10 @@ calendário do domínio.
 
 Títulos que não cabem na primeira coluna são abreviados visualmente; manter o
 ponteiro sobre o texto revela o nome completo sem alterar a largura do gráfico.
-As barras usam uma cor própria para cada um dos quatro níveis, mantendo texto e
+As barras acomodam os cinco níveis de hierarquia, mantendo texto e
 progresso com contraste e preservando a forma distinta das tarefas-resumo.
+Tarefas críticas recebem ainda um contorno sólido e as próximas do crítico um
+contorno tracejado, de modo que a informação não dependa somente da cor.
 
 Por padrão todas as relações aparecem. Ao clicar em uma linha, ou escolher uma
 relação em **Dependência em foco**, aquela relação recebe destaque,
@@ -167,11 +178,26 @@ tarefa-resumo com descendentes abertos informa a pendência e não pode ser
 concluída. O salvamento usa o
 scheduler do Chrono Project e nunca o mecanismo de agendamento da biblioteca.
 
-Desfazer e refazer no Gantt preservam até 50 edições temporais por projeto no
-SQLite. As pilhas sobrevivem à troca de view e à reabertura da aplicação; uma
-nova edição após desfazer limpa a pilha de refazer. O escopo inclui datas,
-duração, progresso e alterações de lag produzidas pelos gestos do Gantt, não
-operações estruturais como excluir tarefas ou importar workspaces.
+Tabela, Kanban e Gantt compartilham um único histórico de até 50 edições por
+projeto durante a sessão atual. `Ctrl+Z` desfaz e `Ctrl+Shift+Z` refaz; os botões
+do Gantt e o menu **Editar** usam a mesma pilha. O histórico restaura
+atomicamente a tarefa editada, as sucessoras recalculadas, os resumos afetados e
+os lags alterados. Inclusões e remoções de predecessoras, duplicação, exclusão e
+reordenação de tarefas também entram como operações únicas, e o menu descreve a
+próxima ação. Uma nova edição após desfazer limpa a pilha de refazer. Campos de
+texto preservam o desfazer nativo do editor. Criação simples de tarefa e
+importação ainda não entram no histórico, que é limpo ao reabrir ou recarregar
+o workspace.
+O submenu **Editar > Histórico de alterações** apresenta as operações aplicadas
+e desfeitas na sessão sem ocupar permanentemente a área de trabalho.
+
+Na Tabela, o seletor pesquisável de predecessoras segue a ordem estrutural completa: cada
+tarefa-resumo é seguida imediatamente por seus descendentes antes da próxima
+irmã. Relações impossíveis, incluindo a própria tarefa, duplicidades, ancestrais
+que produziriam ciclo e demais caminhos cíclicos, não são oferecidas. Se a
+validação mudar entre a escolha e a gravação, o motivo é exibido no diálogo em
+vez de falhar silenciosamente. A inclusão múltipla forma uma única entrada do
+histórico, por exemplo **3 predecessoras adicionadas a 1.2.2.1. Local**.
 
 ## Controle do plano de referência
 
@@ -252,5 +278,5 @@ candidatos para uma iteração futura de UX, depois do Checkpoint Git 5:
 - ação **Hoje** e enquadramento automático do projeto no Gantt;
 - navegação direta entre as duas pontas de uma dependência em foco;
 - densidade compacta opcional no Kanban;
-- marcos e caminho crítico somente após decisões próprias de domínio
-  e scheduler — não como comportamento implícito da biblioteca de Gantt.
+- marcos dependem de decisão própria de domínio; o caminho crítico usa o cálculo
+  do Chrono Project, nunca um comportamento implícito da biblioteca de Gantt.

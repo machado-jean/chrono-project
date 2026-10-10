@@ -4,7 +4,7 @@ Este é o registro vivo de execução do Chrono Project. Ele traduz o roadmap de
 
 `AGENTS.md` continua sendo a fonte de verdade para produto, arquitetura e regras operacionais. Este documento não substitui a especificação e não deve introduzir escopo incompatível com ela.
 
-Última atualização: **6 de outubro de 2026**.
+Última atualização: **10 de outubro de 2026**.
 
 ## Como manter este documento
 
@@ -31,14 +31,14 @@ Não usar percentuais subjetivos. O progresso deve ser demonstrado por entregáv
 
 | Item | Estado |
 | --- | --- |
-| Etapa do produto | Candidato visual 0.2.5 em preparação |
-| Fase ativa | Identidade visual da interface |
-| Próxima fase | Validar e publicar a composição desktop unificada |
-| Versão da aplicação | `0.2.5` |
-| Versão do schema SQLite | `8` |
-| Último commit de referência | `a76e865` — `Prepare Chrono Project v0.2.4 release` |
-| Branch de trabalho | `main`; candidato 0.2.5 ainda não commitado |
-| Checkpoints obrigatórios | A, B, C e D concluídos; E em preparação |
+| Etapa do produto | Candidato 0.2.6 em validação final |
+| Fase ativa | Hardening e distribuição Windows |
+| Próxima fase | Validar manualmente e gerar os artefatos da v0.2.6 |
+| Versão da aplicação | `0.2.6` |
+| Versão do schema SQLite | `9` |
+| Último commit de referência | `8d1e6d3` — publicação da v0.2.5 |
+| Branch de trabalho | `main`; candidato 0.2.6 ainda não commitado |
+| Checkpoints obrigatórios | A, B, C e D concluídos; E em validação |
 | Funcionalidades de negócio | Core, scheduler, views, reutilização e portabilidade implementados |
 
 ## Visão geral das fases
@@ -55,7 +55,7 @@ Não usar percentuais subjetivos. O progresso deve ser demonstrado por entregáv
 | 7 — Hardening e distribuição | Preparar o produto para uso real no Windows | Em andamento | 8 | Instalador e operação offline validados em máquina limpa |
 | 8 — Controle do plano | Baseline, desvios, prazos-limite e saúde | Concluída | 9 | O plano aprovado pode ser comparado ao cronograma corrente |
 | 9 — Identidade visual | Novo ícone profissional e aplicação consistente da marca | Em andamento | 10 | Aplicativo, instaladores e artefatos exibem a identidade aprovada |
-| 10 — Análise do cronograma | Caminho crítico, folgas e explicabilidade | Planejada | 11 | O usuário identifica e entende as tarefas que controlam o término |
+| 10 — Análise do cronograma | Caminho crítico, folgas e explicabilidade | Em andamento | 11 | O usuário identifica e entende as tarefas que controlam o término |
 | 11 — Progresso e marcos | Marcos e consolidação automática de progresso | Planejada | 12 | Progresso e eventos-chave são coerentes na hierarquia e nas views |
 | 12 — Produtividade | Visões salvas, edição em massa e histórico global | Planejada | 13 | Operações frequentes são rápidas, reversíveis e acessíveis |
 | 13 — Interoperabilidade | Importação e exportação CSV/XLSX | Planejada | 14 | Dados tabulares transitam com prévia, validação e relatório de erros |
@@ -460,18 +460,19 @@ Clippy, build e duas execuções consecutivas dos cinco cenários desktop.
 
 ## Fase 10 — Análise e explicação do cronograma
 
-Estado: **Planejada**. Versão-alvo sugerida: `0.2.0`.
+Estado: **Em andamento**. Primeiro incremento implementado em 07/10/2026.
 
 ### Escopo
 
-- Calcular caminho crítico sobre tarefas-folha e dependências FS.
-- Calcular folga total em dias úteis e identificar tarefas quase críticas.
-- Destacar tarefas críticas no Gantt sem depender somente de cor.
-- Adicionar filtros para tarefas críticas e com baixa folga.
-- Expor caminho crítico e folga na Tabela e, opcionalmente, no PDF.
+- [x] Calcular caminho crítico sobre tarefas-folha e dependências FS.
+- [x] Calcular folga total em dias úteis e identificar tarefas quase críticas.
+- [x] Destacar tarefas críticas no Gantt sem depender somente de cor.
+- [x] Adicionar filtros para tarefas críticas e com baixa folga.
+- [x] Expor caminho crítico e folga na Tabela.
+- [ ] Avaliar inclusão opcional no PDF.
 - Criar uma explicação de agendamento por tarefa: predecessora controladora,
   lag, calendário efetivo, próxima data útil e impacto no término do projeto.
-- Indicar quando não existe rede suficiente para determinar caminho crítico.
+- [x] Indicar quando não existe rede suficiente para determinar caminho crítico.
 
 ### Integridade e testes obrigatórios
 
@@ -479,7 +480,8 @@ Estado: **Planejada**. Versão-alvo sugerida: `0.2.0`.
 - Casos com cadeias independentes, múltiplas predecessoras, lag, feriados,
   tarefas MANUAL, tarefas-resumo e redes desconectadas.
 - Nenhuma alteração incidental na política reativa FS já estabilizada.
-- Testes de desempenho nos limites de 1.000 tarefas por projeto.
+- Testes de desempenho nos limites de 1.000 tarefas por projeto foram adiados
+  por decisão de produto até a conclusão dos incrementos funcionais.
 
 ### Critério de saída
 
@@ -526,6 +528,10 @@ marcos representam eventos-chave sem distorcer a duração do cronograma.
 ## Fase 12 — Produtividade, configuração de views e reversibilidade
 
 Estado: **Planejada**. Versão-alvo sugerida: `0.2.2`.
+
+Incremento parcial concluído em 07/10/2026: histórico legível da sessão,
+inclusão/remoção/intervalo de predecessoras em massa e filtro por múltiplos
+responsáveis. Visões salvas permanecem explicitamente como `to-do`.
 
 ### Escopo
 
@@ -1644,6 +1650,158 @@ matriz no host, na VM limpa e no CI Windows.
 - Executável e instaladores padrão/offline foram gerados, assinados, verificados
   e promovidos para `v0.2.5`. Commit, push, CI, tag e publicação permanecem
   reservados ao usuário.
+
+### 6 de outubro de 2026 — Histórico unificado após a publicação 0.2.5
+
+- A versão 0.2.5 permaneceu imutável após sua publicação no commit `8d1e6d3`.
+- A próxima correção passou a manter até 50 edições de tarefas por projeto na
+  sessão atual, compartilhadas por Tabela, Kanban e Gantt.
+- `Ctrl+Z` desfaz e `Ctrl+Shift+Z` refaz prioridades, status, progresso, textos,
+  datas e outras edições salvas; campos de texto continuam usando o desfazer
+  nativo enquanto estão em edição.
+- O histórico registra também todas as tarefas-resumo e sucessoras alteradas
+  pelo scheduler, além de mudanças de lag realizadas no mesmo salvamento, e
+  restaura o conjunto em uma transação.
+- Os botões **Desfazer** e **Refazer** do Gantt foram conectados à mesma pilha,
+  eliminando a divergência do antigo histórico exclusivo de gestos do gráfico.
+- Naquele incremento, criação, exclusão, reordenação, dependências e importação
+  ainda permaneciam fora do histórico; a limitação foi superada parcialmente
+  pelo incremento de 7 de outubro descrito abaixo.
+
+### 7 de outubro de 2026 — Seletor hierárquico de predecessoras
+
+- Um projeto real revelou que o seletor usava a ordem bruta do banco e separava
+  resumos de seus descendentes, tornando ambíguas tarefas homônimas como
+  `1.2.1.3 Comando` e `1.2.2 Comando`.
+- As opções passaram a seguir a mesma travessia hierárquica da Tabela: pai,
+  descendentes e somente depois a próxima tarefa irmã.
+- Candidatas que criariam ciclos, incluindo ancestrais da sucessora, deixaram de
+  ser apresentadas; duplicidades e a própria tarefa continuam excluídas.
+- Falhas de gravação ou validação concorrente agora aparecem junto ao controle,
+  eliminando o clique silencioso no botão `+`.
+- O seletor foi evoluído para um diálogo pesquisável por número ou título, com
+  checkboxes, indicação de resumo, relações existentes e seleção múltipla.
+- A prévia calcula o impacto combinado do lote; uma confirmação grava relações
+  e cascata do scheduler em uma única transação.
+- `Ctrl+Z`/`Ctrl+Shift+Z` desfaz e refaz o lote completo. O histórico cobre
+  também remoção de predecessora, duplicação, exclusão e reordenação de tarefas,
+  incluindo restauração de entidades e relações removidas.
+- **Editar** mostra Desfazer/Refazer com a descrição da operação, como
+  **3 predecessoras adicionadas a 1.2.2.1. Local**.
+- Os filtros compartilhados ganharam seleção exata de responsável, preenchida
+  pelos nomes existentes no projeto.
+- As larguras mínimas das colunas foram revistas para não cortar cabeçalhos.
+- Testes de regressão cobrem o lote de três predecessoras como uma operação,
+  além de desfazer/refazer reordenação, duplicação e exclusão com dependência.
+
+### 7 de outubro de 2026 — Caminho crítico e produtividade do planejamento
+
+- O domínio passou a calcular caminho crítico e folga total em dias úteis sobre
+  tarefas-folha e relações FS, incluindo redes desconectadas e projeção da menor
+  folga para tarefas-resumo.
+- A Tabela marca tarefas críticas sem criar uma nova coluna; o Gantt usa
+  contorno sólido ou tracejado além da cor. O filtro compartilhado permite
+  mostrar tarefas críticas ou com até dois dias úteis de folga.
+- O filtro de responsáveis aceita múltiplos nomes e tarefas sem responsável.
+- Relações existentes podem ser selecionadas para remoção ou alteração de lag
+  em massa, preservando transação única e um único `Ctrl+Z`.
+- **Editar > Histórico de alterações** apresenta até 12 operações recentes da
+  sessão e distingue as que foram desfeitas.
+- A hierarquia foi ampliada de quatro para cinco níveis no domínio, templates,
+  Tabela e Gantt.
+- Avisos globais de erro passaram a aparecer como alerta compacto e descartável,
+  sem deslocar toda a área de trabalho.
+- Visões salvas continuam como `to-do`; a auditoria de desempenho foi adiada
+  até o encerramento dos incrementos funcionais, conforme decisão do usuário.
+- Não houve mudança de schema. Commit e operações remotas não foram executados.
+
+### 7 de outubro de 2026 — Massa complementar e comportamento dos menus
+
+- O banco local recebeu o projeto isolado **Auditoria — planejamento avançado**,
+  com 15 tarefas, cinco níveis, seis relações FS, uma sucessora com quatro
+  predecessoras, predecessora-resumo, lag, quatro responsáveis e três tarefas
+  sem responsável.
+- O gerador `npm run dev:seed-advanced-audit` é idempotente, recria somente esse
+  projeto e valida a integridade do SQLite antes e depois da transação.
+- Antes da primeira execução foi criado um backup byte a byte com SHA-256
+  idêntico em `.local/backups/chronoproject-before-advanced-audit-20261007-160223.sqlite`.
+- Os menus superiores agora fecham ao clicar fora da barra, além do fechamento
+  por `Esc` já existente, sem interferir nos controles internos dos painéis.
+- O painel **Detalhes** foi reorganizado como inspetor inline de estrutura,
+  agenda, conteúdo e reutilização. Ele permanece aberto durante a edição e
+  fecha somente pelo comando explícito ou por `Esc`.
+- Commit e operações remotas não foram executados.
+
+### 7 de outubro de 2026 — Caminho crítico e margem da meta final
+
+- Cada projeto passou a possuir uma preferência persistente para ativar ou
+  desativar a análise do caminho crítico. A meta final é derivada do maior
+  prazo-limite entre suas tarefas não canceladas.
+- A folga das tarefas é calculada sobre a rede: zero identifica a sequência que
+  controla o término e valores positivos mostram quanto um ramo pode atrasar.
+- A margem global é calculada separadamente contra o maior prazo-limite: valores
+  positivos mostram reserva e valores negativos mostram ultrapassagem prevista.
+- Alterar somente um prazo-limite não muda quais tarefas pertencem ao caminho
+  crítico.
+- Um switch deslizante no cabeçalho, junto ao plano de referência, ativa a
+  análise imediatamente e abre a explicação ao ser ligado. Um diálogo informativo
+  reúne meta automática, margem e uma rede com bifurcação, convergência, durações
+  e alternativa textual. A configuração não altera datas.
+- Indicadores e filtro de cronograma ficam ocultos/desabilitados quando a análise
+  não está disponível; Tabela e Gantt continuam consumindo a mesma projeção.
+- O diálogo mostra, lado a lado, término previsto, meta final e margem global e
+  explica o motivo exato quando ainda não existe informação suficiente para o
+  cálculo.
+- O Gantt associa a criticidade pelo identificador efetivo das barras da
+  biblioteca, incluindo seu prefixo interno, para que os contornos crítico e
+  quase crítico apareçam na linha do tempo.
+- A migration `0009_project_critical_path.sql` preserva projetos existentes com
+  o recurso desligado e sem meta. Exportação, importação, backup e duplicação
+  carregam os novos campos.
+- Pacotes dos schemas 4 a 8 continuam sendo atualizados em cópia temporária antes
+  da leitura, sem mutar o arquivo original.
+- Commit e operações remotas não foram executados.
+
+### 10 de outubro de 2026 — Revisão integral do candidato 0.2.6
+
+- A entrega acumulada foi revisada em domínio, estado, interface, persistência,
+  portabilidade, migrations, testes e documentação; regras duplicadas da moldura
+  e do Gantt foram consolidadas.
+- A versão foi separada da v0.2.5 publicada e sincronizada como `0.2.6` nos cinco
+  manifests. O schema permanece corretamente identificado como `9`.
+- A legenda do Gantt foi mantida curta e a folga exata passou a ser validada no
+  inspetor da tarefa, conforme o contrato visual aprovado.
+- O teste unitário correspondente foi atualizado e a jornada E2E passou a usar
+  o seletor pesquisável de predecessoras, eliminando dependência do controle
+  inline removido.
+- Foram aprovados 191 testes TypeScript/React, 39 testes Rust, 1 jornada E2E,
+  2 testes de desempenho, lint, typecheck, build web, Cargo fmt/check/Clippy e
+  auditoria npm sem vulnerabilidades.
+- O roteiro manual consolidado está em `docs/releases/next.md`. Executável,
+  instaladores, assinaturas e hashes serão registrados somente após essa
+  validação; commit, push e publicação continuam reservados ao usuário.
+
+### 10 de outubro de 2026 — Candidato 0.2.6 pronto para handoff
+
+- A validação manual final foi aprovada com dados reais, incluindo o intervalo
+  individual de cada predecessora e o retorno dos filtros ao arranjo compacto,
+  sem o controle redundante de conclusão.
+- A bateria final aprovou 191 testes TypeScript/React, a jornada E2E, 39 testes
+  Rust com 1 caso histórico ignorado, 2 testes de desempenho, lint, typecheck,
+  build web, auditoria npm, Cargo fmt/check/Clippy e build de distribuição.
+- O executável foi gerado sem `shared-dev-data`; os instaladores padrão e
+  offline foram assinados e verificados contra a chave pública incorporada.
+- `latest.json`, `BUILD_RECORD.json`, `SHA256SUMS.txt`, notas e scripts de
+  assinatura, verificação e publicação foram promovidos para a distribuição
+  local v0.2.6 após duas validações `-VerifyOnly`.
+- A política operacional passou a acompanhar gates com progresso por até dois
+  minutos antes da pausa; prompts confirmados de assinatura continuam sendo
+  comunicados imediatamente.
+- Documentação interna e conteúdo externo do GitHub Release devem ser
+  atualizados em todo release antes do handoff para commit e push.
+- A retenção local manteve v0.2.6, v0.2.5 e v0.2.4; a cópia local da v0.2.3 foi
+  removida após a promoção, permanecendo recuperável no GitHub.
+- Commit, push, tag e publicação permanecem reservados ao usuário.
 
 ## Regras permanentes de acompanhamento
 

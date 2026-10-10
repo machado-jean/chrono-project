@@ -37,6 +37,7 @@ const project: Project = {
   calendarId: DEFAULT_CALENDAR_ID,
   position: 0,
   isArchived: false,
+  criticalPathEnabled: false,
   createdAt: NOW,
   updatedAt: NOW,
 };

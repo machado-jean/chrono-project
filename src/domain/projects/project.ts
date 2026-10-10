@@ -25,6 +25,7 @@ export interface Project {
   readonly calendarId: string;
   readonly position: number;
   readonly isArchived: boolean;
+  readonly criticalPathEnabled: boolean;
   readonly createdAt: string;
   readonly updatedAt: string;
 }
@@ -36,6 +37,9 @@ export function isProjectStatus(value: string): value is ProjectStatus {
 export function validateProject(project: Project): Project {
   if (!isProjectStatus(project.status)) {
     throw new Error("O status do projeto não é válido.");
+  }
+  if (typeof project.criticalPathEnabled !== "boolean") {
+    throw new Error("A preferência do caminho crítico não é válida.");
   }
 
   return {

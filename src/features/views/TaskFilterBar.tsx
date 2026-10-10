@@ -4,12 +4,14 @@ import {
   TASK_STATUSES,
   TASK_STATUS_LABELS,
 } from "../../domain/tasks/task";
-import { EMPTY_TASK_FILTERS, type TaskFilters } from "./task-filters";
+import { EMPTY_TASK_FILTERS, UNASSIGNED_FILTER_VALUE, type TaskFilters } from "./task-filters";
 
 interface TaskFilterBarProps {
   readonly filters: TaskFilters;
   readonly resultCount: number;
   readonly totalCount: number;
+  readonly availableAssignees: readonly string[];
+  readonly criticalPathAvailable: boolean;
   readonly onChange: (filters: TaskFilters) => void;
 }
 
@@ -17,6 +19,8 @@ export function TaskFilterBar({
   filters,
   resultCount,
   totalCount,
+  availableAssignees,
+  criticalPathAvailable,
   onChange,
 }: TaskFilterBarProps) {
   const update = (changes: Partial<TaskFilters>): void => {
@@ -77,19 +81,6 @@ export function TaskFilterBar({
           </select>
         </label>
         <label>
-          <span>Conclusão</span>
-          <select
-            value={filters.completion}
-            onChange={(event) => {
-              update({ completion: event.target.value as TaskFilters["completion"] });
-            }}
-          >
-            <option value="ALL">Todas</option>
-            <option value="OPEN">Não concluídas</option>
-            <option value="COMPLETED">Concluídas</option>
-          </select>
-        </label>
-        <label>
           <span>De</span>
           <input
             type="date"
@@ -105,6 +96,42 @@ export function TaskFilterBar({
             onChange={(event) => { update({ dateTo: event.target.value }); }}
           />
         </label>
+        <label>
+          <span>Cronograma</span>
+          <select
+            disabled={!criticalPathAvailable}
+            value={filters.criticality}
+            onChange={(event) => {
+              update({ criticality: event.target.value as TaskFilters["criticality"] });
+            }}
+          >
+            <option value="ALL">{criticalPathAvailable ? "Todas" : "Desativado"}</option>
+            <option value="CRITICAL">Caminho crítico</option>
+            <option value="NEAR_CRITICAL">Próximas do crítico</option>
+          </select>
+        </label>
+        <div className="filter-multi">
+          <span>Responsável</span>
+          <details>
+            <summary>{filters.assignees.length === 0 ? "Todos" : `${String(filters.assignees.length)} selecionado${filters.assignees.length === 1 ? "" : "s"}`}</summary>
+            <div className="filter-multi-options">
+              {[UNASSIGNED_FILTER_VALUE, ...availableAssignees].map((assignee) => (
+                <label key={assignee}>
+                  <input
+                    type="checkbox"
+                    checked={filters.assignees.includes(assignee)}
+                    onChange={(event) => {
+                      update({ assignees: event.target.checked
+                        ? [...filters.assignees, assignee]
+                        : filters.assignees.filter((candidate) => candidate !== assignee) });
+                    }}
+                  />
+                  <span>{assignee === UNASSIGNED_FILTER_VALUE ? "Sem responsável" : assignee}</span>
+                </label>
+              ))}
+            </div>
+          </details>
+        </div>
         <label>
           <span>Tag</span>
           <input

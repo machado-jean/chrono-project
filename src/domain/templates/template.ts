@@ -13,6 +13,7 @@ import {
   type TaskPriority,
   type TaskStatus,
 } from "../tasks/task";
+import { MAX_TASK_HIERARCHY_LEVELS } from "../tasks/hierarchy";
 
 export interface TaskTemplate {
   readonly id: string;
@@ -197,11 +198,11 @@ export function validateTaskTemplateBundle(bundle: TaskTemplateBundle): TaskTemp
       visited.add(candidate.id);
       candidate = itemById.get(candidate.parentId);
     }
-    if (visited.size + 1 > 4) {
+    if (visited.size + 1 > MAX_TASK_HIERARCHY_LEVELS) {
       throw new DomainValidationError(
         "template_hierarchy_depth_limit",
         "parentId",
-        "A hierarquia do template pode ter no máximo 4 níveis.",
+        `A hierarquia do template pode ter no máximo ${String(MAX_TASK_HIERARCHY_LEVELS)} níveis.`,
       );
     }
   }

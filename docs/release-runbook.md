@@ -17,7 +17,7 @@ complementa `AGENTS.md` e `docs/release-process.md`.
 
 ## 2. Protocolo obrigatório para etapas demoradas
 
-Toda etapa com duração prevista superior a um minuto deve seguir este fluxo:
+Toda etapa com duração prevista superior a dois minutos deve seguir este fluxo:
 
 1. explicar qual comando será iniciado e qual artefato ele produzirá;
 2. iniciar o comando em sessão persistente, com retorno rápido;
@@ -111,24 +111,25 @@ Caso contrário, abrir o terminal para entrada direta do usuário.
 Registrar no release corrente as durações informadas pelas próprias ferramentas.
 Antes de cada comando, usar a mediana recente daquele mesmo gate como referência:
 
-- mediana abaixo de 45 segundos: executar normalmente, com retorno inicial curto;
-- mediana entre 45 e 60 segundos: iniciar em sessão persistente e interromper o
-  turno somente se o processo continuar ativo após o retorno inicial;
-- mediana acima de 60 segundos, ou etapa sem histórico confiável: iniciar em
+- mediana abaixo de 90 segundos: executar normalmente, com retorno inicial curto;
+- mediana entre 90 e 120 segundos: iniciar em sessão persistente e acompanhar
+  enquanto houver progresso, interrompendo o turno se permanecer ativa ao
+  completar dois minutos;
+- mediana acima de 120 segundos, ou etapa sem histórico confiável: iniciar em
   sessão persistente, fornecer o monitor e pausar imediatamente;
-- instaladores padrão/offline, assinatura interativa e publicação
-  continuam sendo tratados como demorados independentemente do cache local.
+- instaladores padrão/offline com cache aquecido podem ser acompanhados até o
+  limite de dois minutos; uma espera confirmada em `Password:` deve ser
+  comunicada imediatamente. Publicação remota continua sendo executada pelo
+  usuário, conforme a seção 11.
 
-Exceção aprovada para o Chrono Project: o gate `npm run test:e2e` pode ser
-acompanhado pelo agente até o término quando o cache estiver aquecido e o
-histórico recente permanecer próximo de um minuto. Não pausar preventivamente
-por causa da execução de 1 min 02 s registrada no release `0.2.1`. Se o gate
-ultrapassar 90 segundos, ficar sem progresso aparente ou voltar a durações de
-vários minutos, aplicar imediatamente o protocolo de sessão persistente e
-entregar o monitor ao usuário.
+O gate `npm run test:e2e` pode ser acompanhado pelo agente até o término quando
+o cache estiver aquecido e o histórico recente permanecer abaixo de dois
+minutos. Se ultrapassar 120 segundos, ficar sem progresso aparente ou voltar a
+durações de vários minutos, aplicar imediatamente o protocolo de sessão
+persistente e entregar o monitor ao usuário.
 
 Uma execução rápida não elimina a regra principal: se houver expectativa razoável
-de ultrapassar um minuto, o agente deve pausar. O histórico serve para evitar
+de ultrapassar dois minutos, o agente deve pausar. O histórico serve para evitar
 pausas desnecessárias em gates comprovadamente curtos, não para acompanhar uma
 sessão longa por polling.
 
@@ -340,7 +341,9 @@ trocar a fonte do download nem desativar a verificação. Copiar o resultado par
 
 ## 10. Documentação antes da publicação
 
-Toda documentação versionada deve chegar ao commit final pronta para permanecer
+Em todo release, sem exceção, toda documentação interna e todo conteúdo externo
+destinado ao GitHub devem ser revisados e atualizados antes do handoff para
+commit e push. Toda documentação versionada deve chegar ao commit final pronta para permanecer
 imutável durante a publicação. Release notes não podem conter `PENDENTE`, texto
 provisório, hashes ausentes ou campos reservados para preenchimento posterior.
 Se uma informação só passa a existir depois da criação da tag ou do GitHub

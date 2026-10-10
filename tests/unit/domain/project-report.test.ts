@@ -21,6 +21,7 @@ const project: Project = {
   calendarId: "30000000-0000-4000-8000-000000000001",
   position: 0,
   isArchived: false,
+  criticalPathEnabled: false,
   createdAt: NOW,
   updatedAt: NOW,
 };

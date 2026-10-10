@@ -15,6 +15,7 @@ writeFileSync(configPath, `${JSON.stringify({
         height: 800,
         label: "main",
         maximized: true,
+        decorations: false,
         minHeight: 640,
         minWidth: 960,
         title: "Chrono Project E2E",

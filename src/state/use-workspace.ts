@@ -41,6 +41,7 @@ import {
   type TaskPriority,
   type TaskStatus,
 } from "../domain/tasks/task";
+import { buildTaskOutlineNumbers } from "../domain/tasks/outline-number";
 import type {
   TaskTemplate,
   TaskTemplateBundle,
@@ -67,10 +68,33 @@ interface DependencyInput {
   readonly lagDays: number;
 }
 
+interface CreateDependenciesOptions {
+  readonly historyLabel?: string;
+}
+
 interface CreateTemplateInput {
   readonly rootTaskId: string;
   readonly name: string;
   readonly description: string | null;
+}
+
+interface SaveTaskOptions {
+  readonly recordHistory?: boolean;
+  readonly historyLabel?: string;
+}
+
+interface TaskEditHistoryEntry {
+  readonly projectId: string;
+  readonly label: string;
+  readonly beforeTasks: readonly Task[];
+  readonly afterTasks: readonly Task[];
+  readonly beforeDependencies: readonly TaskDependency[];
+  readonly afterDependencies: readonly TaskDependency[];
+}
+
+interface TaskEditHistoryStacks {
+  readonly undoEntries: TaskEditHistoryEntry[];
+  readonly redoEntries: TaskEditHistoryEntry[];
 }
 
 export type MoveDirection = "up" | "down";
@@ -110,7 +134,18 @@ export interface WorkspaceController {
   readonly saveTask: (
     task: Task,
     dependencyUpdates?: readonly TaskDependency[],
+    options?: SaveTaskOptions,
   ) => Promise<boolean>;
+  readonly canUndoTaskEdit: boolean;
+  readonly canRedoTaskEdit: boolean;
+  readonly undoTaskEditLabel: string | null;
+  readonly redoTaskEditLabel: string | null;
+  readonly taskEditHistoryEntries: readonly {
+    readonly label: string;
+    readonly state: "APPLIED" | "UNDONE";
+  }[];
+  readonly undoTaskEdit: () => Promise<boolean>;
+  readonly redoTaskEdit: () => Promise<boolean>;
   readonly setTasksSchedulingMode: (
     taskIds: readonly string[],
     schedulingMode: SchedulingMode,
@@ -120,8 +155,20 @@ export interface WorkspaceController {
   readonly moveTask: (taskId: string, direction: MoveDirection) => Promise<boolean>;
   readonly removeTaskTree: (taskId: string) => Promise<boolean>;
   readonly createDependency: (input: DependencyInput) => Promise<TaskDependency | null>;
+  readonly createDependencies: (
+    inputs: readonly DependencyInput[],
+    options?: CreateDependenciesOptions,
+  ) => Promise<readonly TaskDependency[] | null>;
   readonly saveDependency: (dependency: TaskDependency) => Promise<boolean>;
+  readonly saveDependencies: (
+    dependencies: readonly TaskDependency[],
+    historyLabel?: string,
+  ) => Promise<boolean>;
   readonly removeDependency: (dependencyId: string) => Promise<boolean>;
+  readonly removeDependencies: (
+    dependencyIds: readonly string[],
+    historyLabel?: string,
+  ) => Promise<boolean>;
   readonly duplicateTask: (taskId: string, includeDescendants: boolean) => Promise<Task | null>;
   readonly duplicateProject: (projectId: string) => Promise<Project | null>;
   readonly createTemplate: (input: CreateTemplateInput) => Promise<TaskTemplate | null>;
@@ -257,6 +304,17 @@ export function useWorkspace(repository: WorkspaceRepository): WorkspaceControll
   const projectsRef = useRef(projects);
   const tasksRef = useRef(tasks);
   const dependenciesRef = useRef(dependencies);
+  const taskEditHistoryRef = useRef(new Map<string, TaskEditHistoryStacks>());
+  const [taskEditHistoryAvailability, setTaskEditHistoryAvailability] = useState(
+    new Map<string, {
+      readonly canUndo: boolean;
+      readonly canRedo: boolean;
+      readonly undoLabel: string | null;
+      readonly redoLabel: string | null;
+      readonly undoLabels: readonly string[];
+      readonly redoLabels: readonly string[];
+    }>(),
+  );
   const mutationQueueRef = useRef<Promise<void>>(Promise.resolve());
 
   useLayoutEffect(() => { calendarsRef.current = calendars; }, [calendars]);
@@ -313,6 +371,8 @@ export function useWorkspace(repository: WorkspaceRepository): WorkspaceControll
         projectsRef.current = snapshot.projects;
         tasksRef.current = reconciledTasks;
         dependenciesRef.current = snapshot.dependencies;
+        taskEditHistoryRef.current.clear();
+        setTaskEditHistoryAvailability(new Map());
         setCalendars(snapshot.calendars);
         setProjects(snapshot.projects);
         setTasks(reconciledTasks);
@@ -364,6 +424,29 @@ export function useWorkspace(repository: WorkspaceRepository): WorkspaceControll
     return await queued;
   }, []);
 
+  const recordTaskEditHistory = useCallback((entry: TaskEditHistoryEntry): void => {
+    const history = taskEditHistoryRef.current.get(entry.projectId) ?? {
+      undoEntries: [],
+      redoEntries: [],
+    };
+    history.undoEntries.push(entry);
+    if (history.undoEntries.length > 50) history.undoEntries.shift();
+    history.redoEntries.splice(0);
+    taskEditHistoryRef.current.set(entry.projectId, history);
+    setTaskEditHistoryAvailability((current) => {
+      const next = new Map(current);
+      next.set(entry.projectId, {
+        canUndo: true,
+        canRedo: false,
+        undoLabel: entry.label,
+        redoLabel: null,
+        undoLabels: history.undoEntries.map(({ label }) => label),
+        redoLabels: [],
+      });
+      return next;
+    });
+  }, []);
+
   const createProject = useCallback(
     async (input: CreateProjectInput): Promise<Project | null> =>
       runMutation(async () => {
@@ -376,6 +459,7 @@ export function useWorkspace(repository: WorkspaceRepository): WorkspaceControll
           calendarId: calendars.find((calendar) => calendar.isDefault)?.id ?? DEFAULT_CALENDAR_ID,
           position: nextPosition(projects),
           isArchived: false,
+          criticalPathEnabled: false,
           createdAt,
           updatedAt: createdAt,
         });
@@ -707,6 +791,7 @@ export function useWorkspace(repository: WorkspaceRepository): WorkspaceControll
     async (
       task: Task,
       dependencyUpdates: readonly TaskDependency[] = [],
+      options: SaveTaskOptions = {},
     ): Promise<boolean> => {
       const result = await runMutation(async () => {
         const currentProjects = projectsRef.current;
@@ -787,6 +872,9 @@ export function useWorkspace(repository: WorkspaceRepository): WorkspaceControll
           taskTreeIdsToDelete: [],
         });
         const replacements = persistedTasks.filter((candidate) => persistIds.has(candidate.id));
+        const beforeTasks = currentTasks.filter((candidate) => persistIds.has(candidate.id));
+        const beforeDependencies = existingProjectDependencies.filter((dependency) =>
+          dependencyUpdateIds.has(dependency.id));
         const nextTasks = replaceTasks(tasksRef.current, replacements);
         tasksRef.current = nextTasks;
         setTasks(nextTasks);
@@ -796,6 +884,16 @@ export function useWorkspace(repository: WorkspaceRepository): WorkspaceControll
           );
           dependenciesRef.current = nextDependencies;
           setDependencies(nextDependencies);
+        }
+        if ((options.recordHistory ?? true) && beforeTasks.length === replacements.length) {
+          recordTaskEditHistory({
+            projectId: task.projectId,
+            label: options.historyLabel ?? `Alteração em ${validated.title}`,
+            beforeTasks,
+            afterTasks: replacements,
+            beforeDependencies,
+            afterDependencies: validatedDependencyUpdates,
+          });
         }
         setSchedulingConflicts((current) =>
           replaceProjectConflicts(
@@ -808,7 +906,123 @@ export function useWorkspace(repository: WorkspaceRepository): WorkspaceControll
       }, { blocking: false });
       return result ?? false;
     },
-    [repository, runMutation],
+    [recordTaskEditHistory, repository, runMutation],
+  );
+
+  const restoreTaskEdit = useCallback(
+    async (direction: "UNDO" | "REDO"): Promise<boolean> => {
+      const result = await runMutation(async () => {
+        const projectId = selectedProjectId;
+        if (projectId === null) return false;
+        const history = taskEditHistoryRef.current.get(projectId);
+        if (history === undefined) return false;
+        const source = direction === "UNDO" ? history.undoEntries : history.redoEntries;
+        const destination = direction === "UNDO" ? history.redoEntries : history.undoEntries;
+        const entry = source[source.length - 1];
+        if (entry === undefined || entry.projectId !== projectId) return false;
+
+        const project = projectsRef.current.find((candidate) => candidate.id === projectId);
+        if (project === undefined) throw new Error("O projeto do histórico não existe mais.");
+        const updatedAt = nowUtc();
+        const sourceTasks = direction === "UNDO" ? entry.afterTasks : entry.beforeTasks;
+        const snapshotTasks = direction === "UNDO" ? entry.beforeTasks : entry.afterTasks;
+        const sourceDependencies = direction === "UNDO"
+          ? entry.afterDependencies
+          : entry.beforeDependencies;
+        const snapshotDependencies = direction === "UNDO"
+          ? entry.beforeDependencies
+          : entry.afterDependencies;
+        const restoredTasks = snapshotTasks.map((task) =>
+          validateTask({ ...task, updatedAt }));
+        const restoredTaskIds = new Set(restoredTasks.map(({ id }) => id));
+        const removedTaskIds = new Set(
+          sourceTasks.filter((task) => !restoredTaskIds.has(task.id)).map(({ id }) => id),
+        );
+        const taskTreeIdsToDelete = sourceTasks
+          .filter((task) => removedTaskIds.has(task.id) &&
+            (task.parentId === null || !removedTaskIds.has(task.parentId)))
+          .map(({ id }) => id);
+        const projectTasksWithRestore = replaceTasks(
+          tasksRef.current.filter((task) => task.projectId === projectId),
+          restoredTasks,
+          removedTaskIds,
+        );
+        const restoredDependencies = snapshotDependencies.map((dependency) =>
+          validateTaskDependency({ ...dependency, updatedAt }, projectTasksWithRestore));
+        const restoredDependenciesById = new Map(
+          restoredDependencies.map((dependency) => [dependency.id, dependency]),
+        );
+        const restoredDependencyIds = new Set(restoredDependencies.map(({ id }) => id));
+        const dependencyIdsToDelete = sourceDependencies
+          .filter((dependency) => !restoredDependencyIds.has(dependency.id))
+          .map(({ id }) => id);
+        const deletedDependencyIds = new Set(dependencyIdsToDelete);
+        const nextDependencies = [
+          ...dependenciesRef.current
+            .filter((dependency) =>
+              !deletedDependencyIds.has(dependency.id) &&
+              !removedTaskIds.has(dependency.predecessorId) &&
+              !removedTaskIds.has(dependency.successorId))
+            .map((dependency) => restoredDependenciesById.get(dependency.id) ?? dependency),
+          ...restoredDependencies.filter((dependency) =>
+            !dependenciesRef.current.some(({ id }) => id === dependency.id)),
+        ];
+        const nextTasks = replaceTasks(tasksRef.current, restoredTasks, removedTaskIds);
+        const nextProjectDependencies = nextDependencies.filter(
+          (dependency) => dependency.projectId === projectId,
+        );
+        validateGraph(projectTasksWithRestore, nextProjectDependencies);
+        await repository.applyScheduleChanges({
+          calendarsToSave: [],
+          tasks: restoredTasks,
+          dependenciesToSave: restoredDependencies,
+          dependencyIdsToDelete,
+          taskTreeIdsToDelete,
+        });
+        tasksRef.current = nextTasks;
+        dependenciesRef.current = nextDependencies;
+        setTasks(nextTasks);
+        setDependencies(nextDependencies);
+        setSchedulingConflicts((current) =>
+          replaceProjectConflicts(
+            current,
+            new Set(projectTasksWithRestore.map(({ id }) => id)),
+            projectSchedulingConflicts(
+              project,
+              projectTasksWithRestore,
+              nextProjectDependencies,
+              calendarsRef.current,
+            ),
+          ),
+        );
+        source.pop();
+        destination.push(entry);
+        setTaskEditHistoryAvailability((current) => {
+          const next = new Map(current);
+          next.set(projectId, {
+            canUndo: history.undoEntries.length > 0,
+            canRedo: history.redoEntries.length > 0,
+            undoLabel: history.undoEntries.at(-1)?.label ?? null,
+            redoLabel: history.redoEntries.at(-1)?.label ?? null,
+            undoLabels: history.undoEntries.map(({ label }) => label),
+            redoLabels: history.redoEntries.map(({ label }) => label),
+          });
+          return next;
+        });
+        return true;
+      }, { blocking: false });
+      return result ?? false;
+    },
+    [repository, runMutation, selectedProjectId],
+  );
+
+  const undoTaskEdit = useCallback(
+    () => restoreTaskEdit("UNDO"),
+    [restoreTaskEdit],
+  );
+  const redoTaskEdit = useCallback(
+    () => restoreTaskEdit("REDO"),
+    [restoreTaskEdit],
   );
 
   const setTasksSchedulingMode = useCallback(
@@ -897,18 +1111,28 @@ export function useWorkspace(repository: WorkspaceRepository): WorkspaceControll
       if (taskIds === null) return false;
       const positions = positionsById(taskIds);
       const result = await runMutation(async () => {
+        const beforeTasks = tasksRef.current.filter((candidate) => taskIds.includes(candidate.id));
         await repository.reorderTasks(taskIds);
-        setTasks((currentTasks) =>
-          currentTasks.map((candidate) => {
+        const nextTasks = tasksRef.current.map((candidate) => {
             const position = positions.get(candidate.id);
             return position === undefined ? candidate : { ...candidate, position };
-          }),
-        );
+          });
+        const afterTasks = nextTasks.filter((candidate) => taskIds.includes(candidate.id));
+        tasksRef.current = nextTasks;
+        setTasks(nextTasks);
+        recordTaskEditHistory({
+          projectId: task.projectId,
+          label: `${task.title} movida para ${direction === "up" ? "cima" : "baixo"}`,
+          beforeTasks,
+          afterTasks,
+          beforeDependencies: [],
+          afterDependencies: [],
+        });
         return true;
       });
       return result ?? false;
     },
-    [repository, runMutation, tasks],
+    [recordTaskEditHistory, repository, runMutation, tasks],
   );
 
   const removeTaskTree = useCallback(
@@ -941,21 +1165,36 @@ export function useWorkspace(repository: WorkspaceRepository): WorkspaceControll
           scheduled.changedTaskIds,
           updatedAt,
         );
+        const affectedIds = new Set([...removedIds, ...scheduled.changedTaskIds]);
+        const beforeTasks = tasks.filter((task) => affectedIds.has(task.id));
+        const afterTasks = persistedTasks.filter((task) => scheduled.changedTaskIds.has(task.id));
+        const removedDependencies = dependencies.filter((dependency) =>
+          removedIds.has(dependency.predecessorId) || removedIds.has(dependency.successorId));
         await repository.applyScheduleChanges({
           calendarsToSave: [],
           tasks: persistedTasks.filter((task) => scheduled.changedTaskIds.has(task.id)),
           dependenciesToSave: [],
-          dependencyIdsToDelete: [],
+          dependencyIdsToDelete: removedDependencies.map(({ id }) => id),
           taskTreeIdsToDelete: [taskId],
         });
-        setTasks((current) => replaceTasks(current, persistedTasks, removedIds));
-        setDependencies((current) =>
-          current.filter(
+        const nextTasks = replaceTasks(tasksRef.current, persistedTasks, removedIds);
+        const nextDependencies = dependenciesRef.current.filter(
             (dependency) =>
               !removedIds.has(dependency.predecessorId) &&
               !removedIds.has(dependency.successorId),
-          ),
-        );
+          );
+        tasksRef.current = nextTasks;
+        dependenciesRef.current = nextDependencies;
+        setTasks(nextTasks);
+        setDependencies(nextDependencies);
+        recordTaskEditHistory({
+          projectId: root.projectId,
+          label: `${root.title} excluída${removedIds.size === 1 ? "" : ` com ${String(removedIds.size - 1)} subtarefa${removedIds.size === 2 ? "" : "s"}`}`,
+          beforeTasks,
+          afterTasks,
+          beforeDependencies: removedDependencies,
+          afterDependencies: [],
+        });
         setSchedulingConflicts((current) =>
           replaceProjectConflicts(
             current,
@@ -969,7 +1208,7 @@ export function useWorkspace(repository: WorkspaceRepository): WorkspaceControll
       });
       return result ?? false;
     },
-    [calendars, dependencies, projects, repository, runMutation, tasks],
+    [calendars, dependencies, projects, recordTaskEditHistory, repository, runMutation, tasks],
   );
 
   const persistDependency = useCallback(
@@ -1027,16 +1266,35 @@ export function useWorkspace(repository: WorkspaceRepository): WorkspaceControll
     [repository],
   );
 
-  const createDependency = useCallback(
-    async (input: DependencyInput): Promise<TaskDependency | null> =>
-      runMutation(async () => {
+  const createDependencies = useCallback(
+    async (
+      inputs: readonly DependencyInput[],
+      options: CreateDependenciesOptions = {},
+    ): Promise<readonly TaskDependency[] | null> => {
+      if (inputs.length === 0) return [];
+      return runMutation(async () => {
         const currentTasks = tasksRef.current;
         const currentDependencies = dependenciesRef.current;
-        const successor = currentTasks.find((task) => task.id === input.successorId);
+        const successorIds = new Set(inputs.map(({ successorId }) => successorId));
+        if (successorIds.size !== 1) {
+          throw new Error("A inclusão múltipla deve usar a mesma tarefa sucessora.");
+        }
+        const successorId = inputs[0]?.successorId;
+        const successor = currentTasks.find((task) => task.id === successorId);
         if (successor === undefined) throw new Error("A tarefa sucessora não existe.");
+        const project = projectsRef.current.find(({ id }) => id === successor.projectId);
+        if (project === undefined) throw new Error("O projeto da dependência não existe.");
+        const uniquePredecessorIds = new Set(inputs.map(({ predecessorId }) => predecessorId));
+        if (uniquePredecessorIds.size !== inputs.length) {
+          throw new Error("A mesma predecessora não pode ser adicionada duas vezes.");
+        }
+        if (inputs.some((input) => currentDependencies.some((dependency) =>
+          dependency.predecessorId === input.predecessorId &&
+          dependency.successorId === input.successorId))) {
+          throw new Error("Uma das predecessoras selecionadas já foi adicionada.");
+        }
         const createdAt = nowUtc();
-        const dependency = validateTaskDependency(
-          {
+        const created = inputs.map((input) => validateTaskDependency({
             id: crypto.randomUUID(),
             projectId: successor.projectId,
             predecessorId: input.predecessorId,
@@ -1045,14 +1303,68 @@ export function useWorkspace(repository: WorkspaceRepository): WorkspaceControll
             lagDays: input.lagDays,
             createdAt,
             updatedAt: createdAt,
-          },
-          currentTasks,
+          }, currentTasks));
+        const nextDependencies = [...currentDependencies, ...created];
+        const projectTasks = currentTasks.filter((task) => task.projectId === successor.projectId);
+        const projectDependencies = nextDependencies.filter(
+          (dependency) => dependency.projectId === successor.projectId,
         );
-        const nextDependencies = [...currentDependencies, dependency];
-        await persistDependency(dependency, nextDependencies);
-        return dependency;
-      }),
-    [persistDependency, runMutation],
+        validateGraph(projectTasks, projectDependencies);
+        const scheduled = rescheduleAffectedTasks({
+          tasks: projectTasks,
+          dependencies: projectDependencies,
+          calendars: calendarsRef.current,
+          projectCalendarId: project.calendarId,
+          changedTaskIds: [successor.id],
+        });
+        const persistedTasks = stampedScheduledTasks(
+          scheduled.tasks,
+          scheduled.changedTaskIds,
+          createdAt,
+        );
+        const replacements = persistedTasks.filter((task) => scheduled.changedTaskIds.has(task.id));
+        const beforeTasks = currentTasks.filter((task) => scheduled.changedTaskIds.has(task.id));
+        await repository.applyScheduleChanges({
+          calendarsToSave: [],
+          tasks: replacements,
+          dependenciesToSave: created,
+          dependencyIdsToDelete: [],
+          taskTreeIdsToDelete: [],
+        });
+        const nextTasks = replaceTasks(currentTasks, replacements);
+        tasksRef.current = nextTasks;
+        dependenciesRef.current = nextDependencies;
+        setTasks(nextTasks);
+        setDependencies(nextDependencies);
+        const outline = buildTaskOutlineNumbers(projectTasks).get(successor.id);
+        const targetLabel = `${outline === undefined ? "" : `${outline}. `}${successor.title}`;
+        recordTaskEditHistory({
+          projectId: successor.projectId,
+          label: options.historyLabel ?? `${String(created.length)} predecessora${created.length === 1 ? "" : "s"} adicionada${created.length === 1 ? "" : "s"} a ${targetLabel}`,
+          beforeTasks,
+          afterTasks: replacements,
+          beforeDependencies: [],
+          afterDependencies: created,
+        });
+        setSchedulingConflicts((current) =>
+          replaceProjectConflicts(
+            current,
+            new Set(projectTasks.map(({ id }) => id)),
+            projectSchedulingConflicts(project, persistedTasks, projectDependencies, calendarsRef.current),
+          ),
+        );
+        return created;
+      });
+    },
+    [recordTaskEditHistory, repository, runMutation],
+  );
+
+  const createDependency = useCallback(
+    async (input: DependencyInput): Promise<TaskDependency | null> => {
+      const created = await createDependencies([input]);
+      return created?.[0] ?? null;
+    },
+    [createDependencies],
   );
 
   const saveDependency = useCallback(
@@ -1069,56 +1381,136 @@ export function useWorkspace(repository: WorkspaceRepository): WorkspaceControll
     [dependencies, persistDependency, runMutation, tasks],
   );
 
-  const removeDependency = useCallback(
-    async (dependencyId: string): Promise<boolean> => {
+  const saveDependencies = useCallback(
+    async (updates: readonly TaskDependency[], historyLabel?: string): Promise<boolean> => {
+      if (updates.length === 0) return true;
       const result = await runMutation(async () => {
-        const removed = dependencies.find((dependency) => dependency.id === dependencyId);
-        if (removed === undefined) throw new Error("A dependência selecionada não existe.");
-        const project = projects.find((candidate) => candidate.id === removed.projectId);
+        const currentTasks = tasksRef.current;
+        const currentDependencies = dependenciesRef.current;
+        const updateIds = new Set(updates.map(({ id }) => id));
+        const previous = currentDependencies.filter(({ id }) => updateIds.has(id));
+        if (previous.length !== updateIds.size) throw new Error("Uma das dependências selecionadas não existe.");
+        const projectIds = new Set(previous.map(({ projectId }) => projectId));
+        if (projectIds.size !== 1) throw new Error("As dependências devem pertencer ao mesmo projeto.");
+        const projectId = previous[0]?.projectId;
+        const project = projectsRef.current.find(({ id }) => id === projectId);
         if (project === undefined) throw new Error("O projeto da dependência não existe.");
-        const nextDependencies = dependencies.filter((dependency) => dependency.id !== dependencyId);
-        const projectTasks = tasks.filter((task) => task.projectId === removed.projectId);
+        const updatedAt = nowUtc();
+        const validated = updates.map((dependency) => validateTaskDependency({ ...dependency, updatedAt }, currentTasks));
+        const updateById = new Map(validated.map((dependency) => [dependency.id, dependency]));
+        const nextDependencies = currentDependencies.map((dependency) => updateById.get(dependency.id) ?? dependency);
+        const projectTasks = currentTasks.filter((task) => task.projectId === project.id);
+        const projectDependencies = nextDependencies.filter((dependency) => dependency.projectId === project.id);
+        validateGraph(projectTasks, projectDependencies);
+        const changedTaskIds = [...new Set(validated.map(({ successorId }) => successorId))];
         const scheduled = rescheduleAffectedTasks({
           tasks: projectTasks,
-          dependencies: nextDependencies.filter(
-            (dependency) => dependency.projectId === removed.projectId,
-          ),
-          calendars,
+          dependencies: projectDependencies,
+          calendars: calendarsRef.current,
           projectCalendarId: project.calendarId,
-          changedTaskIds: [removed.successorId],
+          changedTaskIds,
         });
-        const updatedAt = nowUtc();
-        const persistedTasks = stampedScheduledTasks(
-          scheduled.tasks,
-          scheduled.changedTaskIds,
-          updatedAt,
-        );
+        const persistedTasks = stampedScheduledTasks(scheduled.tasks, scheduled.changedTaskIds, updatedAt);
+        const replacements = persistedTasks.filter((task) => scheduled.changedTaskIds.has(task.id));
+        const beforeTasks = currentTasks.filter((task) => scheduled.changedTaskIds.has(task.id));
         await repository.applyScheduleChanges({
           calendarsToSave: [],
-          tasks: persistedTasks.filter((task) => scheduled.changedTaskIds.has(task.id)),
-          dependenciesToSave: [],
-          dependencyIdsToDelete: [dependencyId],
+          tasks: replacements,
+          dependenciesToSave: validated,
+          dependencyIdsToDelete: [],
           taskTreeIdsToDelete: [],
         });
-        setTasks((current) => replaceTasks(current, persistedTasks));
+        const nextTasks = replaceTasks(currentTasks, persistedTasks);
+        tasksRef.current = nextTasks;
+        dependenciesRef.current = nextDependencies;
+        setTasks(nextTasks);
         setDependencies(nextDependencies);
-        setSchedulingConflicts((current) =>
-          replaceProjectConflicts(
-            current,
-            new Set(persistedTasks.map(({ id }) => id)),
-            projectSchedulingConflicts(
-              project,
-              persistedTasks,
-              nextDependencies.filter((dependency) => dependency.projectId === removed.projectId),
-              calendars,
-            ),
-          ),
-        );
+        recordTaskEditHistory({
+          projectId: project.id,
+          label: historyLabel ?? `${String(validated.length)} predecessora${validated.length === 1 ? "" : "s"} atualizada${validated.length === 1 ? "" : "s"}`,
+          beforeTasks,
+          afterTasks: replacements,
+          beforeDependencies: previous,
+          afterDependencies: validated,
+        });
+        setSchedulingConflicts((current) => replaceProjectConflicts(
+          current,
+          new Set(projectTasks.map(({ id }) => id)),
+          projectSchedulingConflicts(project, persistedTasks, projectDependencies, calendarsRef.current),
+        ));
         return true;
       });
       return result ?? false;
     },
-    [calendars, dependencies, projects, repository, runMutation, tasks],
+    [recordTaskEditHistory, repository, runMutation],
+  );
+
+  const removeDependencies = useCallback(
+    async (dependencyIds: readonly string[], historyLabel?: string): Promise<boolean> => {
+      if (dependencyIds.length === 0) return true;
+      const result = await runMutation(async () => {
+        const currentTasks = tasksRef.current;
+        const currentDependencies = dependenciesRef.current;
+        const ids = new Set(dependencyIds);
+        const removed = currentDependencies.filter(({ id }) => ids.has(id));
+        if (removed.length !== ids.size) throw new Error("Uma das dependências selecionadas não existe.");
+        const projectIds = new Set(removed.map(({ projectId }) => projectId));
+        if (projectIds.size !== 1) throw new Error("As dependências devem pertencer ao mesmo projeto.");
+        const projectId = removed[0]?.projectId;
+        const project = projectsRef.current.find(({ id }) => id === projectId);
+        if (project === undefined) throw new Error("O projeto da dependência não existe.");
+        const nextDependencies = currentDependencies.filter(({ id }) => !ids.has(id));
+        const projectTasks = currentTasks.filter((task) => task.projectId === project.id);
+        const projectDependencies = nextDependencies.filter((dependency) => dependency.projectId === project.id);
+        const scheduled = rescheduleAffectedTasks({
+          tasks: projectTasks,
+          dependencies: projectDependencies,
+          calendars: calendarsRef.current,
+          projectCalendarId: project.calendarId,
+          changedTaskIds: [...new Set(removed.map(({ successorId }) => successorId))],
+        });
+        const updatedAt = nowUtc();
+        const persistedTasks = stampedScheduledTasks(scheduled.tasks, scheduled.changedTaskIds, updatedAt);
+        const replacements = persistedTasks.filter((task) => scheduled.changedTaskIds.has(task.id));
+        const beforeTasks = currentTasks.filter((task) => scheduled.changedTaskIds.has(task.id));
+        await repository.applyScheduleChanges({
+          calendarsToSave: [],
+          tasks: replacements,
+          dependenciesToSave: [],
+          dependencyIdsToDelete: [...ids],
+          taskTreeIdsToDelete: [],
+        });
+        const nextTasks = replaceTasks(currentTasks, persistedTasks);
+        tasksRef.current = nextTasks;
+        dependenciesRef.current = nextDependencies;
+        setTasks(nextTasks);
+        setDependencies(nextDependencies);
+        const successor = currentTasks.find(({ id }) => id === removed[0]?.successorId);
+        recordTaskEditHistory({
+          projectId: project.id,
+          label: historyLabel ?? `${String(removed.length)} predecessora${removed.length === 1 ? "" : "s"} removida${removed.length === 1 ? "" : "s"} de ${successor?.title ?? "tarefa"}`,
+          beforeTasks,
+          afterTasks: replacements,
+          beforeDependencies: removed,
+          afterDependencies: [],
+        });
+        setSchedulingConflicts((current) => replaceProjectConflicts(
+          current,
+          new Set(projectTasks.map(({ id }) => id)),
+          projectSchedulingConflicts(project, persistedTasks, projectDependencies, calendarsRef.current),
+        ));
+        return true;
+      });
+      return result ?? false;
+    },
+    [recordTaskEditHistory, repository, runMutation],
+  );
+
+  const removeDependency = useCallback(
+    async (dependencyId: string): Promise<boolean> => {
+      return removeDependencies([dependencyId]);
+    },
+    [removeDependencies],
   );
 
   const duplicateTask = useCallback(
@@ -1169,8 +1561,24 @@ export function useWorkspace(repository: WorkspaceRepository): WorkspaceControll
           tasks: persistedProjectTasks.filter((task) => persistIds.has(task.id)),
           dependencies: duplicated.dependencies,
         });
-        setTasks((current) => replaceTasks(current, persistedProjectTasks));
-        setDependencies((current) => [...current, ...duplicated.dependencies]);
+        const replacements = persistedProjectTasks.filter((task) => persistIds.has(task.id));
+        const duplicatedIds = new Set(duplicated.tasks.map(({ id }) => id));
+        const beforeTasks = tasks.filter((task) =>
+          persistIds.has(task.id) && !duplicatedIds.has(task.id));
+        const nextTasks = replaceTasks(tasksRef.current, persistedProjectTasks);
+        const nextWorkspaceDependencies = [...dependenciesRef.current, ...duplicated.dependencies];
+        tasksRef.current = nextTasks;
+        dependenciesRef.current = nextWorkspaceDependencies;
+        setTasks(nextTasks);
+        setDependencies(nextWorkspaceDependencies);
+        recordTaskEditHistory({
+          projectId: source.projectId,
+          label: `${source.title} duplicada${includeDescendants ? " com subtarefas" : ""}`,
+          beforeTasks,
+          afterTasks: replacements,
+          beforeDependencies: [],
+          afterDependencies: duplicated.dependencies,
+        });
         setSchedulingConflicts((current) =>
           replaceProjectConflicts(
             current,
@@ -1181,7 +1589,7 @@ export function useWorkspace(repository: WorkspaceRepository): WorkspaceControll
         const copiedRootId = duplicated.sourceToCopyId.get(taskId);
         return persistedProjectTasks.find((task) => task.id === copiedRootId) ?? null;
       }),
-    [calendars, dependencies, projects, repository, runMutation, tasks],
+    [calendars, dependencies, projects, recordTaskEditHistory, repository, runMutation, tasks],
   );
 
   const duplicateProject = useCallback(
@@ -1333,6 +1741,9 @@ export function useWorkspace(repository: WorkspaceRepository): WorkspaceControll
       : baselineTasks.filter((task) => task.baselineId === activeBaseline.id),
     [activeBaseline, baselineTasks],
   );
+  const selectedTaskEditHistoryAvailability = selectedProjectId === null
+    ? undefined
+    : taskEditHistoryAvailability.get(selectedProjectId);
 
   return {
     calendars,
@@ -1369,14 +1780,33 @@ export function useWorkspace(repository: WorkspaceRepository): WorkspaceControll
     removeProjectBaselines,
     createTask,
     saveTask,
+    canUndoTaskEdit: selectedTaskEditHistoryAvailability?.canUndo ?? false,
+    canRedoTaskEdit: selectedTaskEditHistoryAvailability?.canRedo ?? false,
+    undoTaskEditLabel: selectedTaskEditHistoryAvailability?.undoLabel ?? null,
+    redoTaskEditLabel: selectedTaskEditHistoryAvailability?.redoLabel ?? null,
+    taskEditHistoryEntries: [
+      ...(selectedTaskEditHistoryAvailability?.undoLabels ?? []).map((label) => ({
+        label,
+        state: "APPLIED" as const,
+      })),
+      ...[...(selectedTaskEditHistoryAvailability?.redoLabels ?? [])].reverse().map((label) => ({
+        label,
+        state: "UNDONE" as const,
+      })),
+    ].reverse(),
+    undoTaskEdit,
+    redoTaskEdit,
     setTasksSchedulingMode,
     loadGanttHistory,
     saveGanttHistory,
     moveTask,
     removeTaskTree,
     createDependency,
+    createDependencies,
     saveDependency,
+    saveDependencies,
     removeDependency,
+    removeDependencies,
     duplicateTask,
     duplicateProject,
     createTemplate,

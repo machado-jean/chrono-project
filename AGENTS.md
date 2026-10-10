@@ -2085,9 +2085,9 @@ Esse runbook é obrigatório e define:
   sem CI duplicado para a tag;
 - relatório final do release.
 
-## 69.1 Regra de pausa acima de um minuto
+## 69.1 Regra de pausa acima de dois minutos
 
-Para toda etapa com duração prevista superior a um minuto, o Codex deve:
+Para toda etapa com duração prevista superior a dois minutos, o Codex deve:
 
 1. iniciar a etapa em sessão persistente;
 2. informar o ID da sessão;
@@ -2107,10 +2107,11 @@ em `docs/release-runbook.md`. Ele deve mostrar somente processos relacionados,
 encerrar quando nenhum for encontrado e exibir que o processo terminou e precisa
 de validação do agente.
 
-O gate `npm run test:e2e` possui exceção operacional documentada no runbook:
-com cache aquecido e histórico próximo de um minuto, pode ser acompanhado até o
-fim sem pausa. Ao ultrapassar 90 segundos ou deixar de apresentar progresso,
-retomar o protocolo obrigatório de espera longa.
+Gates e builds com histórico recente inferior a dois minutos podem ser
+acompanhados pelo Codex até o fim. Se uma execução ultrapassar 120 segundos,
+deixar de apresentar progresso ou entrar em espera interativa, retomar o
+protocolo obrigatório de espera longa. Uma espera confirmada em `Password:`
+deve ser comunicada imediatamente, sem aguardar o limite de dois minutos.
 
 ## 69.2 Frases de autorização
 
@@ -2123,7 +2124,8 @@ retomar o protocolo obrigatório de espera longa.
 
 ## 69.3 Handoff obrigatório ao usuário
 
-Antes das etapas finais, o Codex deve atualizar:
+Em todo release, sem exceção, antes das etapas finais o Codex deve atualizar e
+verificar:
 
 - toda documentação interna do repositório;
 - as release notes destinadas à tela do GitHub;

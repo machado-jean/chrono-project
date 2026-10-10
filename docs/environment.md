@@ -304,6 +304,22 @@ O comando exige exatamente a hierarquia esperada, recusa execução implícita s
 preenche 205 cronogramas e recria 119 predecessoras FS com identificadores
 determinísticos. O Chrono Project deve permanecer fechado durante a execução.
 
+Os recursos avançados possuem uma massa complementar idempotente em um projeto
+separado, sem alterar os demais projetos:
+
+```powershell
+npm run dev:seed-advanced-audit
+```
+
+Ela recria somente **Auditoria — planejamento avançado** e cobre cinco níveis,
+quatro predecessoras na mesma sucessora, predecessora-resumo, lag, tarefas
+críticas e quase críticas, tarefa manual, quatro responsáveis e tarefas sem
+responsável. O comando valida o SQLite antes e depois e deve ser executado com o
+Chrono Project fechado.
+Depois de uma mudança de schema, abra a versão nova do aplicativo uma vez antes
+do seed. O utilitário recusa bancos antigos em vez de aplicar migrations fora do
+fluxo oficial do Tauri.
+
 No fechamento da Fase 5, todos esses gates voltaram a ser executados: lint e
 typecheck aprovados, 78 testes TypeScript/React e 23 testes Rust/SQLite
 aprovados, build web concluído, Cargo fmt/check e Clippy sem erros, auditoria
@@ -741,3 +757,79 @@ Artefatos promovidos para `.local/distribution/v0.2.5/`:
 | `chrono-project.exe` | 21.544.960 bytes | `803B86F09600BD969CC22841A46D6E6D717AD66D90EC9037E9DFB7EA576722E7` |
 | `Chrono-Project-Windows-x64-Setup.exe` | 7.337.587 bytes | `506773F13C5A59128635454D11FDA54210A52919440FC802C4A8733A1D2754CA` |
 | `Chrono-Project-Windows-x64-Offline-Setup.exe` | 222.449.753 bytes | `0166B4DC1E9C93ACD7CA3199132A203C92E832E2E4912FF06F809DC42CD94215` |
+
+## Validação automatizada do candidato 0.2.6
+
+O candidato 0.2.6 reutiliza o toolchain aprovado: Windows 11 x64, Node.js
+24.20.0, npm 11.19.0, Rust/Cargo 1.98.0 e Tauri CLI 2.11.4. Nenhuma ferramenta
+global foi instalada ou atualizada.
+
+Em 10 de outubro de 2026 foram aprovados:
+
+- `npm ci`, com 323 pacotes auditados e nenhuma vulnerabilidade;
+- `npm run check`, com lint, typecheck e 191 testes TypeScript/React;
+- 1 jornada E2E usando o seletor múltiplo de predecessoras;
+- 39 testes Rust; o teste que exige uma base v0.2.1 externa permaneceu ignorado;
+- 2 testes de desempenho: cadeia de 1.000 tarefas em 31 ms e projeção de 10.000
+  tarefas em 6 ms;
+- Cargo fmt, check e Clippy com `-D warnings`;
+- build web de produção, com 223 módulos transformados.
+
+Os testes que manipulam arquivos temporários foram executados fora do sandbox
+restrito do Windows, pois esse isolamento bloqueava operações atômicas de
+renomeação com `EPERM`/`os error 5` antes que a lógica fosse exercitada. Fora do
+sandbox, todos terminaram com código zero.
+
+A validação manual com dados reais foi aprovada em 10 de outubro de 2026. Ela
+cobriu a moldura integrada, menus, predecessoras múltiplas, intervalos por
+relação, histórico, filtros, cinco níveis, ações em massa, detalhes, caminho
+crítico, Tabela, Kanban, Gantt, persistência, exportação e backup.
+
+Tempos totais observados na finalização do candidato:
+
+| Etapa | Tempo total |
+| --- | ---: |
+| `npm ci` aprovado | 10,07 s |
+| `npm run check` | 64,59 s |
+| jornada E2E da aplicação e testes Rust | 32,53 s |
+| testes de desempenho | 0,92 s |
+| auditoria npm final | 1,04 s |
+| Cargo fmt | 0,40 s |
+| Cargo check | 15,03 s |
+| Cargo test `--all-targets` fora do sandbox | 1,75 s |
+| Cargo Clippy | 3,35 s |
+| executável de distribuição sem bundle | 59,03 s |
+| instalador padrão aprovado, NSIS e assinatura | 67,53 s |
+| tentativa offline no sandbox, encerrada por DNS | 48,71 s |
+| instalador offline, incluindo espera interativa | 2.621,10 s |
+| finalização local e validação criptográfica | 2,63 s |
+| `PUBLISH_RELEASE.ps1 -VerifyOnly` no staging | 0,81 s |
+
+O total de 2.621,10 s do instalador offline inclui o período em que o terminal
+permaneceu aguardando a confirmação do usuário no prompt `Password:`. Como a
+saída do terminal não possui timestamp por linha, esse valor não representa
+tempo de CPU nem permite separar com precisão a montagem NSIS da espera. O
+monitor confirmou ausência de `cargo`, `rustc` e `makensis` antes de o prompt
+ser consultado; Enter concluiu a assinatura da chave local sem passphrase.
+
+O sandbox não enxergou o cache do NSIS 3.11 criado no perfil normal e bloqueou
+DNS. A execução autorizada obteve o pacote pela fonte oficial do Tauri. O build
+offline resolveu o redistribuível WebView2 pela URL oficial da Microsoft; nenhum
+arquivo alternativo ou fonte não oficial foi usado.
+
+Artefatos promovidos para `.local/distribution/v0.2.6/`:
+
+| Arquivo | Tamanho | SHA-256 |
+| --- | ---: | --- |
+| `chrono-project.exe` | 21.577.216 bytes | `BFA376EFFFFDC1B59CE072B6E080F78D5A69DA0A4DCC8BBDEA5566DCC71CD3C8` |
+| `Chrono-Project-Windows-x64-Setup.exe` | 7.355.144 bytes | `F2FD2066617F2D538C45A7CD12211F6D0911A548FE1D7E4C67FD1109F5A3B5A9` |
+| `Chrono-Project-Windows-x64-Offline-Setup.exe` | 224.227.093 bytes | `C47CDDE74D73CD5594571E8FCEC286DD188836C715F085A13A8DBDE0479C9DAF` |
+
+O executável de inspeção final com `shared-dev-data` foi substituído no local
+fixo `.local/inspection/Chrono-Project-Inspection.exe`. Possui 21.579.776 bytes
+e SHA-256 `39D21453896B1CCFA2BDF95CF148174EB33C96A3F0E01464CBDF14626E0E0151`.
+Após os builds, o cache Cargo alcançou 30,78 GiB e acionou a política de limpeza
+exclusiva dos incrementais de debug. Foram liberados 16,01 GiB; o cache restante
+ficou em 14,77 GiB, preservando dependências, release e instaladores.
+A retenção local preservou v0.2.6, v0.2.5 e v0.2.4 e removeu somente a cópia
+local publicada da v0.2.3, liberando mais 0,23 GiB.

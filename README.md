@@ -17,7 +17,7 @@ As Fases 0 a 6 estão concluídas e o Checkpoint Git 7 foi consolidado no commit
 - projetos com criação, edição, status, arquivamento e exclusão;
 - tarefas e subtarefas com edição inline, status, prioridade, progresso, datas,
   duração, responsável, tags e detalhes;
-- hierarquia de até quatro níveis com expansão/recolhimento, troca de pai,
+- hierarquia de até cinco níveis com expansão/recolhimento, troca de pai,
   reordenação e prevenção de ciclos;
 - numeração hierárquica derivada (`1.`, `1.1.`, `1.1.1.`) nas três views;
 - calendário configurável com segunda a domingo, feriados e exceções;
@@ -35,7 +35,11 @@ As Fases 0 a 6 estão concluídas e o Checkpoint Git 7 foi consolidado no commit
   exclusão confirmada sem impacto nas tarefas atuais;
 - datas planejadas versus atuais, desvio em dias úteis, prazo-limite e saúde;
 - persistência atômica das recalculações;
-- filtros compartilhados por texto, status, prioridade, conclusão, datas e tag;
+- filtros compartilhados por texto, status, prioridade, múltiplos responsáveis,
+  caminho crítico, datas e tag; o status já concentra a seleção de tarefas
+  concluídas, sem um controle redundante de conclusão;
+- caminho crítico opcional por projeto, com folga da rede independente da meta,
+  margem global relativa ao maior prazo-limite e explicação visual acessível;
 - Kanban por status com drag-and-drop e campo **Status** acessível;
 - Gantt com hierarquia, progresso, dependências FS, ajuste automático de lag,
   menu de contexto, desfazer/refazer persistente por projeto, resumos, escalas, fins de semana,
@@ -113,6 +117,7 @@ Documentação principal:
 - [notas do Chrono Project v0.2.3](docs/releases/v0.2.3.md);
 - [notas do Chrono Project v0.2.4](docs/releases/v0.2.4.md);
 - [notas do Chrono Project v0.2.5](docs/releases/v0.2.5.md);
+- [notas do Chrono Project v0.2.6](docs/releases/v0.2.6.md);
 - [decisões arquiteturais](docs/decisions/).
 
 ## Preparação

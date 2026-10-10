@@ -112,6 +112,31 @@ const TASK_ID = "20000000-0000-4000-8000-000000000001";
 const SECOND_TASK_ID = "20000000-0000-4000-8000-000000000002";
 const THIRD_TASK_ID = "20000000-0000-4000-8000-000000000003";
 
+async function addPredecessors(
+  successorTitle: string,
+  predecessorLabels: readonly string[],
+  lagDays = 0,
+): Promise<void> {
+  const buttons = await screen.findAllByRole("button", {
+    name: `Adicionar predecessoras a ${successorTitle}`,
+  });
+  const openButton = buttons[0];
+  if (openButton === undefined) throw new Error("Botão de predecessoras não encontrado.");
+  fireEvent.click(openButton);
+  const dialog = await screen.findByRole("dialog", { name: "Adicionar predecessoras" });
+  for (const label of predecessorLabels) {
+    fireEvent.click(within(dialog).getByRole("checkbox", { name: label }));
+  }
+  if (lagDays !== 0) {
+    fireEvent.change(within(dialog).getByLabelText("Intervalo comum (dias úteis)"), {
+      target: { value: String(lagDays) },
+    });
+  }
+  fireEvent.click(within(dialog).getByRole("button", {
+    name: `Adicionar ${String(predecessorLabels.length)} predecessora${predecessorLabels.length === 1 ? "" : "s"}`,
+  }));
+}
+
 const defaultCalendar: Calendar = {
   id: DEFAULT_CALENDAR_ID,
   name: "Calendário padrão",
@@ -141,6 +166,7 @@ function project(): Project {
     calendarId: DEFAULT_CALENDAR_ID,
     position: 0,
     isArchived: false,
+    criticalPathEnabled: false,
     createdAt: NOW,
     updatedAt: NOW,
   };
@@ -450,6 +476,17 @@ class MemoryWorkspaceRepository implements WorkspaceRepository {
 }
 
 describe("aplicação Chrono Project", () => {
+  it("integra os controles da janela à moldura do aplicativo", async () => {
+    render(<App repository={new MemoryWorkspaceRepository({ projects: [project()] })} />);
+    await screen.findByRole("heading", { name: "Tabela de tarefas" });
+
+    const controls = screen.getByLabelText("Controles da janela");
+    expect(within(controls).getByRole("button", { name: "Minimizar janela" })).toBeVisible();
+    expect(within(controls).getByRole("button", { name: "Maximizar janela" })).toBeVisible();
+    expect(within(controls).getByRole("button", { name: "Fechar janela" })).toBeVisible();
+    expect(document.querySelector(".window-drag-region")).toHaveAttribute("data-tauri-drag-region");
+  });
+
   it("permite ajustar e restaurar a largura da coluna Tarefa", async () => {
     window.localStorage.removeItem("chrono-project.task-table.task-column-width");
     window.localStorage.removeItem("chrono-project.task-table.predecessors-column-width");
@@ -678,6 +715,44 @@ describe("aplicação Chrono Project", () => {
     await waitFor(() => { expect(repository.tasks[0]?.deadlineDate).toBe("2026-09-04"); });
   });
 
+  it("desfaz e refaz uma alteração de prioridade pelos atalhos globais", async () => {
+    const repository = new MemoryWorkspaceRepository({
+      projects: [project()],
+      tasks: [scheduledTask(TASK_ID, "Preparar operação", "2026-08-28")],
+    });
+    render(<App repository={repository} />);
+
+    const priority = await screen.findByLabelText("Prioridade da tarefa");
+    fireEvent.change(priority, { target: { value: "HIGH" } });
+    await waitFor(() => { expect(repository.tasks[0]?.priority).toBe("HIGH"); });
+
+    fireEvent.keyDown(priority, { key: "z", ctrlKey: true });
+    await waitFor(() => {
+      expect(repository.tasks[0]?.priority).toBe("NORMAL");
+      expect(priority).toHaveValue("NORMAL");
+    });
+
+    fireEvent.keyDown(priority, { key: "Z", ctrlKey: true, shiftKey: true });
+    await waitFor(() => {
+      expect(repository.tasks[0]?.priority).toBe("HIGH");
+      expect(priority).toHaveValue("HIGH");
+    });
+  });
+
+  it("preserva o desfazer nativo enquanto um campo de texto está sendo editado", async () => {
+    const repository = new MemoryWorkspaceRepository({ projects: [project()], tasks: [task()] });
+    render(<App repository={repository} />);
+
+    const priority = await screen.findByLabelText("Prioridade da tarefa");
+    fireEvent.change(priority, { target: { value: "HIGH" } });
+    await waitFor(() => { expect(repository.tasks[0]?.priority).toBe("HIGH"); });
+
+    const title = screen.getByLabelText("Título da tarefa");
+    fireEvent.keyDown(title, { key: "z", ctrlKey: true });
+    await new Promise((resolve) => { setTimeout(resolve, 0); });
+    expect(repository.tasks[0]?.priority).toBe("HIGH");
+  });
+
   it("salva a edição pendente antes de desmontar a tabela ao trocar de visualização", async () => {
     const repository = new MemoryWorkspaceRepository({ projects: [project()], tasks: [task()] });
     render(<App repository={repository} />);
@@ -755,7 +830,7 @@ describe("aplicação Chrono Project", () => {
     expect(screen.getByDisplayValue("Não iniciada")).toBeVisible();
   });
 
-  it("abre detalhes em uma linha ampla e explica o código visual", async () => {
+  it("mantém os detalhes abertos ao clicar fora e fecha com Escape", async () => {
     render(<App repository={new MemoryWorkspaceRepository({ projects: [project()], tasks: [task()] })} />);
 
     const detailsButton = await screen.findByRole("button", { name: "Detalhes" });
@@ -771,8 +846,12 @@ describe("aplicação Chrono Project", () => {
       expect.stringContaining("DEV-01"),
     );
     expect(screen.getByText(/Ele não altera o UUID interno da tarefa/)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Detalhes da tarefa" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Ocultar detalhes" })).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByRole("table")).toHaveAccessibleName(/Tarefas do projeto/);
+
+    fireEvent.pointerDown(screen.getByRole("heading", { name: "Tabela de tarefas" }));
+    expect(screen.getByLabelText("Código visual da tarefa")).toBeInTheDocument();
 
     code.focus();
     fireEvent.keyDown(code, { key: "Escape" });
@@ -789,6 +868,8 @@ describe("aplicação Chrono Project", () => {
     expect(shortcutsButton).toHaveAttribute("aria-keyshortcuts", "Control+/");
     fireEvent.click(shortcutsButton);
     expect(screen.getByRole("dialog", { name: "Atalhos de teclado" })).toBeVisible();
+    expect(screen.getByText("Desfazer a última edição salva de tarefa")).toBeVisible();
+    expect(screen.getByText("Refazer a última edição desfeita")).toBeVisible();
     expect(screen.getByText("Fechar menu, diálogo ou detalhes da tarefa")).toBeVisible();
     fireEvent.keyDown(screen.getByRole("button", { name: "Fechar" }), { key: "Escape" });
     expect(screen.queryByRole("dialog", { name: "Atalhos de teclado" })).not.toBeInTheDocument();
@@ -797,7 +878,7 @@ describe("aplicação Chrono Project", () => {
     expect(screen.getByRole("dialog", { name: "Atalhos de teclado" })).toBeVisible();
   });
 
-  it("identifica o projeto atual e fecha o menu superior com Escape", async () => {
+  it("identifica o projeto atual e fecha o menu superior com Escape ou clique externo", async () => {
     render(<App repository={new MemoryWorkspaceRepository({ projects: [project()] })} />);
     await screen.findByRole("heading", { name: "Tabela de tarefas" });
 
@@ -812,6 +893,11 @@ describe("aplicação Chrono Project", () => {
     fireEvent.keyDown(importButton, { key: "Escape" });
     expect(fileMenu).not.toHaveAttribute("open");
     expect(fileSummary).toHaveFocus();
+
+    fireEvent.click(fileSummary);
+    expect(fileMenu).toHaveAttribute("open");
+    fireEvent.pointerDown(screen.getByRole("heading", { name: "Tabela de tarefas" }));
+    expect(fileMenu).not.toHaveAttribute("open");
   });
 
   it("apresenta erros de validação em português sem persistir dados incompletos", async () => {
@@ -931,18 +1017,87 @@ describe("aplicação Chrono Project", () => {
     });
     render(<App repository={repository} />);
 
-    fireEvent.change(await screen.findByLabelText("Nova predecessora de Sucessora"), {
-      target: { value: predecessor.id },
-    });
-    fireEvent.click(screen.getByLabelText("Confirmar predecessora de Sucessora"));
+    await addPredecessors("Sucessora", ["1. Predecessora"]);
 
     await waitFor(() => {
       expect(repository.dependencies).toHaveLength(1);
       expect(repository.tasks.find(({ id }) => id === successor.id)?.startDate).toBe("2026-08-28");
       expect(repository.tasks.find(({ id }) => id === successor.id)?.endDate).toBe("2026-08-28");
     });
-    expect(screen.getByLabelText("Confirmar predecessora de Sucessora")).toHaveTextContent("+");
+    expect(screen.getAllByRole("button", { name: "Adicionar predecessoras a Sucessora" })[1]).toHaveTextContent("+");
     expect(await screen.findByText("1. Predecessora", { selector: ".dependency-item span" })).toBeVisible();
+  });
+
+  it("permite adicionar três predecessoras à mesma atividade", async () => {
+    const root = scheduledTask("50000000-0000-4000-8000-000000000001", "Raiz", "2026-08-28");
+    const sourceSummary = scheduledTask("50000000-0000-4000-8000-000000000002", "Grupo de origem", "2026-08-28", { parentId: root.id });
+    const first = scheduledTask(TASK_ID, "Predecessora A", "2026-08-28", { parentId: sourceSummary.id });
+    const second = scheduledTask(SECOND_TASK_ID, "Predecessora B", "2026-08-28", { parentId: sourceSummary.id, position: 1 });
+    const third = scheduledTask(THIRD_TASK_ID, "Predecessora C", "2026-08-28", { parentId: sourceSummary.id, position: 2 });
+    const targetSummary = scheduledTask("50000000-0000-4000-8000-000000000003", "Grupo de destino", "2026-08-28", { parentId: root.id, position: 1 });
+    const successor = scheduledTask(
+      "50000000-0000-4000-8000-000000000004",
+      "Atividade com três predecessoras",
+      "2026-08-28",
+      { parentId: targetSummary.id },
+    );
+    const repository = new MemoryWorkspaceRepository({
+      projects: [project()],
+      tasks: [root, sourceSummary, targetSummary, successor, third, first, second],
+    });
+    render(<App repository={repository} />);
+
+    const rootRow = (await screen.findByDisplayValue("Raiz")).closest("tr");
+    expect(rootRow).not.toBeNull();
+    fireEvent.click(within(rootRow as HTMLElement).getByRole("button", { name: "Expandir subtarefas" }));
+    const targetRow = (await screen.findByDisplayValue("Grupo de destino")).closest("tr");
+    expect(targetRow).not.toBeNull();
+    fireEvent.click(within(targetRow as HTMLElement).getByRole("button", { name: "Expandir subtarefas" }));
+
+    const pickerButtons = await screen.findAllByRole("button", {
+      name: "Adicionar predecessoras a Atividade com três predecessoras",
+    });
+    fireEvent.click(pickerButtons[0] as HTMLElement);
+    const picker = await screen.findByRole("dialog", { name: "Adicionar predecessoras" });
+    const optionLabels = within(picker).getAllByRole("checkbox").map(
+      (checkbox) => checkbox.closest("label")?.textContent,
+    );
+    expect(optionLabels).toEqual([
+      "1.1. Grupo de origemResumo",
+      "1.1.1. Predecessora A",
+      "1.1.2. Predecessora B",
+      "1.1.3. Predecessora C",
+    ]);
+    for (const label of optionLabels.slice(1)) {
+      fireEvent.click(within(picker).getByRole("checkbox", { name: label ?? "" }));
+    }
+    fireEvent.click(within(picker).getByRole("button", { name: "Adicionar 3 predecessoras" }));
+    await waitFor(() => { expect(repository.dependencies).toHaveLength(3); });
+
+    expect(repository.dependencies.map(({ predecessorId }) => predecessorId)).toEqual(
+      expect.arrayContaining([first.id, second.id, third.id]),
+    );
+    expect(screen.getByTitle("3 predecessoras adicionadas a 1.2.1. Atividade com três predecessoras")).toBeEnabled();
+    fireEvent.keyDown(window, { key: "z", ctrlKey: true });
+    await waitFor(() => { expect(repository.dependencies).toHaveLength(0); });
+    fireEvent.keyDown(window, { key: "z", ctrlKey: true, shiftKey: true });
+    await waitFor(() => { expect(repository.dependencies).toHaveLength(3); });
+
+    const successorRow = (await screen.findByDisplayValue("Atividade com três predecessoras")).closest("tr");
+    expect(successorRow).not.toBeNull();
+    fireEvent.click(within(successorRow as HTMLElement).getByRole("button", { name: "Gerenciar" }));
+    const manager = await screen.findByRole("dialog", { name: "Gerenciar predecessoras" });
+    const firstLag = within(manager).getByLabelText("Intervalo de 1.1.1. Predecessora A");
+    const secondLag = within(manager).getByLabelText("Intervalo de 1.1.2. Predecessora B");
+    expect(firstLag).toHaveValue(0);
+    expect(secondLag).toHaveValue(0);
+    fireEvent.change(firstLag, { target: { value: "2" } });
+    expect(within(manager).getByRole("checkbox", { name: "1.1.1. Predecessora A" })).toBeChecked();
+    fireEvent.click(within(manager).getByRole("button", { name: "Aplicar intervalos" }));
+    await waitFor(() => {
+      expect(repository.dependencies.find(({ predecessorId }) => predecessorId === first.id)?.lagDays).toBe(2);
+      expect(repository.dependencies.find(({ predecessorId }) => predecessorId === second.id)?.lagDays).toBe(0);
+    });
   });
 
   it("oferece confirmação compacta e menu de contexto próprio na tarefa", async () => {
@@ -962,7 +1117,7 @@ describe("aplicação Chrono Project", () => {
 
     const secondRow = (await screen.findByDisplayValue("Executar operação")).closest("tr");
     expect(secondRow).not.toBeNull();
-    const addPredecessor = within(secondRow as HTMLElement).getByTitle("Adicionar predecessora");
+    const addPredecessor = within(secondRow as HTMLElement).getByTitle("Adicionar predecessoras");
     expect(addPredecessor).toHaveTextContent("+");
 
     fireEvent.contextMenu(secondRow as HTMLElement, { clientX: 320, clientY: 240 });
@@ -975,7 +1130,7 @@ describe("aplicação Chrono Project", () => {
     expect(within(menu).getByRole("menuitem", { name: "Excluir tarefa…" })).toBeVisible();
 
     fireEvent.click(within(menu).getByRole("menuitem", { name: "Adicionar predecessora" }));
-    expect(within(secondRow as HTMLElement).getByLabelText("Nova predecessora de Executar operação")).toHaveFocus();
+    expect(within(secondRow as HTMLElement).getAllByRole("button", { name: "Adicionar predecessoras a Executar operação" })[0]).toHaveFocus();
 
     const titleInput = within(secondRow as HTMLElement).getByLabelText("Título da tarefa");
     (titleInput as HTMLInputElement).setSelectionRange(0, 8);
@@ -1089,10 +1244,7 @@ describe("aplicação Chrono Project", () => {
     });
     render(<App repository={repository} />);
 
-    fireEvent.change(await screen.findByLabelText("Nova predecessora de CBM"), {
-      target: { value: predecessor.id },
-    });
-    fireEvent.click(screen.getByLabelText("Confirmar predecessora de CBM"));
+    await addPredecessors("CBM", ["1. Descongelamento"]);
 
     await waitFor(() => {
       expect(repository.tasks.find(({ id }) => id === successor.id)).toMatchObject({
@@ -1127,6 +1279,10 @@ describe("aplicação Chrono Project", () => {
     render(<App repository={repository} />);
 
     const endFields = await screen.findAllByLabelText("Fim da tarefa");
+    await waitFor(() => {
+      expect(repository.tasks.find(({ id }) => id === successor.id)?.startDate).toBe("2026-09-04");
+      expect(repository.tasks.find(({ id }) => id === finalTask.id)?.startDate).toBe("2026-09-04");
+    });
     fireEvent.change(endFields[0] as HTMLElement, {
       target: { value: "2026-09-02" },
     });
@@ -1140,6 +1296,20 @@ describe("aplicação Chrono Project", () => {
     expect(repository.appliedScheduleChanges.at(-1)?.tasks.map(({ id }) => id)).toEqual(
       expect.arrayContaining([predecessor.id, successor.id, finalTask.id]),
     );
+
+    fireEvent.keyDown(document.body, { key: "z", ctrlKey: true });
+    await waitFor(() => {
+      expect(repository.tasks.find(({ id }) => id === predecessor.id)?.endDate).toBe("2026-09-04");
+      expect(repository.tasks.find(({ id }) => id === successor.id)?.startDate).toBe("2026-09-04");
+      expect(repository.tasks.find(({ id }) => id === finalTask.id)?.startDate).toBe("2026-09-04");
+    });
+
+    fireEvent.keyDown(document.body, { key: "z", ctrlKey: true, shiftKey: true });
+    await waitFor(() => {
+      expect(repository.tasks.find(({ id }) => id === predecessor.id)?.endDate).toBe("2026-09-02");
+      expect(repository.tasks.find(({ id }) => id === successor.id)?.startDate).toBe("2026-09-02");
+      expect(repository.tasks.find(({ id }) => id === finalTask.id)?.startDate).toBe("2026-09-02");
+    });
   });
 
   it("salva tarefa e lag juntos pelo único botão da coluna Ações", async () => {
@@ -1215,10 +1385,7 @@ describe("aplicação Chrono Project", () => {
     });
     render(<App repository={repository} />);
 
-    fireEvent.change(await screen.findByLabelText("Nova predecessora de Marco manual"), {
-      target: { value: predecessor.id },
-    });
-    fireEvent.click(screen.getByLabelText("Confirmar predecessora de Marco manual"));
+    await addPredecessors("Marco manual", ["1. Entrega anterior"]);
 
     expect(await screen.findByText("1 conflito de agendamento")).toBeVisible();
     expect(screen.getByText(/deveria começar em 2026-08-28 ou depois/)).toBeVisible();
@@ -1238,13 +1405,7 @@ describe("aplicação Chrono Project", () => {
     });
     render(<App repository={repository} />);
 
-    fireEvent.change(await screen.findByLabelText("Nova predecessora de Plantão"), {
-      target: { value: predecessor.id },
-    });
-    fireEvent.change(screen.getByLabelText("Novo intervalo de Plantão"), {
-      target: { value: "1" },
-    });
-    fireEvent.click(screen.getByLabelText("Confirmar predecessora de Plantão"));
+    await addPredecessors("Plantão", ["1. Fechamento"], 1);
 
     await waitFor(() => {
       expect(repository.tasks.find(({ id }) => id === successor.id)?.startDate).toBe("2026-08-29");
@@ -1426,13 +1587,13 @@ describe("aplicação Chrono Project", () => {
     });
     render(<App repository={repository} />);
 
-    const predecessor = await screen.findByLabelText("Nova predecessora de Sucessora do resumo");
-    fireEvent.change(predecessor, { target: { value: summary.id } });
-    fireEvent.click(screen.getByRole("button", { name: "Confirmar predecessora de Sucessora do resumo" }));
-
-    const preview = await screen.findByRole("dialog", { name: "Prévia do impacto no cronograma" });
-    expect(preview).toHaveTextContent("tarefa-resumo como predecessora");
-    fireEvent.click(within(preview).getByRole("button", { name: "Adicionar predecessora" }));
+    const buttons = await screen.findAllByRole("button", { name: "Adicionar predecessoras a Sucessora do resumo" });
+    fireEvent.click(buttons[0] as HTMLElement);
+    const preview = await screen.findByRole("dialog", { name: "Adicionar predecessoras" });
+    expect(preview).toHaveTextContent("Resumo");
+    fireEvent.click(within(preview).getByRole("checkbox", { name: /Preparar operação/ }));
+    expect(preview).toHaveTextContent("Prévia do impacto");
+    fireEvent.click(within(preview).getByRole("button", { name: "Adicionar 1 predecessora" }));
 
     await waitFor(() => {
       expect(repository.dependencies).toHaveLength(1);
@@ -1770,8 +1931,8 @@ describe("aplicação Chrono Project", () => {
     });
     timeline.append(document.createElement("span"));
     await waitFor(() => {
-      expect(screen.getByLabelText("Percorrer atividades do Gantt")).toHaveAttribute("max", "670");
-      expect(screen.getByTestId("svar-gantt-rows")).toHaveStyle({ minHeight: "1260px" });
+      expect(screen.getByLabelText("Percorrer atividades do Gantt")).toHaveAttribute("max", "850");
+      expect(screen.getByTestId("svar-gantt-rows")).toHaveStyle({ minHeight: "1440px" });
     });
 
     fireEvent.wheel(screen.getByTestId("chronoproject-gantt"), { deltaY: 140 });
@@ -1852,7 +2013,65 @@ describe("aplicação Chrono Project", () => {
     expect(await screen.findByRole("status")).toHaveTextContent("conclusão atualizada para 65%");
   });
 
-  it("recarrega o histórico persistente do Gantt depois de trocar de view", async () => {
+  it("desfaz e refaz a reordenação de tarefas como uma única operação", async () => {
+    const first = scheduledTask(TASK_ID, "Primeira", "2026-08-28");
+    const second = scheduledTask(SECOND_TASK_ID, "Segunda", "2026-08-31", { position: 1 });
+    const repository = new MemoryWorkspaceRepository({ projects: [project()], tasks: [first, second] });
+    render(<App repository={repository} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Mover Segunda para cima" }));
+    await waitFor(() => { expect(repository.tasks.find(({ id }) => id === second.id)?.position).toBe(0); });
+    fireEvent.keyDown(window, { key: "z", ctrlKey: true });
+    await waitFor(() => { expect(repository.tasks.find(({ id }) => id === second.id)?.position).toBe(1); });
+    fireEvent.keyDown(window, { key: "z", ctrlKey: true, shiftKey: true });
+    await waitFor(() => { expect(repository.tasks.find(({ id }) => id === second.id)?.position).toBe(0); });
+  });
+
+  it("desfaz e refaz a duplicação de tarefa", async () => {
+    const source = scheduledTask(TASK_ID, "Duplicável", "2026-08-28");
+    const repository = new MemoryWorkspaceRepository({ projects: [project()], tasks: [source] });
+    render(<App repository={repository} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Mais ações para Duplicável" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Duplicar tarefa" }));
+    await waitFor(() => { expect(repository.tasks).toHaveLength(2); });
+    fireEvent.keyDown(window, { key: "z", ctrlKey: true });
+    await waitFor(() => { expect(repository.tasks).toHaveLength(1); });
+    fireEvent.keyDown(window, { key: "z", ctrlKey: true, shiftKey: true });
+    await waitFor(() => { expect(repository.tasks).toHaveLength(2); });
+  });
+
+  it("restaura tarefa e dependência ao desfazer uma exclusão", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    const predecessor = scheduledTask(TASK_ID, "A excluir", "2026-08-28");
+    const successor = scheduledTask(SECOND_TASK_ID, "Sucessora", "2026-08-31", { position: 1 });
+    const repository = new MemoryWorkspaceRepository({
+      projects: [project()],
+      tasks: [predecessor, successor],
+      dependencies: [dependency(predecessor.id, successor.id)],
+    });
+    render(<App repository={repository} />);
+
+    const row = (await screen.findByDisplayValue("A excluir")).closest("tr");
+    expect(row).not.toBeNull();
+    fireEvent.click(within(row as HTMLElement).getByRole("button", { name: "Excluir" }));
+    await waitFor(() => {
+      expect(repository.tasks).toHaveLength(1);
+      expect(repository.dependencies).toHaveLength(0);
+    });
+    fireEvent.keyDown(window, { key: "z", ctrlKey: true });
+    await waitFor(() => {
+      expect(repository.tasks).toHaveLength(2);
+      expect(repository.dependencies).toHaveLength(1);
+    });
+    fireEvent.keyDown(window, { key: "z", ctrlKey: true, shiftKey: true });
+    await waitFor(() => {
+      expect(repository.tasks).toHaveLength(1);
+      expect(repository.dependencies).toHaveLength(0);
+    });
+  });
+
+  it("mantém o histórico compartilhado do Gantt depois de trocar de view", async () => {
     const scheduled = scheduledTask(TASK_ID, "Planejar entrega", "2026-08-28", { progress: 20 });
     const repository = new MemoryWorkspaceRepository({ projects: [project()], tasks: [scheduled] });
     render(<App repository={repository} />);
@@ -2268,6 +2487,69 @@ describe("aplicação Chrono Project", () => {
     expect(repository.dependencies).toEqual([
       expect.objectContaining({ predecessorId: predecessor.id, successorId: successor.id }),
     ]);
+  });
+
+  it("habilita o caminho crítico, deriva a meta e separa sua margem da folga da rede", async () => {
+    const repository = new MemoryWorkspaceRepository({
+      projects: [project()],
+      tasks: [
+        scheduledTask(TASK_ID, "Preparar operação", "2026-10-05", { deadlineDate: "2026-10-20" }),
+        scheduledTask(SECOND_TASK_ID, "Entrega final", "2026-10-06", { deadlineDate: "2026-10-30" }),
+        scheduledTask(THIRD_TASK_ID, "Cancelada", "2026-11-10", { status: "CANCELLED", deadlineDate: "2026-11-10" }),
+      ],
+      dependencies: [dependency(TASK_ID, SECOND_TASK_ID)],
+    });
+    render(<App repository={repository} />);
+
+    const criticalPathSwitch = await screen.findByRole("switch", { name: "Exibir análise do caminho crítico" });
+    expect(criticalPathSwitch).toHaveAttribute("aria-checked", "false");
+    fireEvent.click(criticalPathSwitch);
+    await waitFor(() => {
+      expect(repository.projects[0]?.criticalPathEnabled).toBe(true);
+      expect(screen.getByRole("switch", { name: "Exibir análise do caminho crítico" })).toHaveAttribute("aria-checked", "true");
+    });
+
+    const dialog = await screen.findByRole("dialog", { name: "Caminho crítico e meta do projeto" });
+    expect(within(dialog).getByText(/O caminho crítico é a rota mais longa da rede/)).toBeVisible();
+    expect(within(dialog).getByText(/A → C → D → E/)).toBeVisible();
+    expect(within(dialog).getByText("Término previsto")).toBeVisible();
+    expect(within(dialog).getByText("05/10/2026")).toBeVisible();
+    expect(within(dialog).getByText("Meta final")).toBeVisible();
+    expect(within(dialog).getByText("30/10/2026")).toBeVisible();
+    expect(within(dialog).getByText("Margem global")).toBeVisible();
+    expect(within(dialog).getByText("+19 dias úteis")).toBeVisible();
+    expect(within(dialog).queryByText("Análise indisponível:")).not.toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Entendi" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Gantt" }));
+    const ganttLegend = screen.getByLabelText("Legenda do Gantt");
+    expect(within(ganttLegend).getByText("Crítica")).toBeVisible();
+    expect(within(ganttLegend).getByText("Quase crítica")).toBeVisible();
+    fireEvent.click(await screen.findByRole("button", { name: "1. Preparar operação" }));
+    expect(screen.getByText("Folga CPM")).toBeVisible();
+    expect(screen.getByText("Crítica · 0 dias úteis de folga")).toBeVisible();
+    await waitFor(() => {
+      const gantt = screen.getByTestId("svar-gantt");
+      expect(gantt.querySelector(`[data-task-id=":${TASK_ID}"]`)).toHaveClass("critical-path-task");
+      expect(gantt.querySelector(`[data-task-id=":${SECOND_TASK_ID}"]`)).toHaveClass("critical-path-task");
+    });
+  });
+
+  it("explica por que o caminho crítico ainda não pode ser calculado", async () => {
+    const repository = new MemoryWorkspaceRepository({
+      projects: [{ ...project(), criticalPathEnabled: true }],
+      tasks: [
+        scheduledTask(TASK_ID, "Preparar operação", "2026-10-05"),
+        scheduledTask(SECOND_TASK_ID, "Entrega final", "2026-10-06", { position: 1 }),
+      ],
+    });
+    render(<App repository={repository} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Entender caminho crítico" }));
+    const dialog = await screen.findByRole("dialog", { name: "Caminho crítico e meta do projeto" });
+
+    expect(within(dialog).getByText("Análise indisponível:")).toBeVisible();
+    expect(within(dialog).getByText("Adicione dependências entre tarefas programadas para calcular o caminho crítico.")).toBeVisible();
+    expect(within(dialog).getByText("Indisponível")).toBeVisible();
   });
 
   it("registra plano de referência, mantém histórico e salva prazo-limite na mesma tarefa", async () => {
