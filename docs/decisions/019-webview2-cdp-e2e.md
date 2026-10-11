@@ -47,9 +47,12 @@ diagnóstico e não bloqueante até a correção upstream. Sua feature Cargo `e2
 - abre a porta CDP apenas na configuração gerada em `.local/e2e/`;
 - não é ativada no executável ou nos instaladores de produção.
 
-Antes de voltar ao gate, o harness deverá adotar User Data Folder e porta CDP
-exclusivos por execução, aguardar o encerramento dos processos WebView2 e passar
-pela matriz descrita em [Diretrizes de validação do WebView2](../webview2-testing.md).
+O harness passou a usar User Data Folder e porta CDP exclusivos por execução e
+a aguardar o encerramento dos processos WebView2. Cinco aberturas e a jornada
+desktop foram aprovadas localmente fora do sandbox. A promoção ao gate continua
+dependendo da VM limpa e de duas execuções consecutivas do workflow manual,
+conforme a matriz em
+[Diretrizes de validação do WebView2](../webview2-testing.md).
 
 ## Alternativas rejeitadas
 

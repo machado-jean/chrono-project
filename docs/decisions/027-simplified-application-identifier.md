@@ -2,7 +2,7 @@
 
 ## Status
 
-Aceito para o próximo release após a versão 0.2.2.
+Aceito e implementado desde a versão 0.2.3.
 
 ## Contexto
 

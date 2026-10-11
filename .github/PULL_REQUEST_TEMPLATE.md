@@ -31,6 +31,7 @@
 - [ ] Testes novos ou atualizados cobrem o comportamento relevante.
 - [ ] Lint, typecheck e testes aplicáveis passaram.
 - [ ] Documentação e notas da próxima versão foram atualizadas.
+- [ ] Se este PR prepara release, percorri todo `docs/README.md` e executei `scripts/Test-DocumentationIndex.ps1`.
 - [ ] Migration nova foi criada quando o schema mudou; nenhuma migration publicada foi editada.
 - [ ] Compatibilidade com dados existentes, atualização e operação offline foi considerada.
 - [ ] Não foram adicionados bancos, backups, segredos ou dados pessoais.

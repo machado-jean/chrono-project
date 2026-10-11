@@ -707,7 +707,8 @@ Manter:
 - apresentação bilíngue em `README.md` e `README.en.md`;
 - formulários estruturados para bugs e melhorias;
 - vulnerabilidades fora de Issues públicas, conforme `SECURITY.md`;
-- Pull Requests orientadas pelo template e revisadas pelo CODEOWNER;
+- Pull Requests orientadas pelo template; `CODEOWNERS` registra a propriedade,
+  mas sua aprovação não é obrigatória enquanto houver um único mantenedor;
 - labels com prefixos `type:`, `area:`, `priority:` e `status:`;
 - Dependabot semanal e agrupado, sem automação de tag ou release;
 - Social Preview, topics e descrição coerentes com capacidades existentes.
@@ -1313,7 +1314,8 @@ Mínimo:
 - status;
 - prioridade;
 - datas;
-- concluída/não concluída;
+- responsável, incluindo tarefas sem responsável;
+- criticidade do cronograma;
 - tags.
 
 ---
@@ -2148,18 +2150,28 @@ deve ser comunicada imediatamente, sem aguardar o limite de dois minutos.
 Em todo release, sem exceção, antes das etapas finais o Codex deve atualizar e
 verificar:
 
-- toda documentação interna do repositório;
+- toda documentação interna do repositório, percorrendo integralmente o índice
+  obrigatório em `docs/README.md` e classificando cada entrada como atualizada,
+  revisada sem mudança ou não aplicável;
 - as release notes destinadas à tela do GitHub;
 - hashes, manifesto, registro de build e scripts de verificação/publicação.
 
-As duas últimas etapas são executadas obrigatoriamente pelo usuário:
+O gate documental deve executar
+`scripts/Test-DocumentationIndex.ps1`. Documento versionado ausente do índice,
+destino interno inexistente ou item não revisado impede o handoff de release.
 
-1. revisar, criar o commit e fazer push;
-2. publicar o release com o `PUBLISH_RELEASE.ps1` preparado e validado.
+As etapas remotas finais são executadas obrigatoriamente pelo usuário:
+
+1. revisar, criar o commit em uma branch temática e fazer push dessa branch;
+2. abrir o Pull Request para `main`, aguardar o check `Windows quality gate`,
+   resolver as conversas e executar o merge;
+3. atualizar a `main` local e publicar o release com o
+   `PUBLISH_RELEASE.ps1` preparado e validado.
 
 O Codex deve parar antes dessas ações, fornecer instruções exatas e aguardar a
-confirmação do usuário. Depois do push, pode verificar `origin/main` e o CI; após
-a publicação feita pelo usuário, deve confirmar que a tag aponta para o mesmo
+confirmação do usuário. Não deve executar commit, push, merge ou publicação no
+lugar do usuário. Depois do merge, pode verificar `origin/main` e o CI; após a
+publicação feita pelo usuário, deve confirmar que a tag aponta para o mesmo
 commit aprovado em `main`, sem nova execução do quality gate.
 
 ## 69.4 Release notes completas antes do commit

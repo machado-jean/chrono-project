@@ -180,7 +180,9 @@ senha pode aparecer nesse arquivo.
    git remote -v
    ```
 
-3. Confirmar que `main` é a branch pretendida e não há alterações inesperadas.
+3. Confirmar que não há alterações inesperadas. O trabalho do release deve ser
+   preparado em branch temática, preferencialmente `release/vX.Y.Z`; a `main`
+   protegida recebe mudanças somente por Pull Request.
 4. Confirmar a mesma versão em:
    - `package.json`;
    - `package-lock.json`;
@@ -350,8 +352,29 @@ Se uma informação só passa a existir depois da criação da tag ou do GitHub
 Release, ela deve ser omitida do documento versionado e registrada nos
 artefatos/serviços de publicação, sem exigir novo commit.
 
+A revisão começa obrigatoriamente por [`docs/README.md`](README.md). O agente
+deve percorrer todas as linhas do índice, abrir cada documento e classificá-lo
+como **Atualizado**, **Revisado sem mudança** ou **Não aplicável**. Não basta
+pesquisar somente os arquivos que parecem relacionados ao release. ADRs e notas
+históricas podem receber **Não aplicável**, mas precisam ser lidos o suficiente
+para confirmar que o release não contradiz suas decisões ou registros.
+
+Depois da leitura integral, executar:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/Test-DocumentationIndex.ps1
+```
+
+O handoff fica bloqueado se um documento versionado não estiver catalogado, se
+qualquer link interno estiver quebrado, se versões ou ADRs divergirem ou se
+alguma entrada não tiver sido revisada. O resultado da auditoria deve informar
+o total catalogado, os totais **Atualizado**, **Revisado sem mudança** e **Não
+aplicável**, cuja soma deve ser
+idêntica ao total do script, além da lista nominal dos arquivos alterados.
+
 Atualizar:
 
+- `docs/README.md`: incluir, mover ou remover entradas quando a coleção mudar;
 - `docs/releases/vX.Y.Z.md`: novidades, compatibilidade, instalação, validação,
   tamanhos e hashes;
 - `docs/releases/next.md`: marcar somente gates comprovados;
@@ -360,13 +383,18 @@ Atualizar:
 - `README.md` e documentação funcional quando o comportamento público mudar.
 
 Executar `git diff --check`. Commit e push somente quando autorizados. Depois do
-push, confirmar que `HEAD` coincide com `origin/main`.
+push, confirmar que a branch local coincide com sua branch remota e abrir o
+Pull Request. Somente depois do CI obrigatório e do merge, atualizar a `main` e
+confirmar que `HEAD` coincide com `origin/main`.
 
 Antes de entregar ao usuário as etapas finais, o agente deve atualizar os dois
 conjuntos de documentação:
 
 ### Documentação interna do repositório
 
+- índice completo `docs/README.md`, percorrido sem itens ignorados;
+- contagem de documentos por resultado da auditoria, fechando com o total do
+  verificador automático;
 - README e documentos funcionais afetados;
 - `docs/releases/vX.Y.Z.md`;
 - `docs/releases/next.md`;
@@ -400,19 +428,25 @@ formato antigo.
 
 ## 11. Publicação remota
 
-As duas últimas etapas pertencem obrigatoriamente ao usuário:
+As etapas remotas finais pertencem obrigatoriamente ao usuário:
 
-1. revisar as alterações, executar o commit e fazer push;
-2. publicar o release executando o `PUBLISH_RELEASE.ps1` preparado pelo agente.
+1. revisar as alterações, criar ou usar a branch `release/vX.Y.Z`, executar o
+   commit e fazer push dessa branch;
+2. abrir o Pull Request para `main`, aguardar `Windows quality gate`, resolver
+   todas as conversas e executar o merge;
+3. atualizar a `main` local por fast-forward e publicar o release executando o
+   `PUBLISH_RELEASE.ps1` preparado pelo agente.
 
 O agente deve parar antes de cada uma delas, fornecer comandos e critérios de
-verificação e aguardar a confirmação do usuário. Não executar commit, push ou o
-`PUBLISH_RELEASE.ps1` em nome do usuário enquanto esta regra estiver vigente.
+verificação e aguardar a confirmação do usuário. Não executar commit, push,
+merge ou o `PUBLISH_RELEASE.ps1` em nome do usuário enquanto esta regra estiver
+vigente.
 
-Depois que o usuário confirmar commit e push:
+Depois que o usuário confirmar o merge e atualizar a `main`:
 
-1. confirmar que `HEAD` coincide com `origin/main`;
-2. confirmar o CI de `main` do commit exato;
+1. confirmar que a branch atual é `main` e que `HEAD` coincide com
+   `origin/main`;
+2. confirmar o CI de `main` do commit exato gerado pelo merge;
 3. orientar o usuário a executar `PUBLISH_RELEASE.ps1 -VerifyOnly`;
 4. após a validação, orientar o usuário a executar `PUBLISH_RELEASE.ps1`;
 5. o script deve aguardar por até cinco minutos o CI do commit aparecer e, se

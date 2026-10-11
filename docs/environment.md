@@ -403,14 +403,15 @@ aprova criação de projeto, cinco tarefas com subtarefa, cadeia A → B → C,
 propagação, Tabela/Kanban/Gantt, duplicação, exportação, workspace vazio,
 importação e comparação semântica. Ele também é executado pelo CI Windows.
 
-O diagnóstico não bloqueante da janela real pode ser repetido após uma correção
-upstream com `npm run test:e2e:desktop`; seus dados ficam em `.local/e2e/`.
+O diagnóstico não bloqueante da janela real é executado com
+`npm run test:e2e:desktop`; seus dados ficam isolados em `.local/e2e/`.
 
-O WebView2 Evergreen permanece a estratégia recomendada para produção. A
-próxima evolução do harness desktop deverá isolar também o User Data Folder e a
-porta CDP em cada execução, aguardar o encerramento dos processos filhos e
-comprovar repetibilidade antes de integrar o CI. A matriz e as fontes oficiais
-estão em [Diretrizes de validação do WebView2](webview2-testing.md).
+O WebView2 Evergreen permanece a estratégia recomendada para produção. O
+harness desktop agora isola User Data Folder, porta CDP e dados em cada
+execução, aguarda o encerramento dos processos filhos e foi repetido cinco vezes
+com sucesso no host. Ele permanece fora do gate até a validação em VM limpa e
+duas execuções remotas consecutivas. A matriz e as fontes oficiais estão em
+[Diretrizes de validação do WebView2](webview2-testing.md).
 
 Gates atuais: 92 testes TypeScript/React regulares, 1 jornada E2E de aplicação,
 2 testes de desempenho e 30 testes Rust/SQLite aprovados; lint, typecheck, build

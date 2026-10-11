@@ -14,7 +14,6 @@ cobre:
 - texto em título, código, descrição, responsável, tags e observações;
 - status;
 - prioridade;
-- concluída ou não concluída;
 - um ou mais responsáveis, incluindo tarefas sem responsável;
 - caminho crítico ou tarefas próximas do crítico, com até dois dias úteis de folga total;
 - sobreposição com intervalo de datas;
@@ -234,9 +233,10 @@ A barra lateral de projetos pode ser recolhida pelo botão **Recolher projetos**
 No modo compacto, o botão **Mostrar projetos** restaura a navegação sem sair do
 projeto atual. Os cabeçalhos editáveis da Tabela possuem um botão de informação
 acessível por mouse e teclado; seu balão é elevado acima das colunas vizinhas.
-A coluna **Tarefa** começa mais larga e pode ser redimensionada pelo divisor em
-sua borda direita. A preferência é mantida localmente entre execuções; as setas
-ajustam a largura pelo teclado e um duplo clique restaura o tamanho padrão. As
+A coluna **Tarefa** começa mais larga, e ela e **Predecessoras** podem ser
+redimensionadas pelo divisor em suas bordas direitas. As preferências são
+mantidas localmente entre execuções; as setas ajustam a largura pelo teclado e
+um duplo clique restaura o tamanho padrão de cada coluna. As
 colunas **Prioridade**, **Progresso**, **Duração** e **Prazo-limite** reservam o
 espaço necessário para manter título e botão de informação totalmente visíveis.
 O clique direito em um projeto abre ações rápidas para arquivar, restaurar ou
@@ -247,25 +247,28 @@ superior **Projeto** como alternativa acessível por teclado.
 
 ## Auditoria manual da Fase 4
 
-Use o projeto **Auditoria do scheduler — Fase 3** e confira:
+Prepare o projeto **Auditoria — planejamento avançado** com
+`npm run dev:seed-advanced-audit` e confira:
 
 1. alternar Tabela, Kanban e Gantt sem recarregar o projeto;
 2. mover uma tarefa no Kanban pelo seletor e confirmar o status na Tabela;
 3. repetir por drag-and-drop e confirmar o mesmo resultado;
-4. combinar texto, status, prioridade, conclusão, datas e tag, observando que os
+4. combinar texto, status, prioridade, criticidade, responsáveis, datas e tag,
+   observando que os
    filtros permanecem ao trocar de view;
 5. no Gantt, alternar Dias, Semanas e Meses;
-6. conferir três tarefas-resumo, sete subtarefas, barras de progresso e oito
-   relações FS;
-7. conferir a numeração `1.`, `1.1.` e, quando houver, `1.1.1.` nas três views;
-8. verificar que a tarefa-resumo de 28/08 a 31/08 ocupa também o dia 31;
+6. conferir 15 tarefas, seis relações FS, cinco níveis de hierarquia, barras de
+   progresso e uma sucessora com quatro predecessoras;
+7. conferir a numeração até `1.1.1.1.1.` nas três views;
+8. verificar que tarefas-resumo refletem o intervalo completo dos descendentes;
 9. clicar em uma dependência distante, conferir o isolamento e voltar para
    **Todas as dependências**;
-10. verificar final de semana e o feriado de 07/09 na escala diária;
+10. verificar finais de semana e exceções do calendário na escala diária;
 11. selecionar uma tarefa-folha predecessora no painel, atrasar seu início,
    salvar e confirmar a propagação para frente nas três views;
 12. restaurar a data anterior e confirmar que as sucessoras `AUTO` também são
-   antecipadas; uma sucessora `MANUAL` deve permanecer fixa e apenas receber aviso;
+    antecipadas; **Atividade manual bloqueada** deve permanecer fixa e apenas
+    receber aviso quando uma restrição for provocada;
 13. selecionar uma tarefa-resumo e confirmar que o prazo não é editável;
 14. fechar e reabrir o executável, que deve iniciar maximizado, e confirmar
     persistência.

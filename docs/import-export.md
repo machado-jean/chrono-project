@@ -27,8 +27,9 @@ Limites da versão 1:
 - `data.sqlite`: 500 MiB;
 - `manifest.json`: 256 KiB;
 - `README.txt`: 64 KiB;
-- schemas SQLite 4, 5, 6 e 7 e formato 1. Schemas 4, 5 e 6 são lidos por uma cópia
-  temporária migrada para inspeção; o arquivo escolhido permanece intacto.
+- schemas SQLite de 4 a 9 e formato 1. Schemas de 4 a 8 são lidos por uma cópia
+  temporária migrada para o schema 9 durante a inspeção; o arquivo escolhido
+  permanece intacto.
 
 ## Exportação
 
@@ -86,4 +87,4 @@ Antes de escrever, o Chrono Project verifica tamanho do pacote e entradas, camin
 3. Exporte o workspace, modifique dois projetos e importe apenas um; confirme que o não selecionado não mudou.
 4. Crie um backup, faça uma alteração e use **Restaurar backup**; confirme a restauração integral após reabrir o executável.
 
-Os testes Rust reproduzem o round-trip `workspace A → exportação → workspace vazio → importação → comparação semântica`, incluindo prazos, datas reais de conclusão, linhas de base e predecessoras-resumo, substituição seletiva, cópia de identidades e relações, rejeição de ZIP inseguro, compatibilidade não destrutiva dos schemas 4, 5, 6 e 7 e restauração integral. O upgrade também é auditado sobre uma cópia de um banco real da versão 0.2.1, sem escrever no arquivo de origem.
+Os testes Rust reproduzem o round-trip `workspace A → exportação → workspace vazio → importação → comparação semântica`, incluindo prazos, datas reais de conclusão, linhas de base, preferência do caminho crítico e predecessoras-resumo, substituição seletiva, cópia de identidades e relações, rejeição de ZIP inseguro, compatibilidade não destrutiva dos schemas 4 a 9 e restauração integral. O upgrade também é auditado sobre uma cópia de um banco real da versão 0.2.1, sem escrever no arquivo de origem.

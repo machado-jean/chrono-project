@@ -9,8 +9,9 @@ assinaturas, staging, scripts e protocolo de espera, está em
 [`release-runbook.md`](release-runbook.md) e deve ser seguido integralmente.
 
 O agente prepara artefatos, documentação interna e conteúdo do GitHub Release.
-O usuário executa pessoalmente as duas etapas finais: commit/push e publicação
-por `PUBLISH_RELEASE.ps1`.
+O usuário executa pessoalmente as etapas remotas finais: commit e push em uma
+branch temática, abertura/merge do Pull Request e publicação por
+`PUBLISH_RELEASE.ps1` depois de atualizar a `main` local.
 
 As release notes versionadas precisam estar completas antes desse commit, sem
 campos `PENDENTE` ou valores destinados a preenchimento pós-publicação. URLs e
@@ -19,18 +20,29 @@ GitHub Release, no registro de build e no relatório final, sem novo commit.
 
 ## Antes da tag
 
-1. Confirmar versão consistente em `package.json`, `Cargo.toml`, `Cargo.lock` e
+1. Confirmar que a `main` continua protegida por Pull Request, pelo check
+   `Windows quality gate`, por histórico linear, por resolução de conversas e
+   pelos bloqueios de exclusão e `force-push`.
+2. Confirmar versão consistente em `package.json`, `Cargo.toml`, `Cargo.lock` e
    `tauri.conf.json`.
-2. Executar todos os gates locais descritos em `docs/releases/next.md`.
-3. Validar manualmente a versão de teste com o banco compartilhado de
+3. Ler integralmente [`docs/README.md`](README.md), revisar cada documento do
+   índice e executar `scripts/Test-DocumentationIndex.ps1`.
+4. Executar todos os gates locais descritos em `docs/releases/next.md`.
+5. Validar manualmente a versão de teste com o banco compartilhado de
    desenvolvimento.
-4. Quando o release altera a identidade visual, executar o roteiro de
+6. Quando o release altera a identidade visual, executar o roteiro de
    [`branding.md`](branding.md) e conferir o ícone no executável, barra de
    tarefas, menu Iniciar, atalho, lista de aplicativos, instalador e
    desinstalador.
-5. Registrar tamanhos e SHA-256 dos dois instaladores nas notas da versão em
+7. Registrar tamanhos e SHA-256 dos dois instaladores nas notas da versão em
    `docs/releases/vX.Y.Z.md`.
-6. Criar o commit somente após a aprovação dessa auditoria.
+8. Criar o commit somente após a aprovação dessa auditoria, em uma branch
+   temática como `release/vX.Y.Z`; nunca tentar enviar o commit diretamente à
+   `main` protegida.
+9. Fazer push da branch, abrir o Pull Request e aguardar o check obrigatório
+   `Windows quality gate` com a branch atualizada em relação à `main`.
+10. Resolver todas as conversas, concluir o merge com histórico linear e então
+   atualizar a `main` local antes de executar `PUBLISH_RELEASE.ps1`.
 
 ## Depois de publicar
 

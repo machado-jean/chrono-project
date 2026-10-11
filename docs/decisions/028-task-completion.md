@@ -1,5 +1,9 @@
 # ADR 028 — Conclusão factual de atividades
 
+## Status
+
+Aceita e implementada desde a versão 0.2.3.
+
 ## Contexto
 
 O status `COMPLETED` elevava o progresso para 100%, mas não registrava quando a

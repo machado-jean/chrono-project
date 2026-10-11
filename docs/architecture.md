@@ -63,7 +63,7 @@ dependências FS. `0004_reuse.sql` cria as tabelas relacionais de templates e
 `0005_plan_control.sql` acrescenta prazo-limite e fotografias de linha de base;
 `0006_summary_predecessors.sql` permite resumo como predecessora e mantém
 resumos proibidos no lado sucessor; `0007_persistent_gantt_history.sql`
-persiste as pilhas limitadas de desfazer/refazer do Gantt por projeto; e
+persiste as pilhas limitadas de desfazer/refazer do Gantt por projeto;
 `0008_task_completion.sql` registra a data factual de conclusão; e
 `0009_project_critical_path.sql` adiciona a preferência persistente da análise
 do caminho crítico.
@@ -123,7 +123,7 @@ sob demanda. Ele somente propõe exceções; a fonte de verdade continua sendo o
 SQLite. A decisão e a política de licenças estão no ADR 016.
 
 A navegação secundária do workspace usa uma barra compacta logo abaixo da barra
-nativa da janela e acima do cabeçalho do projeto.
+de título integrada do Chrono Project e acima do cabeçalho do projeto.
 Arquivo, ações do projeto, calendário, templates e ajuda abrem painéis
 transitórios; esses painéis não criam estado persistente novo e continuam
 chamando os mesmos casos de uso e repositories das interfaces anteriores.
@@ -161,7 +161,7 @@ regras detalhadas e a matriz de testes estão em [scheduling.md](scheduling.md).
 - tarefas-resumo exibem datas derivadas e bloqueiam edição direta;
 - erros de domínio são apresentados ao usuário e não chegam à persistência;
 - projetos arquivados são mantidos no banco e ficam em modo somente leitura;
-- filtros por texto, status, prioridade, conclusão, intervalo e tag são
+- filtros por texto, status, prioridade, criticidade, responsáveis, intervalo e tag são
   compartilhados pelas três views e preservam ancestrais como contexto;
 - o Kanban usa Pointer Events para arraste consistente no WebView2 e mantém um
   seletor equivalente operável por teclado;

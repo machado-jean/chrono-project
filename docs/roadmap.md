@@ -31,13 +31,13 @@ Não usar percentuais subjetivos. O progresso deve ser demonstrado por entregáv
 
 | Item | Estado |
 | --- | --- |
-| Etapa do produto | Candidato 0.2.7 preparado para handoff |
+| Etapa do produto | v0.2.7 publicada; submissão ao WinGet validada |
 | Fase ativa | Hardening e distribuição Windows |
-| Próxima fase | Commit/push do usuário, CI de `main` e publicação da v0.2.7 |
+| Próxima fase | Aprovação do moderador do WinGet e definição do próximo incremento |
 | Versão da aplicação | `0.2.7` |
 | Versão do schema SQLite | `9` |
-| Último commit de referência | `b96fe3f` — políticas conservadoras do Dependabot |
-| Branch de trabalho | `main`; candidato 0.2.7 ainda não commitado |
+| Último commit de referência | `28b4ad1` — manifests WinGet e documentação de submissão |
+| Branch de trabalho | `main`; atualização de governança/documentação ainda não commitada |
 | Checkpoints obrigatórios | A, B, C e D concluídos; E preparado localmente |
 | Funcionalidades de negócio | Core, scheduler, views, reutilização e portabilidade implementados |
 
@@ -346,7 +346,7 @@ teclado e contraste.
 
 ## Incremento transversal — Estabilidade e produtividade pós-0.2.1
 
-Estado: **Em andamento**. Versão-alvo: **a definir**.
+Estado: **Concluído e incorporado à linha 0.2.x**.
 
 Este incremento reúne revisões observadas no uso real da Tabela e do Gantt. A
 ordem prioriza estabilidade, depois fluidez de edição e, por último, mudanças
@@ -354,7 +354,7 @@ de domínio no scheduler.
 
 ### Etapa 1 — Segurança na edição de datas
 
-Estado: **Concluída localmente; não commitada**.
+Estado: **Concluída e versionada**.
 
 - [x] impedir que anos parciais ou inválidos sejam enviados ao scheduler;
 - [x] restaurar a última data válida quando a edição incompleta perde o foco;
@@ -368,7 +368,7 @@ schema, persistência ou regra do scheduler.
 
 ### Etapa 2 — Ações rápidas das views
 
-Estado: **Concluída localmente; não commitada**.
+Estado: **Concluída e versionada**.
 
 - [x] substituir o texto do botão de confirmação de predecessora por `+`, com
   contraste, tooltip **Adicionar predecessora** e nome acessível;
@@ -387,7 +387,7 @@ ESLint, TypeScript, 143 testes regulares, jornada E2E e build Vite aprovados.
 
 ### Etapa 3 — Salvamento automático
 
-Estado: **Concluída localmente; não commitada**.
+Estado: **Concluída e versionada**.
 
 - [x] persistir seleções e datas válidas ao confirmar a alteração;
 - [x] persistir texto após pausa curta e sempre ao sair do campo;
@@ -403,7 +403,7 @@ schema, código nativo ou política do scheduler.
 
 ### Etapa 4 — Bloqueio explícito de datas
 
-Estado: **Concluída localmente; não commitada**.
+Estado: **Concluída e versionada**.
 
 - [x] representar `AUTO`/`MANUAL` como cadeado aberto/fechado;
 - [x] impedir arrasto e redimensionamento de tarefa travada e explicar o bloqueio;
@@ -417,7 +417,7 @@ travadas. Testes de UI e domínio cobrem alternância e bloqueio do arrasto.
 
 ### Etapa 5 — Tarefa-resumo como predecessora
 
-Estado: **Concluída localmente; não commitada**.
+Estado: **Concluída e versionada**.
 
 - [x] permitir resumo somente como predecessora, mantendo resumo como sucessora
   proibido por possuir datas derivadas;
@@ -437,7 +437,7 @@ TypeScript/React e 38 testes Rust aprovados em 2 de outubro de 2026.
 
 ### Etapa 6 — Impacto, produtividade e histórico persistente
 
-Estado: **Concluída localmente; não commitada**.
+Estado: **Concluída e versionada**.
 
 - [x] mostrar prévia das datas afetadas antes de adicionar ou remover uma
   predecessora-resumo;
@@ -460,7 +460,7 @@ Clippy, build e duas execuções consecutivas dos cinco cenários desktop.
 
 ## Fase 10 — Análise e explicação do cronograma
 
-Estado: **Em andamento**. Primeiro incremento implementado em 07/10/2026.
+Estado: **Em andamento**. Primeiro incremento publicado na versão 0.2.6.
 
 ### Escopo
 
@@ -1893,8 +1893,22 @@ matriz no host, na VM limpa e no CI Windows.
 - A desinstalação silenciosa removeu os binários após a finalização assíncrona;
   a reinstalação pelo manifesto restaurou o executável 0.2.7 com `Jean Machado`
   como empresa. Os bancos atual e legado mantiveram seus hashes.
-- Restam a prova em máquina limpa/VM, o envio autorizado do PR e a aceitação do
-  CLA da Microsoft. Nenhum PR externo foi criado automaticamente.
+- O conjunto foi submetido pelo usuário no
+  [PR microsoft/winget-pkgs#450697](https://github.com/microsoft/winget-pkgs/pull/450697),
+  após validação aprovada pelo WingetCreate. O CLA da Microsoft foi aceito e
+  aprovado. Todas as dez etapas técnicas do catálogo foram aprovadas, incluindo
+  varredura, instalação e metadados; resta somente a aprovação de um moderador
+  voluntário e, como reforço independente, a prova em máquina limpa/VM.
+
+### 11 de outubro de 2026 — Proteção rígida da `main`
+
+- A proteção clássica da branch passou a valer também para administradores.
+- Toda alteração exige Pull Request, `Windows quality gate` aprovado e
+  atualizado, conversas resolvidas e histórico linear.
+- Exclusão e `force-push` foram bloqueados.
+- A aprovação humana mínima permanece em zero enquanto houver apenas um
+  mantenedor; PR e CI continuam obrigatórios e a regra pode ser endurecida
+  quando existir um segundo revisor com permissão de escrita.
 
 ## Regras permanentes de acompanhamento
 

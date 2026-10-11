@@ -27,7 +27,7 @@ progresso sobre fundo transparente.
 
 O mesmo símbolo é a fonte de verdade para a interface e para os derivados do
 Tauri. A barra lateral exibe **Planejamento local**, sem repetir o nome que já
-está na barra nativa da janela.
+está na barra de título integrada do Chrono Project.
 
 ## Consequências
 

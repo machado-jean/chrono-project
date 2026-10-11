@@ -37,14 +37,16 @@ backups, logs e artefatos em `.local/e2e/` e injeta caminhos determinísticos
 para os diálogos de exportação/importação. A feature não é ativada no build de
 produção.
 
-Esse comando é somente diagnóstico. No WebView2 151 deste host, assim como no
-relato upstream para versões 150+, a criação da janela automatizada falha com
-`HRESULT 0x800700AA` (“recurso solicitado em uso”). O problema ocorre tanto com
-o driver oficial quanto ao habilitar CDP e não é tratado com downgrade do
-runtime, patch não publicado ou alteração global do Windows.
+Esse comando é somente diagnóstico. O erro histórico `HRESULT 0x800700AA`
+(“recurso solicitado em uso”), observado no WebView2 151 ao reutilizar recursos
+de automação, deixou de ocorrer no ensaio local depois que cada abertura passou
+a usar UUID, porta e perfil WebView2 próprios, com encerramento controlado. Esse
+resultado não prova uma correção universal do runtime: antes de promover o
+harness a gate obrigatório ainda faltam a VM Windows limpa e duas execuções
+consecutivas do workflow manual.
 
-Quando a correção upstream chegar a uma versão estável de Tauri/Wry/WebView2, o
-harness deve ser revalidado antes de ser promovido novamente a gate obrigatório.
+Não tratar regressões futuras com downgrade global do runtime, patch não
+publicado ou alteração global do Windows.
 
 O protocolo completo de isolamento, repetição, diagnóstico, validação em VM e
 critérios para promoção ao CI está em
