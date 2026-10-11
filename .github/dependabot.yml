@@ -7,14 +7,11 @@ updates:
       day: monday
       time: "09:00"
       timezone: America/Sao_Paulo
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 3
+    labels:
+      - "type: dependencies"
+      - "status: needs-triage"
     groups:
-      tauri-npm:
-        patterns:
-          - "@tauri-apps/*"
-        update-types:
-          - minor
-          - patch
       frontend-toolchain:
         patterns:
           - "typescript-eslint"
@@ -68,6 +65,9 @@ updates:
           - minor
           - patch
     ignore:
+      # Tauri spans npm and Cargo manifests. Dependabot cannot update both
+      # ecosystems atomically, so these packages are upgraded together by hand.
+      - dependency-name: "@tauri-apps/*"
       - dependency-name: "typescript"
         versions:
           - ">=6.1.0"
@@ -79,15 +79,11 @@ updates:
       day: monday
       time: "09:15"
       timezone: America/Sao_Paulo
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 3
+    labels:
+      - "type: dependencies"
+      - "status: needs-triage"
     groups:
-      tauri-cargo:
-        patterns:
-          - "tauri"
-          - "tauri-*"
-        update-types:
-          - minor
-          - patch
       cargo-patches:
         patterns:
           - "*"
@@ -98,6 +94,9 @@ updates:
         update-types:
           - patch
     ignore:
+      # Keep the Rust crates aligned with the matching @tauri-apps packages.
+      - dependency-name: "tauri"
+      - dependency-name: "tauri-*"
       - dependency-name: "sqlx"
         versions:
           - ">=0.9.0"
@@ -109,7 +108,10 @@ updates:
       day: monday
       time: "09:30"
       timezone: America/Sao_Paulo
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 1
+    labels:
+      - "type: dependencies"
+      - "status: needs-triage"
     groups:
       github-actions-minor-patch:
         patterns:

@@ -8,9 +8,11 @@ publicada.
 
 - organização pública do repositório: licença MIT, formulários de Issue,
   contribuição, segurança, suporte, conduta, Pull Requests e Dependabot;
-- apresentação bilíngue do GitHub com Social Preview e metadados consistentes.
+- apresentação bilíngue do GitHub com Social Preview e metadados consistentes;
 - política conservadora do Dependabot, com stacks compatíveis, majors
-  individuais e bloqueios temporários documentados para TypeScript e `sqlx`.
+  individuais, volume simultâneo limitado e bloqueios documentados para
+  TypeScript, `sqlx` e atualizações coordenadas do Tauri;
+- compatibilidade antecipada com o lint atualizado da toolchain de frontend.
 
 ## Compatibilidade e dados
 

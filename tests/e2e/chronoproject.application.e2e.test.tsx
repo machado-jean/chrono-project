@@ -24,7 +24,6 @@ import type {
   ExportResult,
   ImportPackagePreview,
   ImportResult,
-  ImportSelection,
   RestoreResult,
   ScheduleChangeSet,
   WorkspaceRepository,
@@ -209,9 +208,7 @@ class JourneyRepository implements WorkspaceRepository {
     });
   }
 
-  applyImportPackage(packagePath: string, selection: ImportSelection): Promise<ImportResult> {
-    void packagePath;
-    void selection;
+  applyImportPackage(): Promise<ImportResult> {
     if (this.exportedSnapshot === null) throw new Error("Nenhum workspace foi exportado.");
     const snapshot = structuredClone(this.exportedSnapshot);
     this.calendars = [...snapshot.calendars]; this.projects = [...snapshot.projects]; this.tasks = [...snapshot.tasks];

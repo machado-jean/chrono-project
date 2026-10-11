@@ -41,14 +41,23 @@ somente depois de publicar e verificar a release correspondente.
 
 Dependabot consulta npm, Cargo e GitHub Actions semanalmente. Atualizações
 patch/minor compatíveis são agrupadas por stack; majors permanecem individuais
-para revisão. TypeScript `>= 6.1` fica bloqueado enquanto a cadeia
+para revisão. O limite simultâneo é de três PRs para npm, três para Cargo e um
+para GitHub Actions. TypeScript `>= 6.1` fica bloqueado enquanto a cadeia
 `typescript-eslint` exigir versão inferior, e `sqlx >= 0.9` fica bloqueado
 enquanto `tauri-plugin-sql` permanecer sobre `sqlx 0.8`.
 
+Pacotes `@tauri-apps/*` e crates `tauri*` não são atualizados automaticamente.
+Eles compartilham compatibilidade entre `package-lock.json` e `Cargo.lock`, mas
+o Dependabot não produz um único PR transacional entre os dois ecossistemas.
+Atualizações do Tauri devem ser preparadas manualmente no mesmo incremento,
+com versões npm/Rust alinhadas e todo o CI aprovado. Alertas de segurança desses
+pacotes exigem a mesma atualização coordenada e têm prioridade de correção.
+
 Cada Pull Request executa o CI normal uma única vez. A automação não cria tags,
 não publica releases e não substitui revisão de licença, compatibilidade ou
-notas de versão. Uma exceção temporária deve registrar o motivo e ser removida
-quando a dependência compatível estiver disponível.
+notas de versão. Os PRs recebem `type: dependencies` e
+`status: needs-triage`. Uma exceção temporária deve registrar o motivo e ser
+removida quando a dependência compatível estiver disponível.
 
 ## Apresentação
 

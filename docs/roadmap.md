@@ -1843,6 +1843,11 @@ matriz no host, na VM limpa e no CI Windows.
   ESLint, e entre `sqlx` direto e `tauri-plugin-sql`, os grupos foram reduzidos
   a stacks compatíveis. Majors passaram a ser individuais e os dois intervalos
   incompatíveis ficaram temporariamente bloqueados.
+- Atualizações automáticas do Tauri foram retiradas dos dois ecossistemas: seus
+  pacotes npm e crates Rust devem avançar juntos, no mesmo incremento e sob o
+  mesmo CI. O volume simultâneo foi limitado a 3 PRs npm, 3 Cargo e 1 Actions,
+  todos identificados para triagem; o harness E2E também foi preparado para o
+  lint mais estrito da toolchain de frontend.
 - Foi criado um ativo bilíngue para o Social Preview, preservando o símbolo
   oficial e a linguagem visual de precisão do produto; o upload na configuração
   do GitHub depende de uma sessão autenticada no navegador.
