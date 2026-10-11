@@ -59,6 +59,44 @@ linear, conversas resolvidas e o check obrigatório **Windows quality gate**
 atualizado e aprovado. Push direto e force-push em `main` não fazem parte do
 fluxo de contribuição.
 
+## Fluxo obrigatório de integração
+
+Toda alteração, inclusive documentação e ajustes pequenos, segue o mesmo ciclo:
+
+1. partir de uma `main` limpa e atualizada;
+2. criar uma branch temática (`feat/...`, `fix/...`, `docs/...`, `test/...` ou
+   `release/vX.Y.Z`);
+3. implementar, testar e atualizar a documentação afetada;
+4. revisar o diff e criar commits coerentes;
+5. fazer push somente da branch temática;
+6. abrir Pull Request para `main` e preencher o template;
+7. aguardar o **Windows quality gate** atualizado e resolver as conversas;
+8. fazer squash merge, preservando um commit linear na `main`;
+9. excluir a branch temática local e remota;
+10. atualizar a `main` local por fast-forward e confirmar árvore limpa e
+    sincronizada com `origin/main`.
+
+Fluxo de terminal recomendado depois das validações locais:
+
+```powershell
+git switch -c docs/exemplo
+git add --all
+git commit -m "docs: describe the change"
+git push -u origin docs/exemplo
+gh pr create --base main --head docs/exemplo
+gh pr checks --watch
+gh pr merge --squash --delete-branch
+git switch main
+git fetch --prune origin
+git pull --ff-only origin main
+git status --short --branch
+```
+
+O último comando deve mostrar somente `## main...origin/main`. Divergência,
+arquivos modificados ou arquivos não rastreados precisam ser entendidos antes
+de iniciar o próximo trabalho. Operações remotas continuam sujeitas às regras
+de autorização de `AGENTS.md`.
+
 ## Regras de implementação
 
 - regras de domínio e scheduling ficam em TypeScript puro, fora de React;

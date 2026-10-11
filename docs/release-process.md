@@ -41,8 +41,13 @@ GitHub Release, no registro de build e no relatório final, sem novo commit.
    `main` protegida.
 9. Fazer push da branch, abrir o Pull Request e aguardar o check obrigatório
    `Windows quality gate` com a branch atualizada em relação à `main`.
-10. Resolver todas as conversas, concluir o merge com histórico linear e então
-   atualizar a `main` local antes de executar `PUBLISH_RELEASE.ps1`.
+10. Resolver todas as conversas e concluir o Pull Request por squash merge.
+11. Excluir a branch temática local e remota depois do merge concluído.
+12. Atualizar referências com `git fetch --prune`, trocar para `main` e executar
+    `git pull --ff-only origin main`.
+13. Confirmar com `git status --short --branch` que não existem mudanças locais
+    e que a saída é somente `## main...origin/main`; só então executar
+    `PUBLISH_RELEASE.ps1`.
 
 ## Depois de publicar
 

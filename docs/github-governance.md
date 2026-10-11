@@ -38,6 +38,27 @@ o mantenedor de integrar o próprio trabalho, sem dispensar PR e CI. Se outro
 mantenedor com permissão de escrita passar a participar regularmente, habilitar
 ao menos uma aprovação externa e a regra de último autor diferente.
 
+## Ciclo de vida de uma alteração
+
+O fluxo canônico está detalhado em [`CONTRIBUTING.md`](../CONTRIBUTING.md) e vale
+também para alterações feitas pelo mantenedor:
+
+```text
+main atualizada
+→ branch temática
+→ validações e commit
+→ push da branch
+→ Pull Request
+→ CI e conversas resolvidas
+→ squash merge
+→ exclusão da branch
+→ main local atualizada, limpa e sincronizada
+```
+
+Push direto, merge local e force-push em `main` não são atalhos aceitos. Depois
+do merge, usar `git fetch --prune` para remover referências remotas obsoletas e
+confirmar que `HEAD`, `main` e `origin/main` apontam para o mesmo commit.
+
 ## Labels
 
 | Prefixo | Uso |
