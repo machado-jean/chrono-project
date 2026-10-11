@@ -1,5 +1,22 @@
 # Identidade visual do Chrono Project
 
+## Apresentação no GitHub
+
+O `README.md` usa a marca oficial transparente em `src/assets/chrono-mark.png`
+centralizada e reduzida, sem criar uma variante paralela do símbolo. A página
+principal é mantida em português do Brasil e aponta para `README.en.md`, que
+oferece uma apresentação equivalente em inglês e informa que a interface do
+aplicativo ainda é PT-BR.
+
+Badges no README devem representar somente estados verificáveis: última release,
+CI da branch `main`, plataforma Windows, operação offline e Tauri. Downloads
+devem usar as URLs permanentes de `releases/latest/download`, preservando os
+nomes estáveis dos instaladores padrão e offline.
+
+Os topics do repositório descrevem tecnologia e domínio, nunca qualidades não
+comprovadas. Não usar `open-source` antes da definição e publicação de uma
+licença do projeto.
+
 ## Símbolo oficial
 
 O símbolo do Chrono Project é um relógio mecânico aberto em forma de `C`. A

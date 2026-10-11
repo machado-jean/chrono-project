@@ -1803,6 +1803,19 @@ matriz no host, na VM limpa e no CI Windows.
   removida após a promoção, permanecendo recuperável no GitHub.
 - Commit, push, tag e publicação permanecem reservados ao usuário.
 
+### 10 de outubro de 2026 — Apresentação bilíngue do repositório
+
+- O README principal foi condensado como página de produto em PT-BR, usando a
+  marca oficial, badges verificáveis, downloads permanentes e acesso rápido à
+  documentação técnica.
+- `README.en.md` apresenta o mesmo produto em inglês e informa explicitamente
+  que a interface do aplicativo ainda está disponível apenas em português do
+  Brasil.
+- A política de branding passou a registrar o uso da marca, badges, links de
+  download e topics no GitHub.
+- A ausência de licença pública foi declarada de forma transparente; nenhuma
+  licença foi escolhida implicitamente pelo agente.
+
 ## Regras permanentes de acompanhamento
 
 

@@ -1,281 +1,153 @@
-# Chrono Project
+<div align="center">
+  <img src="src/assets/chrono-mark.png" alt="Marca do Chrono Project" width="150" />
+  <h1>Chrono Project</h1>
+  <p><strong>Planejamento de projetos desktop, local-first e feito para Windows.</strong></p>
+  <p>Tabela, Kanban, Gantt, predecessoras, caminho crítico e dados sob seu controle.</p>
+  <p>
+    <strong>Português (Brasil)</strong> ·
+    <a href="README.en.md">English</a>
+  </p>
+  <p>
+    <a href="https://github.com/machado-jean/chrono-project/releases/latest"><img src="https://img.shields.io/github/v/release/machado-jean/chrono-project?display_name=tag&sort=semver&label=release&color=087f8c" alt="Última versão" /></a>
+    <a href="https://github.com/machado-jean/chrono-project/actions/workflows/ci.yml"><img src="https://github.com/machado-jean/chrono-project/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI" /></a>
+    <img src="https://img.shields.io/badge/Windows-11%20x64-2563eb" alt="Windows 11 x64" />
+    <img src="https://img.shields.io/badge/opera%C3%A7%C3%A3o-offline-087a52" alt="Operação offline" />
+    <img src="https://img.shields.io/badge/Tauri-2-24c8db" alt="Tauri 2" />
+  </p>
+  <p>
+    <a href="https://github.com/machado-jean/chrono-project/releases/latest/download/Chrono-Project-Windows-x64-Setup.exe"><strong>Baixar para Windows</strong></a>
+    ·
+    <a href="https://github.com/machado-jean/chrono-project/releases/latest/download/Chrono-Project-Windows-x64-Offline-Setup.exe">Instalador offline</a>
+    ·
+    <a href="https://github.com/machado-jean/chrono-project/releases/latest">Notas da versão</a>
+  </p>
+</div>
 
-Chrono Project é uma aplicação desktop local-first para planejamento de projetos e tarefas. A V1 tem como alvo exclusivo o Windows 11 x64 e deve operar integralmente offline após instalada.
-
+> [!NOTE]
 > Chrono Project é um projeto independente de gestão de projetos e não possui
 > vínculo com o Project Chrono, plataforma de simulação física.
 
-## Estado atual
+## O que é
 
-As Fases 0 a 6 estão concluídas e o Checkpoint Git 7 foi consolidado no commit
-`fc26a29`. O recorte funcional atual contém:
+Chrono Project é uma aplicação desktop para planejar projetos sem depender de
+contas, servidor remoto ou assinatura. Projetos, tarefas, calendários e backups
+permanecem na máquina do usuário. Depois de instalado, o uso normal funciona
+integralmente offline.
 
-- Tauri 2, React, TypeScript e Vite;
-- SQLite embarcado com migrations versionadas;
-- logging local;
-- lint, typecheck, testes e CI para Windows;
-- projetos com criação, edição, status, arquivamento e exclusão;
-- tarefas e subtarefas com edição inline, status, prioridade, progresso, datas,
-  duração, responsável, tags e detalhes;
-- hierarquia de até cinco níveis com expansão/recolhimento, troca de pai,
-  reordenação e prevenção de ciclos;
-- numeração hierárquica derivada (`1.`, `1.1.`, `1.1.1.`) nas três views;
-- calendário configurável com segunda a domingo, feriados e exceções;
-- calendário opcional **Todos os dias** para tarefas de fim de semana;
-- cálculo assistido entre início, fim e duração;
-- predecessoras Término para Início, inclusive por tarefa-resumo, lag, múltiplas
-  relações e prevenção de ciclos combinados com a hierarquia;
-- propagação reativa de tarefas automáticas, para frente ou para trás, e aviso
-  para conflitos manuais;
-- tarefas-resumo com datas derivadas e tarefas manuais com trava explícita contra
-  arrasto ou reagendamento automático;
-- prévia de impacto ao relacionar resumos, trava em massa e atalho
-  `Ctrl+Shift+L` para tarefas selecionadas;
-- planos de referência nomeados e imutáveis, com histórico de revisões e
-  exclusão confirmada sem impacto nas tarefas atuais;
-- datas planejadas versus atuais, desvio em dias úteis, prazo-limite e saúde;
-- persistência atômica das recalculações;
-- filtros compartilhados por texto, status, prioridade, múltiplos responsáveis,
-  caminho crítico, datas e tag; o status já concentra a seleção de tarefas
-  concluídas, sem um controle redundante de conclusão;
-- caminho crítico opcional por projeto, com folga da rede independente da meta,
-  margem global relativa ao maior prazo-limite e explicação visual acessível;
-- Kanban por status com drag-and-drop e campo **Status** acessível;
-- Gantt com hierarquia, progresso, dependências FS, ajuste automático de lag,
-  menu de contexto, desfazer/refazer persistente por projeto, resumos, escalas, fins de semana,
-  feriados, foco de dependência e edição temporal segura;
-- sincronização imediata entre Tabela, Kanban e Gantt;
-- janela principal maximizada na inicialização;
-- identidade visual própria com relógio mecânico em forma de `C`, aplicada ao
-  executável e à interface;
-- barra lateral de projetos recolhível e ajuda contextual acessível na Tabela;
-- menu de contexto para exportar, arquivar, restaurar ou excluir projetos;
-- duplicação de tarefa isolada, árvore completa e projeto, sempre com novos UUIDs;
-- preservação somente das dependências internas ao conteúdo duplicado;
-- biblioteca global de templates de árvores, com aplicação em qualquer projeto
-  e data de início escolhida;
-- exportação de projeto e workspace em pacote `.chronoproject` validado;
-- relatórios PDF locais com atividades, indicadores e cronograma Gantt;
-- comparação opcional da linha de base na Tabela, no Gantt e no PDF;
-- importação seletiva com atualização por UUID ou cópia independente;
-- seleção individual de templates e tratamento seguro de calendários;
-- backup SQLite verificado e restauração integral com backup de segurança;
-- seletor de destino para backup manual e acesso discreto à pasta dos backups
-  automáticos;
-- interface integralmente em português;
-- navegação por teclado com link de salto, foco visível, menus e diálogos com
-  retorno de foco, além de alternativas nativas às interações visuais;
-- verificação manual de nova versão pelo GitHub, sem consulta na inicialização,
-  com download, validação de assinatura, instalação passiva e reinício;
-- download alternativo do instalador offline pelo navegador padrão.
+Foi desenhado para oferecer densidade e produtividade de software desktop sem
+virar uma planilha genérica ou um painel SaaS.
 
-A identidade Chrono Project estreia na versão `0.2.0`. A migration 5 adiciona controle do
-plano sem modificar as regras do scheduler. A Fase 7 permanece com
-a validação manual em máquina Windows limpa registrada separadamente. Seu primeiro incremento adicionou orçamentos de
-desempenho, navegação das views por teclado, instaladores NSIS padrão/offline e
-um fluxo automatizado mínimo em camadas. A revisão final de UX/acessibilidade
-foi concluída e está registrada em
-[docs/ux-accessibility.md](docs/ux-accessibility.md). A validação manual em uma
-máquina Windows limpa ainda é critério de saída pendente. A automação da janela
-Tauri passou localmente com isolamento de dados e perfil WebView2. Permanece
-diagnóstica e não bloqueante até completar a validação remota e em VM,
-conforme o ADR 019. A decisão de linha de base e prazo está no ADR 022.
-O Gantt foi auditado com um projeto de 205 tarefas: roda do mouse, barra
-horizontal e barra vertical externa alcançaram integralmente a estrutura sem
-sobrepor o painel de inspeção.
+## Destaques
 
-O progresso por fase, os checkpoints e o histórico de entregas são mantidos em [docs/roadmap.md](docs/roadmap.md).
+| Área | Recursos |
+| --- | --- |
+| Planejamento | Tarefas, subtarefas, cinco níveis, prioridades, responsáveis, tags, datas, duração e progresso |
+| Cronograma | Dependências Término–Início, múltiplas predecessoras, lag, dias úteis, feriados e propagação automática |
+| Análise | Plano de referência, desvios, prazo-limite, saúde, caminho crítico, folga e margem da meta |
+| Visualizações | Tabela editável, Kanban por status e Gantt hierárquico sincronizados sobre os mesmos dados |
+| Produtividade | Edição inline, ações em massa, menus de contexto, histórico, `Ctrl+Z` e `Ctrl+Shift+Z` |
+| Reutilização | Duplicação de tarefas e projetos, templates de árvores e preservação de relações internas |
+| Portabilidade | Exportação `.chronoproject`, importação seletiva, backup verificado e relatórios PDF locais |
+| Privacidade | SQLite local, sem telemetria e sem envio automático de dados |
 
-## Stack
+## Instalação
 
-- Tauri 2 e Rust apenas para a camada nativa;
+O alvo atual é **Windows 11 x64**.
+
+- **Instalador padrão — recomendado:** usa o WebView2 disponível no Windows e
+  baixa o bootstrapper oficial da Microsoft somente quando necessário.
+- **Instalador offline:** inclui o redistribuível do WebView2 para instalação sem
+  internet.
+
+O aplicativo é instalado para o usuário atual em:
+
+```text
+%LOCALAPPDATA%\Chrono Project\
+```
+
+Os dados ficam separados do executável:
+
+```text
+Banco:   %APPDATA%\chronoproject\chronoproject.sqlite
+Backups: %APPDATA%\chronoproject\backups\
+Logs:    %LOCALAPPDATA%\chronoproject\logs\
+```
+
+Consulte [instalação e manutenção no Windows](docs/installation-windows.md)
+antes de atualizar uma instalação antiga ou testar o pacote offline.
+
+## Tecnologia
+
+- Tauri 2 e Rust na integração nativa;
 - React e TypeScript estrito na aplicação;
-- Vite para desenvolvimento e build do frontend;
+- Vite para desenvolvimento e build;
 - SQLite como fonte local de verdade;
-- npm para dependências JavaScript.
+- npm com lockfile versionado;
+- testes unitários, integração, E2E e desempenho no CI para Windows.
 
-Documentação principal:
+## Desenvolvimento
 
-- [ambiente e versões](docs/environment.md);
-- [arquitetura](docs/architecture.md);
-- [modelo de dados](docs/data-model.md);
-- [scheduler e calendário](docs/scheduling.md);
-- [Tabela, Kanban, Gantt e auditoria manual](docs/views.md);
-- [duplicação, templates e auditoria manual](docs/reuse.md);
-- [roadmap e histórico](docs/roadmap.md);
-- [importação, exportação e backup](docs/import-export.md);
-- [relatórios PDF](docs/pdf-reports.md);
-- [instalação e manutenção no Windows](docs/installation-windows.md);
-- [processo de release e verificação obrigatória do CI](docs/release-process.md);
-- [identidade visual e uso do ícone](docs/branding.md);
-- [auditoria de UX e acessibilidade](docs/ux-accessibility.md);
-- [diretrizes e evidências WebView2](docs/webview2-testing.md);
-- [validação da atualização em VM](docs/vm-validation-record.md);
-- [preparação do próximo release](docs/releases/next.md);
-- [notas do Chrono Project v0.2.1](docs/releases/v0.2.1.md);
-- [notas do Chrono Project v0.2.2](docs/releases/v0.2.2.md);
-- [notas do Chrono Project v0.2.3](docs/releases/v0.2.3.md);
-- [notas do Chrono Project v0.2.4](docs/releases/v0.2.4.md);
-- [notas do Chrono Project v0.2.5](docs/releases/v0.2.5.md);
-- [notas do Chrono Project v0.2.6](docs/releases/v0.2.6.md);
-- [decisões arquiteturais](docs/decisions/).
-
-## Preparação
-
-Em um Windows 11 x64 com os pré-requisitos instalados:
+Pré-requisitos e versões homologadas estão em
+[docs/environment.md](docs/environment.md).
 
 ```powershell
 npm ci
 npm run tauri:dev
 ```
 
-Durante o desenvolvimento, `tauri dev` e o release local de teste compartilham:
-
-```text
-chrono-project\.local\data\chronoproject.sqlite
-```
-
-Na primeira abertura, um banco existente no perfil é copiado de forma
-consistente para essa base, com backup em `.local\backups`. Uma base de
-desenvolvimento já existente nunca é sobrescrita.
-
-O build de distribuição continua usando o diretório de configuração do usuário
-resolvido pelo Tauri. No Windows usado no bootstrap:
-
-```text
-%APPDATA%\chronoproject\chronoproject.sqlite
-```
-
-Logs ficam no diretório recomendado do Windows:
-
-```text
-%LOCALAPPDATA%\chronoproject\logs\
-```
-
-`.local/` é ignorado pelo Git. A separação entre o release local de teste e o
-build instalável está no
-[ADR 012](docs/decisions/012-shared-development-database.md).
-
-Durante a estabilização da Fase 3, uma variante conhecida do checksum da
-migration 3 existiu em builds locais. A inicialização reconhece somente essa
-variante, valida integralmente o banco e cria uma cópia anterior ao reparo em:
-
-```text
-%APPDATA%\chronoproject\backups\
-```
-
-Projetos e tarefas não são modificados. Qualquer divergência diferente da
-variante documentada interrompe a abertura sem escrita; detalhes estão no
-[ADR 011](docs/decisions/011-migration-checksum-compatibility.md).
-
-## Qualidade e testes
+Gates principais:
 
 ```powershell
-npm run lint
-npm run typecheck
-npm test
+npm run check
 npm run test:e2e
 npm run test:performance
 npm run build
 
-cd src-tauri
-cargo fmt --all -- --check
-cargo check --locked --all-targets
-cargo test --locked --all-targets
-cargo clippy --locked --all-targets -- -D warnings
+cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check
+cargo check --manifest-path src-tauri/Cargo.toml --locked --all-targets
+cargo test --manifest-path src-tauri/Cargo.toml --locked --all-targets
+cargo clippy --manifest-path src-tauri/Cargo.toml --locked --all-targets -- -D warnings
 ```
 
-Para gerar o executável local de teste que usa o mesmo banco de `tauri dev`:
+Os dados de desenvolvimento ficam em `.local/`, que é ignorado pelo Git. O
+executável de auditoria usa intencionalmente essa base; builds distribuídos usam
+o perfil normal do Windows. Veja o
+[ADR 012](docs/decisions/012-shared-development-database.md).
 
-```powershell
-npm run tauri:build:test
-```
+## Documentação
 
-O resultado fica em `src-tauri\target\release\chrono-project.exe`. Não distribuir
-esse binário, pois ele referencia a `.local` do checkout em que foi compilado.
-Como builds de produção usam o mesmo nome, o comando de teste deve ser sempre o
-último executado antes da auditoria local.
+- [Roadmap e histórico](docs/roadmap.md)
+- [Arquitetura](docs/architecture.md)
+- [Modelo de dados](docs/data-model.md)
+- [Scheduler, dependências e calendário](docs/scheduling.md)
+- [Tabela, Kanban e Gantt](docs/views.md)
+- [Importação, exportação e backup](docs/import-export.md)
+- [Relatórios PDF](docs/pdf-reports.md)
+- [UX e acessibilidade](docs/ux-accessibility.md)
+- [Identidade visual](docs/branding.md)
+- [Processo de release](docs/release-process.md)
+- [Notas da v0.2.6](docs/releases/v0.2.6.md)
+- [Decisões arquiteturais](docs/decisions/)
 
-Para gerar instaladores de produção:
+## Estado do projeto
 
-```powershell
-npm run tauri:build:installer
-npm run tauri:build:installer:offline
-```
+A versão estável mais recente é a
+[v0.2.6](https://github.com/machado-jean/chrono-project/releases/tag/v0.2.6).
+O produto já cobre o fluxo principal de planejamento local. A validação em uma
+máquina Windows limpa e totalmente offline continua sendo o principal gate de
+distribuição pendente. Os próximos incrementos planejados incluem marcos,
+progresso consolidado, visões salvas, edição em massa e interoperabilidade
+CSV/XLSX.
 
-O primeiro é compacto e usa o bootstrapper do WebView2 somente se necessário;
-o segundo incorpora o runtime para instalação sem internet. Consulte
-[installation-windows.md](docs/installation-windows.md) antes de distribuir.
+## Contribuição e licença
 
-O build de distribuição e o release local de teste usam o mesmo nome e caminho
-de saída. Portanto, executar `npm run tauri:build -- --no-bundle` substitui o
-`.exe` pelo modo de produção, que lê `AppConfig`; para voltar a auditar os dados
-de desenvolvimento nesse caminho, execute `npm run tauri:build:test` por último.
+Relatos de problemas e propostas podem ser enviados pelas
+[Issues](https://github.com/machado-jean/chrono-project/issues). Antes de uma
+mudança estrutural, consulte `AGENTS.md` e as decisões em `docs/decisions/`.
 
-No fechamento da Fase 6, os números e gates finais estão registrados em
-[docs/environment.md](docs/environment.md). O release local de auditoria é
-regerado no mesmo caminho e preserva o banco compartilhado de desenvolvimento.
+O repositório ainda não declara uma licença pública. Até que essa decisão seja
+formalizada em um arquivo `LICENSE`, o código não deve ser presumido como
+licenciado para redistribuição ou incorporação em outros projetos.
 
-Para validar futuramente o comportamento de distribuição sem gerar instaladores:
-
-```powershell
-npm run tauri:build -- --no-bundle
-```
-
-NSIS padrão e offline são as estratégias de distribuição definidas no ADR 017.
-Atualizações são verificadas manualmente conforme o ADR 018.
-
-A instalação passiva assinada substituiu o fluxo inicial da ADR 018; a decisão
-vigente está no [ADR 020](docs/decisions/020-signed-passive-updater.md).
-
-## Estrutura
-
-```text
-src/                 apresentação e aplicação TypeScript
-src/domain/          domínio puro, sem React ou Tauri
-src/features/        projeções e fluxos de cada feature
-src/repositories/    fronteiras de persistência
-src-tauri/           shell nativo, plugins, migrations e logging
-tests/               testes TypeScript unitários, integração, E2E e fixtures
-docs/                arquitetura, ambiente e decisões
-.local/              dados locais de desenvolvimento ignorados
-```
-
-`AGENTS.md` é a especificação principal do projeto.
-
-As atribuições e licenças das bibliotecas e bases de dados incorporadas ficam em
+As atribuições das dependências incorporadas estão em
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
-
-## Builds de auditoria e controle de cache
-
-Use `npm run audit:build` para compilar e substituir o único executável de
-auditoria em `.local\inspection\Chrono-Project-Inspection.exe`. O arquivo fixo
-`Chrono-Project-Inspection.build.json` registra commit, estado do working tree,
-modo do banco, versão e SHA-256.
-
-```powershell
-npm run audit:build
-npm run artifacts:status
-npm run artifacts:clean
-npm run releases:status
-npm run releases:clean
-```
-
-O executável fixo nunca é atualizado sem uma nova compilação com
-`shared-dev-data`; assim, ele não pode receber por engano o binário de produção.
-O cache Cargo em `src-tauri\target` é preservado enquanto estiver abaixo de
-30 GiB. Depois de atualizar o executável, `audit:build` remove automaticamente
-somente `src-tauri\target\debug\incremental` se o limite for atingido. As
-dependências, os builds de release e os instaladores são preservados; apenas a
-próxima compilação de debug pode ficar parcialmente mais demorada.
-
-Para recriar de forma determinística as datas e predecessoras da massa local de
-205 tarefas, com o Chrono Project fechado, execute:
-
-```powershell
-npm run dev:seed-schedule
-```
-
-Os comandos `releases:*` mantêm somente os três releases versionados mais
-recentes em `.local\distribution`. Pastas de staging não são removidas por
-padrão, protegendo builds e finalizações em andamento.
