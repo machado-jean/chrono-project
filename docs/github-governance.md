@@ -39,10 +39,16 @@ somente depois de publicar e verificar a release correspondente.
 
 ## Dependências
 
-Dependabot consulta npm, Cargo e GitHub Actions semanalmente, em grupos
-separados. Cada Pull Request executa o CI normal uma única vez. A automação não
-cria tags, não publica releases e não substitui a revisão de licença,
-compatibilidade ou notas de versão.
+Dependabot consulta npm, Cargo e GitHub Actions semanalmente. Atualizações
+patch/minor compatíveis são agrupadas por stack; majors permanecem individuais
+para revisão. TypeScript `>= 6.1` fica bloqueado enquanto a cadeia
+`typescript-eslint` exigir versão inferior, e `sqlx >= 0.9` fica bloqueado
+enquanto `tauri-plugin-sql` permanecer sobre `sqlx 0.8`.
+
+Cada Pull Request executa o CI normal uma única vez. A automação não cria tags,
+não publica releases e não substitui revisão de licença, compatibilidade ou
+notas de versão. Uma exceção temporária deve registrar o motivo e ser removida
+quando a dependência compatível estiver disponível.
 
 ## Apresentação
 

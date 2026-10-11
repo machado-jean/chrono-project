@@ -1839,6 +1839,10 @@ matriz no host, na VM limpa e no CI Windows.
   Issues comuns.
 - Dependabot foi configurado semanalmente e de forma agrupada para npm, Cargo e
   GitHub Actions, sem criar tags ou repetir o fluxo de release.
+- Após os primeiros PRs revelarem incompatibilidades reais entre TypeScript e
+  ESLint, e entre `sqlx` direto e `tauri-plugin-sql`, os grupos foram reduzidos
+  a stacks compatíveis. Majors passaram a ser individuais e os dois intervalos
+  incompatíveis ficaram temporariamente bloqueados.
 - Foi criado um ativo bilíngue para o Social Preview, preservando o símbolo
   oficial e a linguagem visual de precisão do produto; o upload na configuração
   do GitHub depende de uma sessão autenticada no navegador.

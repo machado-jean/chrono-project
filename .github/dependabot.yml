@@ -9,9 +9,68 @@ updates:
       timezone: America/Sao_Paulo
     open-pull-requests-limit: 5
     groups:
-      npm-dependencies:
+      tauri-npm:
+        patterns:
+          - "@tauri-apps/*"
+        update-types:
+          - minor
+          - patch
+      frontend-toolchain:
+        patterns:
+          - "typescript-eslint"
+          - "@typescript-eslint/*"
+          - "typescript"
+          - "vite"
+          - "@vitejs/*"
+          - "eslint"
+          - "@eslint/*"
+          - "eslint-*"
+          - "globals"
+        update-types:
+          - minor
+          - patch
+      react-and-tests:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "@types/react"
+          - "@types/react-dom"
+          - "vitest"
+          - "@testing-library/*"
+          - "jsdom"
+          - "playwright-core"
+        update-types:
+          - minor
+          - patch
+      npm-minor-patch:
         patterns:
           - "*"
+        exclude-patterns:
+          - "@tauri-apps/*"
+          - "typescript-eslint"
+          - "@typescript-eslint/*"
+          - "typescript"
+          - "vite"
+          - "@vitejs/*"
+          - "eslint"
+          - "@eslint/*"
+          - "eslint-*"
+          - "globals"
+          - "react"
+          - "react-dom"
+          - "@types/react"
+          - "@types/react-dom"
+          - "vitest"
+          - "@testing-library/*"
+          - "jsdom"
+          - "playwright-core"
+        update-types:
+          - minor
+          - patch
+    ignore:
+      - dependency-name: "typescript"
+        versions:
+          - ">=6.1.0"
 
   - package-ecosystem: cargo
     directory: /src-tauri
@@ -22,9 +81,26 @@ updates:
       timezone: America/Sao_Paulo
     open-pull-requests-limit: 5
     groups:
-      cargo-dependencies:
+      tauri-cargo:
+        patterns:
+          - "tauri"
+          - "tauri-*"
+        update-types:
+          - minor
+          - patch
+      cargo-patches:
         patterns:
           - "*"
+        exclude-patterns:
+          - "tauri"
+          - "tauri-*"
+          - "sqlx"
+        update-types:
+          - patch
+    ignore:
+      - dependency-name: "sqlx"
+        versions:
+          - ">=0.9.0"
 
   - package-ecosystem: github-actions
     directory: /
@@ -35,7 +111,10 @@ updates:
       timezone: America/Sao_Paulo
     open-pull-requests-limit: 3
     groups:
-      github-actions:
+      github-actions-minor-patch:
         patterns:
           - "*"
+        update-types:
+          - minor
+          - patch
 
