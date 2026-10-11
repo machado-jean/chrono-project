@@ -128,13 +128,14 @@ o perfil normal do Windows. Veja o
 - [Identidade visual](docs/branding.md)
 - [Organização pública do GitHub](docs/github-governance.md)
 - [Processo de release](docs/release-process.md)
-- [Notas da v0.2.6](docs/releases/v0.2.6.md)
+- [Publicação no WinGet](docs/winget.md)
+- [Notas da v0.2.7](docs/releases/v0.2.7.md)
 - [Decisões arquiteturais](docs/decisions/)
 
 ## Estado do projeto
 
 A versão estável mais recente é a
-[v0.2.6](https://github.com/machado-jean/chrono-project/releases/tag/v0.2.6).
+[v0.2.7](https://github.com/machado-jean/chrono-project/releases/tag/v0.2.7).
 O produto já cobre o fluxo principal de planejamento local. A validação em uma
 máquina Windows limpa e totalmente offline continua sendo o principal gate de
 distribuição pendente. Os próximos incrementos planejados incluem marcos,

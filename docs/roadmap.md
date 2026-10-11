@@ -4,7 +4,7 @@ Este é o registro vivo de execução do Chrono Project. Ele traduz o roadmap de
 
 `AGENTS.md` continua sendo a fonte de verdade para produto, arquitetura e regras operacionais. Este documento não substitui a especificação e não deve introduzir escopo incompatível com ela.
 
-Última atualização: **10 de outubro de 2026**.
+Última atualização: **11 de outubro de 2026**.
 
 ## Como manter este documento
 
@@ -31,14 +31,14 @@ Não usar percentuais subjetivos. O progresso deve ser demonstrado por entregáv
 
 | Item | Estado |
 | --- | --- |
-| Etapa do produto | Candidato 0.2.6 em validação final |
+| Etapa do produto | Candidato 0.2.7 preparado para handoff |
 | Fase ativa | Hardening e distribuição Windows |
-| Próxima fase | Validar manualmente e gerar os artefatos da v0.2.6 |
-| Versão da aplicação | `0.2.6` |
+| Próxima fase | Commit/push do usuário, CI de `main` e publicação da v0.2.7 |
+| Versão da aplicação | `0.2.7` |
 | Versão do schema SQLite | `9` |
-| Último commit de referência | `8d1e6d3` — publicação da v0.2.5 |
-| Branch de trabalho | `main`; candidato 0.2.6 ainda não commitado |
-| Checkpoints obrigatórios | A, B, C e D concluídos; E em validação |
+| Último commit de referência | `b96fe3f` — políticas conservadoras do Dependabot |
+| Branch de trabalho | `main`; candidato 0.2.7 ainda não commitado |
+| Checkpoints obrigatórios | A, B, C e D concluídos; E preparado localmente |
 | Funcionalidades de negócio | Core, scheduler, views, reutilização e portabilidade implementados |
 
 ## Visão geral das fases
@@ -1851,6 +1851,31 @@ matriz no host, na VM limpa e no CI Windows.
 - Foi criado um ativo bilíngue para o Social Preview, preservando o símbolo
   oficial e a linguagem visual de precisão do produto; o upload na configuração
   do GitHub depende de uma sessão autenticada no navegador.
+
+### 11 de outubro de 2026 — Candidato 0.2.7 e preparação do WinGet
+
+- A versão foi sincronizada como `0.2.7` nos manifests npm, Cargo e Tauri, sem
+  alteração do schema SQLite ou do formato `.chronoproject`.
+- O bundle Windows passou a registrar `Jean Machado` como publisher explícito,
+  com metadados de produto, categoria e copyright coerentes.
+- O identificador público `ChronoProject.ChronoProject` foi reservado para a
+  futura submissão comunitária ao WinGet; o identificador interno
+  `chronoproject` e o diretório de dados não foram alterados.
+- O instalador padrão foi instalado, desinstalado e reinstalado com `/S`, sempre
+  com código `0`. O registro exibiu a versão 0.2.7 e o editor Jean Machado.
+- Uma base legada foi copiada para backup antes do teste e permaneceu com o
+  mesmo SHA-256 após a desinstalação, comprovando que dados do usuário não foram
+  removidos por esse fluxo.
+- Foram aprovados 191 testes TypeScript/React, 39 testes Rust, 1 jornada E2E,
+  2 testes de desempenho, lint, typecheck, auditoria npm e Cargo
+  fmt/check/Clippy.
+- Executável, instaladores padrão/offline, assinaturas do updater e hashes foram
+  gerados. O instalador offline concluiu em 138,9 s, estabelecendo que essa etapa
+  deve pausar o acompanhamento desde o início nos próximos releases.
+- Não será adquirido certificado Authenticode comercial. Alternativas gratuitas
+  para open source podem ser avaliadas sem bloquear a v0.2.7; os `.sig` atuais
+  continuam sendo exclusivamente as assinaturas do atualizador Tauri.
+- Commit, push, tag e publicação permanecem reservados ao usuário.
 
 ## Regras permanentes de acompanhamento
 

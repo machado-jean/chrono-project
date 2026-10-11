@@ -1,7 +1,7 @@
 {
   "name": "chrono-project",
   "private": true,
-  "version": "0.2.6",
+  "version": "0.2.7",
   "description": "Local-first desktop project planning for Windows.",
   "author": "Jean Machado and Chrono Project contributors",
   "license": "MIT",

@@ -833,3 +833,46 @@ exclusiva dos incrementais de debug. Foram liberados 16,01 GiB; o cache restante
 ficou em 14,77 GiB, preservando dependências, release e instaladores.
 A retenção local preservou v0.2.6, v0.2.5 e v0.2.4 e removeu somente a cópia
 local publicada da v0.2.3, liberando mais 0,23 GiB.
+
+## Validação automatizada do candidato 0.2.7
+
+Em 11 de outubro de 2026, o candidato 0.2.7 reutilizou o toolchain aprovado e
+não instalou nem atualizou ferramentas globais.
+
+| Etapa | Resultado | Tempo total |
+| --- | --- | ---: |
+| `npm ci` | 323 pacotes, 0 vulnerabilidades | 8,2 s |
+| `npm run check` | lint, typecheck e 191 testes aprovados | 57,7 s |
+| `npm run test:e2e` | 1 jornada E2E e 39 testes Rust; 1 histórico ignorado | 38,9 s |
+| `npm run test:performance` | 2 testes aprovados | 0,8 s |
+| `npm audit --audit-level=low` | 0 vulnerabilidades | 1,0 s |
+| Cargo fmt | aprovado | 0,4 s |
+| Cargo check `--all-targets` | aprovado | 11,3 s |
+| Cargo test `--all-targets` | 39 aprovados e 1 ignorado | 1,6 s |
+| Cargo Clippy com `-D warnings` | aprovado | 6,1 s |
+| executável sem bundle | aprovado | 46,7 s |
+| instalador padrão, NSIS e assinatura | aprovado | 70,0 s |
+| instalador offline, NSIS e assinatura | aprovado | 138,9 s |
+| instalação silenciosa | código 0 | 1,3 s |
+| desinstalação silenciosa | código 0 | 0,9 s |
+| reinstalação silenciosa | código 0 | 0,9 s |
+
+O primeiro teste TypeScript e o primeiro teste Rust que operam arquivos
+temporários encontraram somente restrições `EPERM`/`os error 5` do sandbox do
+Windows. As mesmas baterias foram repetidas fora desse isolamento e aprovadas.
+
+O instalador padrão foi registrado em escopo de usuário com versão `0.2.7` e
+publisher `Jean Machado`. O executável instalado apresentou `ProductVersion`
+0.2.7 e `CompanyName` Jean Machado. A desinstalação removeu o diretório do
+aplicativo, preservando o banco legado. O backup pré-teste possui 200.704 bytes
+e SHA-256 `C60AE652EDFF278D5FC40BA3765B1DC93A7F54FEE3A288B8EA2FFE90DA796491`;
+o arquivo original manteve o mesmo hash após o teste.
+
+O build offline reutilizou o runtime WebView2 em cache e não realizou novo
+download. Seus 138,9 s ultrapassam o limite operacional de dois minutos; por
+isso, builds offline futuros devem ser iniciados já com pausa e acompanhados
+pelo monitor documentado no runbook.
+
+A promoção preservou localmente v0.2.7, v0.2.6 e v0.2.5. A cópia local já
+publicada da v0.2.4 foi removida pela política de retenção, liberando 0,23 GiB;
+seus artefatos permanecem recuperáveis no GitHub.

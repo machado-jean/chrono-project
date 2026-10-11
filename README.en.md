@@ -131,13 +131,14 @@ The detailed documentation is currently maintained in Brazilian Portuguese:
 - [Visual identity](docs/branding.md)
 - [Public GitHub organization](docs/github-governance.md)
 - [Release process](docs/release-process.md)
-- [v0.2.6 release notes](docs/releases/v0.2.6.md)
+- [WinGet publishing](docs/winget.md)
+- [v0.2.7 release notes](docs/releases/v0.2.7.md)
 - [Architecture decisions](docs/decisions/)
 
 ## Project status
 
 The latest stable version is
-[v0.2.6](https://github.com/machado-jean/chrono-project/releases/tag/v0.2.6).
+[v0.2.7](https://github.com/machado-jean/chrono-project/releases/tag/v0.2.7).
 The main local planning workflow is implemented. Validation on a clean, fully
 offline Windows machine remains the primary distribution gate. Planned next
 increments include milestones, consolidated progress, saved views, bulk editing,

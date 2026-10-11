@@ -1,5 +1,10 @@
 # Instalação e manutenção no Windows
 
+Os instaladores registram `Jean Machado` como editor em **Aplicativos
+instalados**. Esse metadado do NSIS é independente da assinatura Authenticode:
+as assinaturas `.sig` publicadas validam o atualizador Tauri, mas não substituem
+um certificado de assinatura de código reconhecido pelo Windows.
+
 ## Escopo
 
 O alvo da V1 é Windows 11 x64. O usuário final não precisa instalar Node.js,
@@ -46,6 +51,15 @@ conservar ambos.
 A instalação é feita somente para o usuário atual e não deve pedir privilégios
 de administrador no fluxo normal.
 
+Para implantação automatizada, o NSIS também aceita instalação silenciosa:
+
+```powershell
+.\Chrono-Project-Windows-x64-Setup.exe /S
+```
+
+O processo deve terminar com código `0`. O caminho efetivo deve ser obtido da
+entrada de desinstalação do Windows, sem presumir um diretório fixo.
+
 ## Atualização e preservação de dados
 
 Quando o instalador gráfico encontra uma versão anterior, a interface em
@@ -91,10 +105,19 @@ segredo no ambiente que gera releases.
 ## Desinstalação
 
 Use **Configurações > Aplicativos > Aplicativos instalados > Chrono Project >
-Desinstalar**. A validação final da Fase 7 deve confirmar separadamente o que o
-NSIS mantém ou remove no perfil. Até essa auditoria, não se deve prometer que a
-desinstalação apaga os dados pessoais; faça backup e, se desejar remoção total,
-revise manualmente o diretório acima depois de desinstalar.
+Desinstalar**. O NSIS remove os binários do aplicativo, mas dados do perfil são
+preservados; faça backup antes de uma manutenção importante e revise
+manualmente o diretório de dados caso deseje removê-los também.
+
+A desinstalação silenciosa usa o executável registrado pelo próprio NSIS:
+
+```powershell
+& '<caminho registrado>\uninstall.exe' /S
+```
+
+Na validação da v0.2.7, instalação e desinstalação silenciosas retornaram código
+`0`; o diretório do aplicativo foi removido e o banco legado do usuário foi
+preservado byte a byte.
 
 ## Checklist de validação em máquina limpa
 
