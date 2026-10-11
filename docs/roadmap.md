@@ -1877,6 +1877,25 @@ matriz no host, na VM limpa e no CI Windows.
   continuam sendo exclusivamente as assinaturas do atualizador Tauri.
 - Commit, push, tag e publicação permanecem reservados ao usuário.
 
+### 11 de outubro de 2026 — Manifests WinGet prontos para submissão
+
+- A v0.2.7 foi publicada no commit `30c8ec0`, reutilizando o CI de `main` sem
+  execução redundante para a tag.
+- Foram criados manifests multi-arquivo PT-BR/EN no schema 1.12.0 para o ID
+  `ChronoProject.ChronoProject`, apontando apenas ao instalador padrão x64 e à
+  URL imutável da v0.2.7.
+- O digest público do GitHub coincide com o SHA-256 local documentado.
+- WinGet 1.29.380 validou o conjunto, baixou o asset, verificou o hash e
+  instalou silenciosamente o aplicativo. O WingetCreate oficial 1.12.13.0 foi
+  instalado para a submissão.
+- O Microsoft Defender concluiu uma varredura personalizada do instalador
+  padrão publicado sem encontrar ameaças.
+- A desinstalação silenciosa removeu os binários após a finalização assíncrona;
+  a reinstalação pelo manifesto restaurou o executável 0.2.7 com `Jean Machado`
+  como empresa. Os bancos atual e legado mantiveram seus hashes.
+- Restam a prova em máquina limpa/VM, o envio autorizado do PR e a aceitação do
+  CLA da Microsoft. Nenhum PR externo foi criado automaticamente.
+
 ## Regras permanentes de acompanhamento
 
 

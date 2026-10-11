@@ -35,6 +35,13 @@ Confirmado em 11 de outubro de 2026:
   `CompanyName = Jean Machado` no aplicativo e copyright correspondente;
 - os artefatos atuais possuem assinatura do updater Tauri, mas não assinatura
   Authenticode reconhecida pelo Windows.
+- a v0.2.7 foi publicada no commit aprovado pelo CI, e o digest público do
+  instalador padrão coincide com o SHA-256 local;
+- os quatro manifests em schema 1.12.0 passaram em `winget validate`;
+- o WinGet baixou o asset versionado, confirmou o hash e instalou a aplicação
+  silenciosamente a partir do manifesto local;
+- desinstalação silenciosa e reinstalação pelo manifesto preservaram os bancos
+  de produção e legado byte a byte.
 
 O release v0.2.6 não deve ser usado para a primeira submissão porque foi gerado
 antes da correção explícita do publisher. Não substituir seu instalador: gerar
@@ -60,30 +67,72 @@ reconheceriam como confiável.
 
 ## Gate antes da primeira submissão
 
-- [x] gerar localmente o candidato v0.2.7 com o publisher corrigido;
+- [x] gerar e publicar a v0.2.7 com o publisher corrigido;
 - [x] confirmar `ProductName`, `ProductVersion`, `CompanyName` e `Publisher` no
   executável, instalador e registro de desinstalação;
-- [ ] publicar a v0.2.7 e confirmar o SHA-256 local igual ao digest do asset;
+- [x] confirmar o SHA-256 local igual ao digest público do asset;
 - [x] instalar como usuário comum com `/S`, sem diálogo ou elevação;
 - [x] confirmar preservação do banco existente durante o teste silencioso;
 - [ ] instalar a versão sobre a anterior e confirmar upgrade sem duplicidade;
 - [x] desinstalar silenciosamente com `/S` e confirmar código de saída zero;
 - [x] registrar quais dados do usuário permanecem após a desinstalação;
-- [ ] executar verificação do Microsoft Defender e observar o SmartScreen;
+- [x] verificar o instalador padrão com o Microsoft Defender, sem ameaças;
+- [ ] observar o SmartScreen em uma máquina limpa;
 - [x] não adquirir certificado comercial; avaliar somente opção gratuita e
   confiável para projeto open source sem bloquear a v0.2.7;
-- [ ] instalar o WingetCreate oficial ou preparar as ferramentas do
-  `microsoft/winget-pkgs`; ele ainda não está instalado neste host;
-- [ ] gerar os três manifests no schema vigente: version, installer e
+- [x] instalar o WingetCreate oficial 1.12.13.0 neste host;
+- [x] gerar os três manifests no schema vigente: version, installer e
   defaultLocale, mais o locale `en-US`;
-- [ ] usar exclusivamente a URL versionada do instalador online x64;
-- [ ] validar os manifests com `winget validate --manifest`;
-- [ ] testar `winget install --manifest` e `winget uninstall --manifest` em
-  ambiente limpo; usar outra máquina/VM enquanto o Windows Sandbox não estiver
-  disponível neste host;
+- [x] usar exclusivamente a URL versionada do instalador online x64;
+- [x] validar os manifests com `winget validate --manifest`;
+- [x] testar `winget install --manifest` e a desinstalação silenciosa neste
+  host, com reinstalação final pelo mesmo manifesto;
+- [ ] repetir instalação e desinstalação em máquina limpa ou VM; usar outra
+  máquina/VM enquanto o Windows Sandbox não estiver disponível neste host;
+- [ ] depois da entrada no catálogo, testar
+  `winget uninstall --id ChronoProject.ChronoProject --exact`;
 - [ ] conferir novamente pacote e PR duplicados imediatamente antes do envio;
 - [ ] enviar um único PR contendo apenas uma versão do pacote;
 - [ ] aceitar o CLA da Microsoft e acompanhar todos os checks de validação.
+
+Os manifests fonte ficam em:
+
+```text
+packaging/winget/manifests/c/ChronoProject/ChronoProject/0.2.7/
+```
+
+Esse caminho espelha exatamente a estrutura exigida pelo `winget-pkgs`. No PR,
+copiar a subárvore `manifests/` para a raiz do fork e não incluir documentação
+ou qualquer outro arquivo no mesmo Pull Request.
+
+Evidências do teste local:
+
+| Item | Resultado |
+| --- | --- |
+| WinGet | `1.29.380` |
+| WingetCreate | `1.12.13.0` |
+| validação | `Êxito na validação do manifesto` |
+| download | URL pública versionada da v0.2.7 |
+| SHA-256 verificado | `B298C57927D63AD84CDF663DFA5DEFC487F47B3696C6DB125E591026446EC455` |
+| instalação silenciosa | aprovada |
+| desinstalação silenciosa | aprovada |
+| executável reinstalado | versão 0.2.7, empresa Jean Machado |
+| Microsoft Defender | nenhuma ameaça encontrada |
+| banco `chronoproject` | `FB95528E5660885AF5D306B1F4066757F9591F1BB3CE36C6A873736E398218B4` |
+| banco legado | `C60AE652EDFF278D5FC40BA3765B1DC93A7F54FEE3A288B8EA2FFE90DA796491` |
+
+Quando a validação em ambiente limpo for aceita, submeter sem expor token na
+linha de comando:
+
+```powershell
+wingetcreate submit `
+  --prtitle "New package: ChronoProject.ChronoProject version 0.2.7" `
+  packaging\winget\manifests\c\ChronoProject\ChronoProject\0.2.7
+```
+
+Sem `--token`, o WingetCreate solicita autenticação segura no GitHub e abre o
+Pull Request no navegador. O primeiro PR também exigirá a aceitação do CLA da
+Microsoft.
 
 ## Campos previstos do instalador
 

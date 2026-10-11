@@ -6,8 +6,10 @@ publicada.
 
 ## Escopo confirmado
 
-- nenhum item confirmado após a v0.2.7; novas mudanças devem ser registradas
-  aqui antes do próximo ciclo de release.
+- manifests WinGet multi-arquivo da v0.2.7 mantidos no repositório como fonte
+  reproduzível para a primeira submissão pública;
+- novas mudanças do aplicativo devem ser registradas aqui antes do próximo
+  ciclo de release.
 
 ## Compatibilidade e dados
 
