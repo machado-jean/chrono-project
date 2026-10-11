@@ -3,6 +3,16 @@
   "private": true,
   "version": "0.2.6",
   "description": "Local-first desktop project planning for Windows.",
+  "author": "Jean Machado and Chrono Project contributors",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/machado-jean/chrono-project.git"
+  },
+  "bugs": {
+    "url": "https://github.com/machado-jean/chrono-project/issues"
+  },
+  "homepage": "https://github.com/machado-jean/chrono-project#readme",
   "type": "module",
   "packageManager": "npm@11.19.0",
   "engines": {

@@ -1,0 +1,121 @@
+name: Relatar problema / Bug report
+description: Informe um erro reproduzível no Chrono Project / Report a reproducible problem
+title: "[Bug]: "
+labels:
+  - "type: bug"
+  - "status: needs-triage"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Obrigado por ajudar a melhorar o Chrono Project.
+
+        Antes de enviar, procure por Issues semelhantes e remova dos anexos nomes de clientes, projetos reais, caminhos pessoais e outros dados sensíveis.
+
+        Thank you for helping improve Chrono Project. The application interface is currently available in Brazilian Portuguese, but reports in English are welcome.
+
+  - type: input
+    id: version
+    attributes:
+      label: Versão / Version
+      description: Consulte Ajuda > Sobre ou a versão exibida no instalador.
+      placeholder: "Ex.: 0.2.6"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: installation
+    attributes:
+      label: Instalação / Installation
+      options:
+        - Instalador padrão / Standard installer
+        - Instalador offline / Offline installer
+        - Ambiente de desenvolvimento / Development environment
+        - Não sei / I do not know
+    validations:
+      required: true
+
+  - type: input
+    id: windows
+    attributes:
+      label: Windows
+      description: Informe versão, edição e arquitetura quando souber.
+      placeholder: "Ex.: Windows 11 24H2 x64"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Área afetada / Affected area
+      multiple: true
+      options:
+        - Projetos / Projects
+        - Tabela / Table
+        - Kanban
+        - Gantt
+        - Predecessoras e scheduler / Dependencies and scheduler
+        - Caminho crítico / Critical path
+        - Calendário / Calendar
+        - Importação, exportação ou backup / Import, export, or backup
+        - Relatório PDF / PDF report
+        - Instalação ou atualização / Installation or update
+        - Interface geral / General interface
+        - Outra / Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Como reproduzir / Steps to reproduce
+      description: Liste a sequência mínima que causa o problema.
+      placeholder: |
+        1. Abrir...
+        2. Selecionar...
+        3. Alterar...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Resultado esperado / Expected result
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Resultado observado / Actual result
+      description: Inclua a mensagem de erro completa, se houver.
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidências adicionais / Additional evidence
+      description: Anexe imagens, vídeo curto ou logs sanitizados. Não envie bancos ou backups com dados reais.
+
+  - type: dropdown
+    id: regression
+    attributes:
+      label: Já funcionou antes? / Did it work before?
+      options:
+        - Não sei / I do not know
+        - Nunca funcionou / Never worked
+        - Sim, em uma versão anterior / Yes, in an earlier version
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: confirmation
+    attributes:
+      label: Confirmações / Confirmations
+      options:
+        - label: Procurei por uma Issue semelhante / I searched for a similar Issue
+          required: true
+        - label: Removi informações pessoais ou confidenciais / I removed personal or confidential information
+          required: true
+

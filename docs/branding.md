@@ -14,8 +14,13 @@ devem usar as URLs permanentes de `releases/latest/download`, preservando os
 nomes estáveis dos instaladores padrão e offline.
 
 Os topics do repositório descrevem tecnologia e domínio, nunca qualidades não
-comprovadas. Não usar `open-source` antes da definição e publicação de uma
-licença do projeto.
+comprovadas. O topic `open-source` somente pode ser usado enquanto o arquivo
+`LICENSE` com a licença MIT estiver publicado na branch padrão.
+
+O Social Preview oficial usa proporção `2:1`, composição clara e densa, símbolo
+original sem redesenho, nome do produto e mensagem bilíngue curta. A fonte
+editável fica em `docs/assets/github-social-preview.html` e o PNG publicado em
+`docs/assets/github-social-preview.png`.
 
 ## Símbolo oficial
 

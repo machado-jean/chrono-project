@@ -13,6 +13,7 @@
     <img src="https://img.shields.io/badge/Windows-11%20x64-2563eb" alt="Windows 11 x64" />
     <img src="https://img.shields.io/badge/operation-offline-087a52" alt="Offline operation" />
     <img src="https://img.shields.io/badge/Tauri-2-24c8db" alt="Tauri 2" />
+    <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-c79221" alt="MIT License" /></a>
   </p>
   <p>
     <a href="https://github.com/machado-jean/chrono-project/releases/latest/download/Chrono-Project-Windows-x64-Setup.exe"><strong>Download for Windows</strong></a>
@@ -128,6 +129,7 @@ The detailed documentation is currently maintained in Brazilian Portuguese:
 - [PDF reports](docs/pdf-reports.md)
 - [UX and accessibility](docs/ux-accessibility.md)
 - [Visual identity](docs/branding.md)
+- [Public GitHub organization](docs/github-governance.md)
 - [Release process](docs/release-process.md)
 - [v0.2.6 release notes](docs/releases/v0.2.6.md)
 - [Architecture decisions](docs/decisions/)
@@ -143,13 +145,17 @@ and CSV/XLSX interoperability.
 
 ## Contributing and license
 
-Bug reports and proposals are welcome through
-[Issues](https://github.com/machado-jean/chrono-project/issues). Before proposing
-a structural change, read `AGENTS.md` and the decisions in `docs/decisions/`.
+Bug reports and proposals are welcome through the structured
+[Issue forms](https://github.com/machado-jean/chrono-project/issues/new/choose).
+Before proposing a structural change, read `AGENTS.md` and the decisions in
+`docs/decisions/`.
 
-This repository does not yet declare a public license. Until a `LICENSE` file is
-formally added, do not assume permission to redistribute or incorporate the code
-into other projects.
+See also [contribution guidelines](CONTRIBUTING.md), the
+[code of conduct](CODE_OF_CONDUCT.md), [support options](SUPPORT.md), and the
+[security policy](SECURITY.md).
+
+Chrono Project is distributed under the [MIT License](LICENSE). By contributing,
+you agree that your contribution will be made available under the same license.
 
 Third-party attributions are available in
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

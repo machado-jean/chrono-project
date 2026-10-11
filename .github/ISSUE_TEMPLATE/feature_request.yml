@@ -1,0 +1,83 @@
+name: Sugerir melhoria / Feature request
+description: Proponha uma melhoria para o produto / Suggest a product improvement
+title: "[Feature]: "
+labels:
+  - "type: feature"
+  - "status: needs-triage"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Descreva primeiro o problema de trabalho que deseja resolver. Isso ajuda a avaliar uma solução coerente com a experiência desktop e local-first do Chrono Project.
+
+        Please describe the workflow problem first. Suggestions in English are welcome.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problema ou necessidade / Problem or need
+      description: Em qual situação essa necessidade aparece e quem é afetado?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Solução sugerida / Suggested solution
+      description: Explique o comportamento esperado, sem se limitar ao desenho visual.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Área / Area
+      multiple: true
+      options:
+        - Projetos / Projects
+        - Tabela / Table
+        - Kanban
+        - Gantt
+        - Predecessoras e scheduler / Dependencies and scheduler
+        - Caminho crítico / Critical path
+        - Calendário / Calendar
+        - Importação, exportação ou backup / Import, export, or backup
+        - Relatório PDF / PDF report
+        - Instalação ou atualização / Installation or update
+        - Interface geral / General interface
+        - Outra / Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: workflow
+    attributes:
+      label: Fluxo proposto / Proposed workflow
+      description: Se possível, descreva os passos e o resultado final.
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternativas consideradas / Alternatives considered
+      description: Como você resolve isso hoje?
+
+  - type: dropdown
+    id: impact
+    attributes:
+      label: Frequência ou impacto / Frequency or impact
+      options:
+        - Bloqueia uma atividade essencial / Blocks an essential workflow
+        - Afeta o trabalho com frequência / Frequently affects work
+        - Melhora produtividade ou clareza / Improves productivity or clarity
+        - Conveniência ocasional / Occasional convenience
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: confirmation
+    attributes:
+      label: Confirmação / Confirmation
+      options:
+        - label: Procurei por uma sugestão semelhante / I searched for a similar request
+          required: true
+

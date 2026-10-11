@@ -696,6 +696,27 @@ dedicado `.github/workflows/release.yml`, acionado por tags `v*` e limitado às
 responsabilidades de release. Não duplicar nele o quality gate completo do CI.
 Nunca mover ou recriar uma tag já publicada sem autorização explícita.
 
+## 12.7 Governança pública do GitHub
+
+O código autoral do projeto é distribuído sob a licença MIT registrada em
+`LICENSE`. Não alterar licença, titularidade ou termos sem decisão explícita do
+mantenedor e ADR correspondente.
+
+Manter:
+
+- apresentação bilíngue em `README.md` e `README.en.md`;
+- formulários estruturados para bugs e melhorias;
+- vulnerabilidades fora de Issues públicas, conforme `SECURITY.md`;
+- Pull Requests orientadas pelo template e revisadas pelo CODEOWNER;
+- labels com prefixos `type:`, `area:`, `priority:` e `status:`;
+- Dependabot semanal e agrupado, sem automação de tag ou release;
+- Social Preview, topics e descrição coerentes com capacidades existentes.
+
+GitHub Discussions é o canal preferencial para dúvidas de uso. Milestones
+representam versões pretendidas e não garantem data. Preservar a regra de um
+único CI por commit: Pull Requests e push em `main` executam o quality gate;
+tags apenas reutilizam o commit já aprovado.
+
 O GitHub versiona:
 
 - código;

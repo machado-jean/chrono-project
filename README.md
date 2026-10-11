@@ -13,6 +13,7 @@
     <img src="https://img.shields.io/badge/Windows-11%20x64-2563eb" alt="Windows 11 x64" />
     <img src="https://img.shields.io/badge/opera%C3%A7%C3%A3o-offline-087a52" alt="Operação offline" />
     <img src="https://img.shields.io/badge/Tauri-2-24c8db" alt="Tauri 2" />
+    <a href="LICENSE"><img src="https://img.shields.io/badge/licen%C3%A7a-MIT-c79221" alt="Licença MIT" /></a>
   </p>
   <p>
     <a href="https://github.com/machado-jean/chrono-project/releases/latest/download/Chrono-Project-Windows-x64-Setup.exe"><strong>Baixar para Windows</strong></a>
@@ -125,6 +126,7 @@ o perfil normal do Windows. Veja o
 - [Relatórios PDF](docs/pdf-reports.md)
 - [UX e acessibilidade](docs/ux-accessibility.md)
 - [Identidade visual](docs/branding.md)
+- [Organização pública do GitHub](docs/github-governance.md)
 - [Processo de release](docs/release-process.md)
 - [Notas da v0.2.6](docs/releases/v0.2.6.md)
 - [Decisões arquiteturais](docs/decisions/)
@@ -142,12 +144,16 @@ CSV/XLSX.
 ## Contribuição e licença
 
 Relatos de problemas e propostas podem ser enviados pelas
-[Issues](https://github.com/machado-jean/chrono-project/issues). Antes de uma
-mudança estrutural, consulte `AGENTS.md` e as decisões em `docs/decisions/`.
+[Issues](https://github.com/machado-jean/chrono-project/issues/new/choose), que
+possuem formulários próprios para bugs e melhorias. Antes de uma mudança
+estrutural, consulte `AGENTS.md` e as decisões em `docs/decisions/`.
 
-O repositório ainda não declara uma licença pública. Até que essa decisão seja
-formalizada em um arquivo `LICENSE`, o código não deve ser presumido como
-licenciado para redistribuição ou incorporação em outros projetos.
+Consulte também [como contribuir](CONTRIBUTING.md), o
+[código de conduta](CODE_OF_CONDUCT.md), as opções de [suporte](SUPPORT.md) e a
+[política de segurança](SECURITY.md).
+
+O Chrono Project é distribuído sob a [licença MIT](LICENSE). Ao contribuir, você
+concorda que sua contribuição seja disponibilizada sob a mesma licença.
 
 As atribuições das dependências incorporadas estão em
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

@@ -1,0 +1,12 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Dúvidas de uso / Usage questions
+    url: https://github.com/machado-jean/chrono-project/discussions/categories/q-a
+    about: Peça ajuda sem abrir um bug / Ask for help without opening a bug
+  - name: Relatar vulnerabilidade / Report a vulnerability
+    url: https://github.com/machado-jean/chrono-project/security/advisories/new
+    about: Use o canal privado para problemas de segurança / Use the private channel for security issues
+  - name: Documentação / Documentation
+    url: https://github.com/machado-jean/chrono-project#documenta%C3%A7%C3%A3o
+    about: Consulte a documentação antes de abrir uma Issue / Read the documentation before opening an Issue
+

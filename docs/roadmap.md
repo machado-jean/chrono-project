@@ -1813,8 +1813,35 @@ matriz no host, na VM limpa e no CI Windows.
   Brasil.
 - A política de branding passou a registrar o uso da marca, badges, links de
   download e topics no GitHub.
-- A ausência de licença pública foi declarada de forma transparente; nenhuma
-  licença foi escolhida implicitamente pelo agente.
+- A apresentação inicial declarou de forma transparente a ausência de licença;
+  posteriormente, por decisão explícita do mantenedor, o projeto adotou MIT.
+
+### 10 de outubro de 2026 — Licença aberta e formulários de Issue
+
+- O código autoral passou a usar a licença MIT, registrada em `LICENSE`, nos
+  manifestos npm/Cargo e no ADR 030.
+- Os READMEs PT-BR e EN passaram a exibir o badge da licença e a orientar que
+  contribuições aceitas são distribuídas sob os mesmos termos.
+- O GitHub recebeu formulários bilíngues e estruturados para relatos de bugs e
+  propostas de melhoria, com proteção explícita contra anexos contendo dados
+  pessoais ou confidenciais.
+- Issues em branco foram desabilitadas para manter relatos reproduzíveis e
+  comparáveis.
+
+### 10 de outubro de 2026 — Governança pública do repositório
+
+- Foram adicionados guias bilíngues de contribuição, segurança, suporte e
+  conduta, além do template de Pull Request e da propriedade padrão do código.
+- Labels passaram a seguir os prefixos `type:`, `area:`, `priority:` e
+  `status:`; o milestone v0.2.7 concentra o próximo incremento planejado.
+- GitHub Discussions e o relato privado de vulnerabilidades foram definidos
+  como canais próprios, evitando transformar dúvidas ou falhas de segurança em
+  Issues comuns.
+- Dependabot foi configurado semanalmente e de forma agrupada para npm, Cargo e
+  GitHub Actions, sem criar tags ou repetir o fluxo de release.
+- Foi criado um ativo bilíngue para o Social Preview, preservando o símbolo
+  oficial e a linguagem visual de precisão do produto; o upload na configuração
+  do GitHub depende de uma sessão autenticada no navegador.
 
 ## Regras permanentes de acompanhamento
 

@@ -3,6 +3,9 @@ name = "chrono-project"
 version = "0.2.6"
 description = "Local-first desktop project planning for Windows"
 authors = ["Chrono Project contributors"]
+license = "MIT"
+repository = "https://github.com/machado-jean/chrono-project"
+homepage = "https://github.com/machado-jean/chrono-project"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
