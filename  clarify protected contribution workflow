@@ -1,0 +1,225 @@
+[1mdiff --git a/AGENTS.md b/AGENTS.md[m
+[1mindex 3a25325..d41b474 100644[m
+[1m--- a/AGENTS.md[m
+[1m+++ b/AGENTS.md[m
+[36m@@ -636,6 +636,25 @@[m [mtest/...[m
+ [m
+ Evitar branches permanentes desnecessárias como `develop` na V1.[m
+ [m
+[32m+[m[32mToda alteração destinada à `main`, inclusive documentação e manutenção, deve[m
+[32m+[m[32mseguir integralmente este fluxo:[m
+[32m+[m
+[32m+[m[32m1. confirmar `main` limpa e sincronizada com `origin/main`;[m
+[32m+[m[32m2. criar uma branch temática;[m
+[32m+[m[32m3. implementar, validar e atualizar a documentação;[m
+[32m+[m[32m4. revisar o diff e criar commits coerentes;[m
+[32m+[m[32m5. fazer push somente da branch temática;[m
+[32m+[m[32m6. abrir Pull Request para `main`;[m
+[32m+[m[32m7. aguardar o `Windows quality gate` atualizado e resolver as conversas;[m
+[32m+[m[32m8. executar squash merge;[m
+[32m+[m[32m9. excluir a branch temática local e remota;[m
+[32m+[m[32m10. executar `git fetch --prune`, atualizar `main` com `git pull --ff-only` e[m
+[32m+[m[32m    confirmar que `git status --short --branch` mostra apenas[m
+[32m+[m[32m    `## main...origin/main`.[m
+[32m+[m
+[32m+[m[32mPush direto, merge local e force-push em `main` são proibidos. As ações remotas[m
+[32m+[m[32mcontinuam exigindo a autorização definida na seção 12.2.[m
+[32m+[m
+ ## 12.4 Commits[m
+ [m
+ Commits devem ser pequenos, coerentes e semanticamente claros.[m
+[36m@@ -2164,9 +2183,11 @@[m [mAs etapas remotas finais são executadas obrigatoriamente pelo usuário:[m
+ [m
+ 1. revisar, criar o commit em uma branch temática e fazer push dessa branch;[m
+ 2. abrir o Pull Request para `main`, aguardar o check `Windows quality gate`,[m
+[31m-   resolver as conversas e executar o merge;[m
+[31m-3. atualizar a `main` local e publicar o release com o[m
+[31m-   `PUBLISH_RELEASE.ps1` preparado e validado.[m
+[32m+[m[32m   resolver as conversas e executar o squash merge;[m
+[32m+[m[32m3. excluir a branch temática local e remota;[m
+[32m+[m[32m4. executar `git fetch --prune`, atualizar a `main` local somente por[m
+[32m+[m[32m   fast-forward e confirmar árvore limpa e sincronizada com `origin/main`;[m
+[32m+[m[32m5. publicar o release com o `PUBLISH_RELEASE.ps1` preparado e validado.[m
+ [m
+ O Codex deve parar antes dessas ações, fornecer instruções exatas e aguardar a[m
+ confirmação do usuário. Não deve executar commit, push, merge ou publicação no[m
+[1mdiff --git a/CONTRIBUTING.md b/CONTRIBUTING.md[m
+[1mindex 19867ad..ca7b6df 100644[m
+[1m--- a/CONTRIBUTING.md[m
+[1m+++ b/CONTRIBUTING.md[m
+[36m@@ -59,6 +59,44 @@[m [mlinear, conversas resolvidas e o check obrigatório **Windows quality gate**[m
+ atualizado e aprovado. Push direto e force-push em `main` não fazem parte do[m
+ fluxo de contribuição.[m
+ [m
+[32m+[m[32m## Fluxo obrigatório de integração[m
+[32m+[m
+[32m+[m[32mToda alteração, inclusive documentação e ajustes pequenos, segue o mesmo ciclo:[m
+[32m+[m
+[32m+[m[32m1. partir de uma `main` limpa e atualizada;[m
+[32m+[m[32m2. criar uma branch temática (`feat/...`, `fix/...`, `docs/...`, `test/...` ou[m
+[32m+[m[32m   `release/vX.Y.Z`);[m
+[32m+[m[32m3. implementar, testar e atualizar a documentação afetada;[m
+[32m+[m[32m4. revisar o diff e criar commits coerentes;[m
+[32m+[m[32m5. fazer push somente da branch temática;[m
+[32m+[m[32m6. abrir Pull Request para `main` e preencher o template;[m
+[32m+[m[32m7. aguardar o **Windows quality gate** atualizado e resolver as conversas;[m
+[32m+[m[32m8. fazer squash merge, preservando um commit linear na `main`;[m
+[32m+[m[32m9. excluir a branch temática local e remota;[m
+[32m+[m[32m10. atualizar a `main` local por fast-forward e confirmar árvore limpa e[m
+[32m+[m[32m    sincronizada com `origin/main`.[m
+[32m+[m
+[32m+[m[32mFluxo de terminal recomendado depois das validações locais:[m
+[32m+[m
+[32m+[m[32m```powershell[m
+[32m+[m[32mgit switch -c docs/exemplo[m
+[32m+[m[32mgit add --all[m
+[32m+[m[32mgit commit -m "docs: describe the change"[m
+[32m+[m[32mgit push -u origin docs/exemplo[m
+[32m+[m[32mgh pr create --base main --head docs/exemplo[m
+[32m+[m[32mgh pr checks --watch[m
+[32m+[m[32mgh pr merge --squash --delete-branch[m
+[32m+[m[32mgit switch main[m
+[32m+[m[32mgit fetch --prune origin[m
+[32m+[m[32mgit pull --ff-only origin main[m
+[32m+[m[32mgit status --short --branch[m
+[32m+[m[32m```[m
+[32m+[m
+[32m+[m[32mO último comando deve mostrar somente `## main...origin/main`. Divergência,[m
+[32m+[m[32marquivos modificados ou arquivos não rastreados precisam ser entendidos antes[m
+[32m+[m[32mde iniciar o próximo trabalho. Operações remotas continuam sujeitas às regras[m
+[32m+[m[32mde autorização de `AGENTS.md`.[m
+[32m+[m
+ ## Regras de implementação[m
+ [m
+ - regras de domínio e scheduling ficam em TypeScript puro, fora de React;[m
+[1mdiff --git a/docs/github-governance.md b/docs/github-governance.md[m
+[1mindex e9263af..3467dff 100644[m
+[1m--- a/docs/github-governance.md[m
+[1m+++ b/docs/github-governance.md[m
+[36m@@ -38,6 +38,27 @@[m [mo mantenedor de integrar o próprio trabalho, sem dispensar PR e CI. Se outro[m
+ mantenedor com permissão de escrita passar a participar regularmente, habilitar[m
+ ao menos uma aprovação externa e a regra de último autor diferente.[m
+ [m
+[32m+[m[32m## Ciclo de vida de uma alteração[m
+[32m+[m
+[32m+[m[32mO fluxo canônico está detalhado em [`CONTRIBUTING.md`](../CONTRIBUTING.md) e vale[m
+[32m+[m[32mtambém para alterações feitas pelo mantenedor:[m
+[32m+[m
+[32m+[m[32m```text[m
+[32m+[m[32mmain atualizada[m
+[32m+[m[32m→ branch temática[m
+[32m+[m[32m→ validações e commit[m
+[32m+[m[32m→ push da branch[m
+[32m+[m[32m→ Pull Request[m
+[32m+[m[32m→ CI e conversas resolvidas[m
+[32m+[m[32m→ squash merge[m
+[32m+[m[32m→ exclusão da branch[m
+[32m+[m[32m→ main local atualizada, limpa e sincronizada[m
+[32m+[m[32m```[m
+[32m+[m
+[32m+[m[32mPush direto, merge local e force-push em `main` não são atalhos aceitos. Depois[m
+[32m+[m[32mdo merge, usar `git fetch --prune` para remover referências remotas obsoletas e[m
+[32m+[m[32mconfirmar que `HEAD`, `main` e `origin/main` apontam para o mesmo commit.[m
+[32m+[m
+ ## Labels[m
+ [m
+ | Prefixo | Uso |[m
+[1mdiff --git a/docs/release-process.md b/docs/release-process.md[m
+[1mindex a28c06b..05e1164 100644[m
+[1m--- a/docs/release-process.md[m
+[1m+++ b/docs/release-process.md[m
+[36m@@ -41,8 +41,13 @@[m [mGitHub Release, no registro de build e no relatório final, sem novo commit.[m
+    `main` protegida.[m
+ 9. Fazer push da branch, abrir o Pull Request e aguardar o check obrigatório[m
+    `Windows quality gate` com a branch atualizada em relação à `main`.[m
+[31m-10. Resolver todas as conversas, concluir o merge com histórico linear e então[m
+[31m-   atualizar a `main` local antes de executar `PUBLISH_RELEASE.ps1`.[m
+[32m+[m[32m10. Resolver todas as conversas e concluir o Pull Request por squash merge.[m
+[32m+[m[32m11. Excluir a branch temática local e remota depois do merge concluído.[m
+[32m+[m[32m12. Atualizar referências com `git fetch --prune`, trocar para `main` e executar[m
+[32m+[m[32m    `git pull --ff-only origin main`.[m
+[32m+[m[32m13. Confirmar com `git status --short --branch` que não existem mudanças locais[m
+[32m+[m[32m    e que a saída é somente `## main...origin/main`; só então executar[m
+[32m+[m[32m    `PUBLISH_RELEASE.ps1`.[m
+ [m
+ ## Depois de publicar[m
+ [m
+[1mdiff --git a/docs/release-runbook.md b/docs/release-runbook.md[m
+[1mindex 25932e4..6f349b7 100644[m
+[1m--- a/docs/release-runbook.md[m
+[1m+++ b/docs/release-runbook.md[m
+[36m@@ -385,7 +385,9 @@[m [mAtualizar:[m
+ Executar `git diff --check`. Commit e push somente quando autorizados. Depois do[m
+ push, confirmar que a branch local coincide com sua branch remota e abrir o[m
+ Pull Request. Somente depois do CI obrigatório e do merge, atualizar a `main` e[m
+[31m-confirmar que `HEAD` coincide com `origin/main`.[m
+[32m+[m[32mconfirmar que `HEAD` coincide com `origin/main`. O merge padrão é squash; depois[m
+[32m+[m[32mdele, excluir a branch temática local e remota e executar `git fetch --prune`[m
+[32m+[m[32mantes da verificação final.[m
+ [m
+ Antes de entregar ao usuário as etapas finais, o agente deve atualizar os dois[m
+ conjuntos de documentação:[m
+[36m@@ -433,8 +435,12 @@[m [mAs etapas remotas finais pertencem obrigatoriamente ao usuário:[m
+ 1. revisar as alterações, criar ou usar a branch `release/vX.Y.Z`, executar o[m
+    commit e fazer push dessa branch;[m
+ 2. abrir o Pull Request para `main`, aguardar `Windows quality gate`, resolver[m
+[31m-   todas as conversas e executar o merge;[m
+[31m-3. atualizar a `main` local por fast-forward e publicar o release executando o[m
+[32m+[m[32m   todas as conversas e executar o squash merge;[m
+[32m+[m[32m3. excluir a branch temática local e remota;[m
+[32m+[m[32m4. executar `git fetch --prune`, trocar para `main` e atualizá-la exclusivamente[m
+[32m+[m[32m   por fast-forward com `git pull --ff-only origin main`;[m
+[32m+[m[32m5. confirmar que `git status --short --branch` mostra apenas[m
+[32m+[m[32m   `## main...origin/main` e então publicar o release executando o[m
+    `PUBLISH_RELEASE.ps1` preparado pelo agente.[m
+ [m
+ O agente deve parar antes de cada uma delas, fornecer comandos e critérios de[m
+[36m@@ -444,22 +450,23 @@[m [mvigente.[m
+ [m
+ Depois que o usuário confirmar o merge e atualizar a `main`:[m
+ [m
+[31m-1. confirmar que a branch atual é `main` e que `HEAD` coincide com[m
+[31m-   `origin/main`;[m
+[31m-2. confirmar o CI de `main` do commit exato gerado pelo merge;[m
+[31m-3. orientar o usuário a executar `PUBLISH_RELEASE.ps1 -VerifyOnly`;[m
+[31m-4. após a validação, orientar o usuário a executar `PUBLISH_RELEASE.ps1`;[m
+[31m-5. o script deve aguardar por até cinco minutos o CI do commit aparecer e, se[m
+[32m+[m[32m1. confirmar que a branch temática não existe local nem remotamente;[m
+[32m+[m[32m2. confirmar que a branch atual é `main`, que `HEAD` coincide com `origin/main`[m
+[32m+[m[32m   e que não há mudanças rastreadas ou não rastreadas;[m
+[32m+[m[32m3. confirmar o CI de `main` do commit exato gerado pelo merge;[m
+[32m+[m[32m4. orientar o usuário a executar `PUBLISH_RELEASE.ps1 -VerifyOnly`;[m
+[32m+[m[32m5. após a validação, orientar o usuário a executar `PUBLISH_RELEASE.ps1`;[m
+[32m+[m[32m6. o script deve aguardar por até cinco minutos o CI do commit aparecer e, se[m
+    estiver `queued` ou `in_progress`, acompanhar a mesma execução com[m
+    `gh run watch --exit-status`; somente `success` libera a publicação;[m
+[31m-6. timeout, falha ou cancelamento do CI devem encerrar o script antes da criação[m
+[32m+[m[32m7. timeout, falha ou cancelamento do CI devem encerrar o script antes da criação[m
+    da tag;[m
+[31m-7. o script deve publicar tag `vX.Y.Z` sem movê-la posteriormente;[m
+[31m-8. o script deve anexar executáveis, `.sig`, `latest.json` e[m
+[32m+[m[32m8. o script deve publicar tag `vX.Y.Z` sem movê-la posteriormente;[m
+[32m+[m[32m9. o script deve anexar executáveis, `.sig`, `latest.json` e[m
+    `SHA256SUMS.txt` ao GitHub Release;[m
+[31m-9. o script deve usar `RELEASE_NOTES.md` como corpo da release;[m
+[31m-10. confirmar que a tag aponta para o mesmo commit aprovado pelo CI de `main`;[m
+[31m-11. confirmar que a tag não iniciou uma execução duplicada do workflow `CI` com:[m
+[32m+[m[32m10. o script deve usar `RELEASE_NOTES.md` como corpo da release;[m
+[32m+[m[32m11. confirmar que a tag aponta para o mesmo commit aprovado pelo CI de `main`;[m
+[32m+[m[32m12. confirmar que a tag não iniciou uma execução duplicada do workflow `CI` com:[m
+ [m
+    ```powershell[m
+    .\scripts\Check-ReleaseCi.ps1 -Tag vX.Y.Z[m
+[1mdiff --git a/docs/releases/next.md b/docs/releases/next.md[m
+[1mindex 4880363..04bcbe1 100644[m
+[1m--- a/docs/releases/next.md[m
+[1m+++ b/docs/releases/next.md[m
+[36m@@ -15,6 +15,8 @@[m [mpublicada.[m
+ - gate documental ampliado para conferir catálogo, links internos, versões e[m
+   cobertura dos ADRs automaticamente;[m
+ - badge público com o total de downloads dos assets de Releases no GitHub;[m
+[32m+[m[32m- fluxo protegido documentado de ponta a ponta, incluindo squash merge,[m
+[32m+[m[32m  exclusão da branch e confirmação final da `main` limpa e sincronizada;[m
+ - novas mudanças do aplicativo devem ser registradas aqui antes do próximo[m
+   ciclo de release.[m
+ [m

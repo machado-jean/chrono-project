@@ -385,7 +385,9 @@ Atualizar:
 Executar `git diff --check`. Commit e push somente quando autorizados. Depois do
 push, confirmar que a branch local coincide com sua branch remota e abrir o
 Pull Request. Somente depois do CI obrigatório e do merge, atualizar a `main` e
-confirmar que `HEAD` coincide com `origin/main`.
+confirmar que `HEAD` coincide com `origin/main`. O merge padrão é squash; depois
+dele, excluir a branch temática local e remota e executar `git fetch --prune`
+antes da verificação final.
 
 Antes de entregar ao usuário as etapas finais, o agente deve atualizar os dois
 conjuntos de documentação:
@@ -433,8 +435,12 @@ As etapas remotas finais pertencem obrigatoriamente ao usuário:
 1. revisar as alterações, criar ou usar a branch `release/vX.Y.Z`, executar o
    commit e fazer push dessa branch;
 2. abrir o Pull Request para `main`, aguardar `Windows quality gate`, resolver
-   todas as conversas e executar o merge;
-3. atualizar a `main` local por fast-forward e publicar o release executando o
+   todas as conversas e executar o squash merge;
+3. excluir a branch temática local e remota;
+4. executar `git fetch --prune`, trocar para `main` e atualizá-la exclusivamente
+   por fast-forward com `git pull --ff-only origin main`;
+5. confirmar que `git status --short --branch` mostra apenas
+   `## main...origin/main` e então publicar o release executando o
    `PUBLISH_RELEASE.ps1` preparado pelo agente.
 
 O agente deve parar antes de cada uma delas, fornecer comandos e critérios de
@@ -444,22 +450,23 @@ vigente.
 
 Depois que o usuário confirmar o merge e atualizar a `main`:
 
-1. confirmar que a branch atual é `main` e que `HEAD` coincide com
-   `origin/main`;
-2. confirmar o CI de `main` do commit exato gerado pelo merge;
-3. orientar o usuário a executar `PUBLISH_RELEASE.ps1 -VerifyOnly`;
-4. após a validação, orientar o usuário a executar `PUBLISH_RELEASE.ps1`;
-5. o script deve aguardar por até cinco minutos o CI do commit aparecer e, se
+1. confirmar que a branch temática não existe local nem remotamente;
+2. confirmar que a branch atual é `main`, que `HEAD` coincide com `origin/main`
+   e que não há mudanças rastreadas ou não rastreadas;
+3. confirmar o CI de `main` do commit exato gerado pelo merge;
+4. orientar o usuário a executar `PUBLISH_RELEASE.ps1 -VerifyOnly`;
+5. após a validação, orientar o usuário a executar `PUBLISH_RELEASE.ps1`;
+6. o script deve aguardar por até cinco minutos o CI do commit aparecer e, se
    estiver `queued` ou `in_progress`, acompanhar a mesma execução com
    `gh run watch --exit-status`; somente `success` libera a publicação;
-6. timeout, falha ou cancelamento do CI devem encerrar o script antes da criação
+7. timeout, falha ou cancelamento do CI devem encerrar o script antes da criação
    da tag;
-7. o script deve publicar tag `vX.Y.Z` sem movê-la posteriormente;
-8. o script deve anexar executáveis, `.sig`, `latest.json` e
+8. o script deve publicar tag `vX.Y.Z` sem movê-la posteriormente;
+9. o script deve anexar executáveis, `.sig`, `latest.json` e
    `SHA256SUMS.txt` ao GitHub Release;
-9. o script deve usar `RELEASE_NOTES.md` como corpo da release;
-10. confirmar que a tag aponta para o mesmo commit aprovado pelo CI de `main`;
-11. confirmar que a tag não iniciou uma execução duplicada do workflow `CI` com:
+10. o script deve usar `RELEASE_NOTES.md` como corpo da release;
+11. confirmar que a tag aponta para o mesmo commit aprovado pelo CI de `main`;
+12. confirmar que a tag não iniciou uma execução duplicada do workflow `CI` com:
 
    ```powershell
    .\scripts\Check-ReleaseCi.ps1 -Tag vX.Y.Z

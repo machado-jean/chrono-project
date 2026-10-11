@@ -15,6 +15,8 @@ publicada.
 - gate documental ampliado para conferir catálogo, links internos, versões e
   cobertura dos ADRs automaticamente;
 - badge público com o total de downloads dos assets de Releases no GitHub;
+- fluxo protegido documentado de ponta a ponta, incluindo squash merge,
+  exclusão da branch e confirmação final da `main` limpa e sincronizada;
 - novas mudanças do aplicativo devem ser registradas aqui antes do próximo
   ciclo de release.
 

@@ -636,6 +636,25 @@ test/...
 
 Evitar branches permanentes desnecessárias como `develop` na V1.
 
+Toda alteração destinada à `main`, inclusive documentação e manutenção, deve
+seguir integralmente este fluxo:
+
+1. confirmar `main` limpa e sincronizada com `origin/main`;
+2. criar uma branch temática;
+3. implementar, validar e atualizar a documentação;
+4. revisar o diff e criar commits coerentes;
+5. fazer push somente da branch temática;
+6. abrir Pull Request para `main`;
+7. aguardar o `Windows quality gate` atualizado e resolver as conversas;
+8. executar squash merge;
+9. excluir a branch temática local e remota;
+10. executar `git fetch --prune`, atualizar `main` com `git pull --ff-only` e
+    confirmar que `git status --short --branch` mostra apenas
+    `## main...origin/main`.
+
+Push direto, merge local e force-push em `main` são proibidos. As ações remotas
+continuam exigindo a autorização definida na seção 12.2.
+
 ## 12.4 Commits
 
 Commits devem ser pequenos, coerentes e semanticamente claros.
@@ -2164,9 +2183,11 @@ As etapas remotas finais são executadas obrigatoriamente pelo usuário:
 
 1. revisar, criar o commit em uma branch temática e fazer push dessa branch;
 2. abrir o Pull Request para `main`, aguardar o check `Windows quality gate`,
-   resolver as conversas e executar o merge;
-3. atualizar a `main` local e publicar o release com o
-   `PUBLISH_RELEASE.ps1` preparado e validado.
+   resolver as conversas e executar o squash merge;
+3. excluir a branch temática local e remota;
+4. executar `git fetch --prune`, atualizar a `main` local somente por
+   fast-forward e confirmar árvore limpa e sincronizada com `origin/main`;
+5. publicar o release com o `PUBLISH_RELEASE.ps1` preparado e validado.
 
 O Codex deve parar antes dessas ações, fornecer instruções exatas e aguardar a
 confirmação do usuário. Não deve executar commit, push, merge ou publicação no
