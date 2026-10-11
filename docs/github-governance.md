@@ -19,6 +19,25 @@ colaboração pública sem alterar o fluxo de qualidade e release.
 - Pull Requests seguem `.github/PULL_REQUEST_TEMPLATE.md`;
 - Issues em branco permanecem desabilitadas.
 
+## Proteção da branch principal
+
+A branch `main` é protegida inclusive para administradores do repositório:
+
+- toda alteração entra por Pull Request;
+- o check `Windows quality gate` deve concluir com sucesso e estar atualizado
+  com a ponta de `main`;
+- o mesmo gate valida `docs/README.md`, impedindo documentos versionados fora do
+  índice ou destinos internos ausentes;
+- todas as conversas do Pull Request devem estar resolvidas;
+- o histórico deve permanecer linear;
+- exclusão e `force-push` são proibidos.
+
+Como o projeto possui atualmente um único mantenedor, não há quantidade mínima
+de aprovações humanas nem revisão obrigatória do CODEOWNER. Isso evita impedir
+o mantenedor de integrar o próprio trabalho, sem dispensar PR e CI. Se outro
+mantenedor com permissão de escrita passar a participar regularmente, habilitar
+ao menos uma aprovação externa e a regra de último autor diferente.
+
 ## Labels
 
 | Prefixo | Uso |

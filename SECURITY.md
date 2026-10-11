@@ -1,5 +1,8 @@
 # Política de segurança / Security policy
 
+Questões de tratamento e armazenamento de dados também são descritas em
+[`PRIVACY.md`](PRIVACY.md).
+
 ## Versões suportadas
 
 Correções de segurança são destinadas à versão estável mais recente disponível

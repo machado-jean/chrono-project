@@ -26,5 +26,5 @@ outros materiais de terceiros. Essas atribuições continuam documentadas em
 - cópias ou partes substanciais devem preservar o aviso de copyright e a licença;
 - o software permanece fornecido sem garantia;
 - contribuições aceitas serão distribuídas sob a mesma licença do projeto;
-- o repositório pode ser identificado como open source depois que o arquivo
-  `LICENSE` estiver publicado na branch padrão.
+- o repositório é identificado como open source pelo arquivo `LICENSE`
+  publicado na branch padrão.

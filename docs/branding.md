@@ -59,7 +59,8 @@ marcadores não devem parecer aplicados sobre filigranas ou peças mecânicas.
 
 ## Uso na interface
 
-- A barra nativa da janela contém o nome **Chrono Project**.
+- A barra de título integrada contém o símbolo, o nome **Chrono Project** e os
+  controles de minimizar, maximizar/restaurar e fechar ligados à janela nativa.
 - A barra lateral não repete o nome. Ela mostra o símbolo e o contexto
   **Planejamento local**.
 - No estado recolhido, o símbolo funciona como botão **Mostrar projetos**.

@@ -13,6 +13,8 @@ propostas, documentação, testes e código sob os termos da licença MIT.
   sem sanitização;
 - mudanças estruturais devem respeitar `AGENTS.md` e os ADRs em
   `docs/decisions/`;
+- o catálogo [`docs/README.md`](docs/README.md) indica a finalidade e o gatilho
+  de revisão de toda documentação versionada;
 - combine antecipadamente mudanças amplas de arquitetura, schema, formato de
   exportação ou identidade visual.
 
@@ -52,6 +54,10 @@ test: cover scheduling across holidays
 ```
 
 Não faça force-push em branches compartilhadas nem mova tags publicadas.
+A branch `main` é protegida: toda alteração entra por Pull Request, com histórico
+linear, conversas resolvidas e o check obrigatório **Windows quality gate**
+atualizado e aprovado. Push direto e force-push em `main` não fazem parte do
+fluxo de contribuição.
 
 ## Regras de implementação
 
@@ -74,10 +80,15 @@ Antes de abrir uma Pull Request, execute:
 npm run lint
 npm run typecheck
 npm run test
+npm run test:performance
+npm run test:e2e:application
 npm run build
 cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check
-cargo check --manifest-path src-tauri/Cargo.toml --locked
+cargo check --manifest-path src-tauri/Cargo.toml --locked --all-targets
+cargo test --manifest-path src-tauri/Cargo.toml --locked --all-targets
 cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked -- -D warnings
+npm run tauri:build:installer:ci
+pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/Test-DocumentationIndex.ps1
 ```
 
 Execute também os testes E2E, de desempenho ou empacotamento quando a alteração

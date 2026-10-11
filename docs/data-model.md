@@ -160,7 +160,7 @@ negócio e não é uma trilha de auditoria multiusuário.
 - `projects.calendar_id` e `tasks.calendar_id` usam `ON DELETE RESTRICT`;
 - calendário e exceções usam cascade controlado;
 - índices atendem calendário, hierarquia, ordenação, filtros e travessia por predecessor/sucessor;
-- banco novo, sequência de migrations e upgrades preservando dados até a versão 8 são testados;
+- banco novo, sequência de migrations e upgrades preservando dados até a versão 9 são testados;
 - a única variante conhecida do checksum da migration 3 recebe reparo
   conservador antes da abertura: schema e integridade são validados, uma cópia
   SQLite é criada e somente `_sqlx_migrations.checksum` é atualizado;

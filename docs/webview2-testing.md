@@ -181,15 +181,18 @@ Todos os itens abaixo são necessários:
 Até isso ocorrer, `npm run test:e2e` continua sendo o gate obrigatório em duas
 camadas e `npm run test:e2e:desktop` continua diagnóstico.
 
-## Roteiro para retomar a implementação
+## Roteiro restante para promoção
 
-1. Auditar `tests/e2e/build.mjs` e o launcher do teste desktop.
-2. Implementar run ID, User Data Folder e porta CDP exclusivos.
-3. Implementar encerramento e espera pelos processos filhos.
-4. Adicionar teste de cinco repetições e preservação de evidências.
-5. Executar a matriz deste documento no host de desenvolvimento.
-6. Repetir na VM limpa e no CI.
-7. Somente então decidir se o E2E desktop volta a bloquear releases.
+O run ID, o User Data Folder, a porta CDP exclusiva, o encerramento controlado,
+as cinco repetições e a preservação de evidências já foram implementados e
+aprovados no host de desenvolvimento. Restam:
+
+1. repetir a matriz em uma VM Windows 11 limpa;
+2. obter duas execuções consecutivas aprovadas do workflow manual
+   `desktop-e2e.yml`;
+3. comparar tempos, processos residuais e evidências das três superfícies;
+4. atualizar este documento e o ADR 019 com os resultados;
+5. somente então decidir se o E2E desktop deve passar a bloquear releases.
 
 ## Referências oficiais
 

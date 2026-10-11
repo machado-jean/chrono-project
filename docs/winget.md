@@ -22,8 +22,9 @@ O `PackageIdentifier` do WinGet não altera o identificador Tauri
 
 Confirmado em 11 de outubro de 2026:
 
-- o identificador não existe no catálogo público nem em Pull Requests do
-  `microsoft/winget-pkgs`;
+- antes da submissão, o identificador não existia no catálogo público nem em
+  outro Pull Request do `microsoft/winget-pkgs`; a primeira solicitação é o
+  PR [#450697](https://github.com/microsoft/winget-pkgs/pull/450697);
 - o GitHub Release oferece URL HTTPS pública, oficial, específica da versão e
   com SHA-256 verificável;
 - o pacote padrão é um NSIS x64 `currentUser`, sem elevação no fluxo normal;
@@ -91,9 +92,11 @@ reconheceriam como confiável.
   máquina/VM enquanto o Windows Sandbox não estiver disponível neste host;
 - [ ] depois da entrada no catálogo, testar
   `winget uninstall --id ChronoProject.ChronoProject --exact`;
-- [ ] conferir novamente pacote e PR duplicados imediatamente antes do envio;
-- [ ] enviar um único PR contendo apenas uma versão do pacote;
-- [ ] aceitar o CLA da Microsoft e acompanhar todos os checks de validação.
+- [ ] depois da entrada no catálogo, adicionar aos READMEs um badge de
+  disponibilidade/versão do WinGet ligado a `ChronoProject.ChronoProject`;
+- [x] conferir novamente pacote e PR duplicados imediatamente antes do envio;
+- [x] enviar um único PR contendo apenas uma versão do pacote;
+- [x] aceitar o CLA da Microsoft e acompanhar todos os checks de validação.
 
 Os manifests fonte ficam em:
 
@@ -101,9 +104,9 @@ Os manifests fonte ficam em:
 packaging/winget/manifests/c/ChronoProject/ChronoProject/0.2.7/
 ```
 
-Esse caminho espelha exatamente a estrutura exigida pelo `winget-pkgs`. No PR,
-copiar a subárvore `manifests/` para a raiz do fork e não incluir documentação
-ou qualquer outro arquivo no mesmo Pull Request.
+Esse caminho espelha exatamente a estrutura exigida pelo `winget-pkgs`. O
+WingetCreate enviou somente os manifests da versão 0.2.7 ao PR, sem documentação
+ou outros arquivos do repositório do Chrono Project.
 
 Evidências do teste local:
 
@@ -121,7 +124,7 @@ Evidências do teste local:
 | banco `chronoproject` | `FB95528E5660885AF5D306B1F4066757F9591F1BB3CE36C6A873736E398218B4` |
 | banco legado | `C60AE652EDFF278D5FC40BA3765B1DC93A7F54FEE3A288B8EA2FFE90DA796491` |
 
-Quando a validação em ambiente limpo for aceita, submeter sem expor token na
+O primeiro conjunto foi submetido em 11 de outubro de 2026, sem expor token na
 linha de comando:
 
 ```powershell
@@ -130,9 +133,13 @@ wingetcreate submit `
   packaging\winget\manifests\c\ChronoProject\ChronoProject\0.2.7
 ```
 
-Sem `--token`, o WingetCreate solicita autenticação segura no GitHub e abre o
-Pull Request no navegador. O primeiro PR também exigirá a aceitação do CLA da
-Microsoft.
+Sem `--token`, o WingetCreate solicitou autenticação segura no GitHub e abriu o
+[PR microsoft/winget-pkgs#450697](https://github.com/microsoft/winget-pkgs/pull/450697).
+A validação local do manifesto foi aprovada e o CLA da Microsoft foi aceito
+com sucesso. As dez etapas técnicas do catálogo também foram aprovadas,
+incluindo varredura do instalador, instalação e metadados. O PR permanece
+aberto e apto a merge, aguardando somente a aprovação obrigatória de um
+moderador voluntário antes da publicação.
 
 ## Campos previstos do instalador
 

@@ -2,7 +2,8 @@
 
 ## Onde procurar ajuda
 
-1. Consulte o [README](README.md) e a documentação em `docs/`.
+1. Consulte o [README](README.md), o [guia do usuário](docs/user-guide.md) e a
+   [solução de problemas](docs/troubleshooting.md).
 2. Procure por uma Issue ou Discussion existente.
 3. Para dúvidas de uso, abra uma Discussion na categoria **Q&A**.
 4. Para um erro reproduzível, use o formulário **Relatar problema**.
@@ -15,9 +16,10 @@ uma reprodução mínima artificial; não compartilhe bancos ou backups reais.
 
 ## English
 
-Read the README and documentation first, then search existing Issues and
-Discussions. Use Discussions for usage questions, the structured Issue forms for
-reproducible bugs or feature requests, and the private process in `SECURITY.md`
-for vulnerabilities. Community support has no guaranteed response time. Never
-share real databases, backups, credentials, or customer data.
+Read the README and [troubleshooting guide](docs/troubleshooting.md) first, then
+search existing Issues and Discussions. Use Discussions for usage questions,
+the structured Issue forms for reproducible bugs or feature requests, and the
+private process in `SECURITY.md` for vulnerabilities. Community support has no
+guaranteed response time. Never share real databases, backups, credentials, or
+customer data.
 

@@ -138,8 +138,11 @@ O domínio calcula primeiro um resultado completo e válido. O caso de uso envia
 - tags afetadas.
 
 Na Tabela, campos da tarefa e alterações de lag são rascunhos da mesma linha.
-O único botão **Salvar** na coluna Ações envia ambos no mesmo `ScheduleChangeSet`;
-nenhuma alteração de lag é persistida enquanto o usuário apenas digita.
+O salvamento automático reúne ambos no mesmo `ScheduleChangeSet`: seletores e
+datas completas são confirmados imediatamente, enquanto textos, números e lag
+usam debounce de 700 ms e também são enviados ao perder foco. Se houver um
+rascunho pendente ou uma falha, o botão **Salvar** aparece como confirmação ou
+nova tentativa manual.
 
 Qualquer falha cancela o conjunto inteiro. Existe teste Rust que provoca uma segunda alteração inválida e comprova que a primeira também é revertida.
 
@@ -169,30 +172,32 @@ tarefas `MANUAL` não são alteradas e seus avisos são reconstruídos.
 
 ## Cenário manual de auditoria
 
-O banco local de desenvolvimento contém o projeto **Auditoria do scheduler —
-Fase 3**. Ele não é versionado; uma cópia consistente fica em
-`.local/backups/`. O cenário possui três tarefas-resumo, sete subtarefas e oito
-dependências FS.
+O cenário atual é preparado com `npm run dev:seed-advanced-audit`, com o
+aplicativo fechado. O comando cria ou recria no banco local o projeto
+**Auditoria — planejamento avançado**; o banco não é versionado e deve ser
+protegido por backup quando contiver outros dados relevantes. A massa possui 15
+tarefas, seis dependências FS, cinco níveis de hierarquia, quatro responsáveis
+distintos, tarefas sem responsável e uma sucessora com quatro predecessoras.
 
 | Tarefa | Relação principal | Resultado esperado |
 | --- | --- | --- |
-| Mapear requisitos | origem da cadeia | 28/08/2026, sexta-feira |
-| Definir arquitetura | requisitos, lag 0 | 31/08/2026, segunda-feira |
-| Desenvolver domínio | arquitetura, lag 1 | 02–03/09/2026 |
-| Integrar persistência | arquitetura e domínio, lag 0 | 04/09/2026; vence a restrição de domínio |
-| Executar testes integrados | domínio lag 0 e persistência lag 1 | 09–11/09/2026; respeita o feriado de 07/09 |
-| Executar validação no fim de semana | testes, lag 0, calendário Todos os dias | 12–13/09/2026, sábado e domingo |
-| Revisar marco manual | persistência, lag 1 | permanece em 04/09 e informa início mínimo em 09/09 |
+| Lançamento de cabos críticos | folha no quinto nível | valida numeração, hierarquia e ramo crítico |
+| Liberação integrada | quatro predecessoras, uma com lag 1 | valida inclusão e gestão múltipla em uma única transação |
+| Liberação após tarefa-resumo | Pacote eletromecânico como predecessora | valida resumo no lado predecessor e folha no lado sucessor |
+| Documentação liberada | Licenças e autorizações, lag 1 | valida propagação com lag positivo |
+| Verificação quase crítica | ramo independente com folga curta | valida indicador e filtro de quase crítica |
+| Atividade com folga | ramo independente | valida folga maior sem realce crítico |
+| Atividade manual bloqueada | tarefa `MANUAL` | preserva datas e informa conflito quando provocado |
 
-As tarefas-resumo devem apresentar, respectivamente, 28–31/08, 02–04/09 e
-04–13/09. Fechar e reabrir o release deve preservar as dez tarefas, as oito
-relações, o feriado e o conflito manual.
+Fechar e reabrir o aplicativo deve preservar as 15 tarefas, as seis relações,
+os responsáveis, a preferência do caminho crítico e o modo manual.
 
-Para auditar a propagação nos dois sentidos, primeiro atrase **Mapear
-requisitos** e confirme o deslocamento da cadeia. Depois restaure sua data
-anterior: as sucessoras `AUTO` devem retornar para as restrições FS recalculadas,
-preservando duração e lag. **Revisar marco manual** não deve ser deslocada em
-nenhum dos sentidos; quando sua data viola a relação, deve apenas exibir o aviso.
+Para auditar a propagação nos dois sentidos, altere uma predecessora de
+**Liberação integrada** e confirme o deslocamento da sucessora e dos resumos.
+Depois restaure sua data anterior: tarefas `AUTO` devem retornar para as
+restrições FS recalculadas, preservando duração e lag. **Atividade manual
+bloqueada** não deve ser deslocada automaticamente; quando uma relação criada
+para o teste viola sua data, deve apenas exibir o aviso.
 
 ## Edição direta no Gantt
 

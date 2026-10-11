@@ -9,6 +9,7 @@
   </p>
   <p>
     <a href="https://github.com/machado-jean/chrono-project/releases/latest"><img src="https://img.shields.io/github/v/release/machado-jean/chrono-project?display_name=tag&sort=semver&label=release&color=087f8c" alt="Última versão" /></a>
+    <a href="https://github.com/machado-jean/chrono-project/releases"><img src="https://img.shields.io/github/downloads/machado-jean/chrono-project/total?label=downloads&color=087f8c" alt="Total de downloads dos releases no GitHub" /></a>
     <a href="https://github.com/machado-jean/chrono-project/actions/workflows/ci.yml"><img src="https://github.com/machado-jean/chrono-project/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI" /></a>
     <img src="https://img.shields.io/badge/Windows-11%20x64-2563eb" alt="Windows 11 x64" />
     <img src="https://img.shields.io/badge/opera%C3%A7%C3%A3o-offline-087a52" alt="Operação offline" />
@@ -117,7 +118,13 @@ o perfil normal do Windows. Veja o
 
 ## Documentação
 
+- [Índice completo e gate documental](docs/README.md)
+- [Guia do usuário](docs/user-guide.md)
+- [Solução de problemas](docs/troubleshooting.md)
 - [Roadmap e histórico](docs/roadmap.md)
+- [Changelog](CHANGELOG.md)
+- [Privacidade](PRIVACY.md)
+- [Decisões arquiteturais](docs/decisions/README.md)
 - [Arquitetura](docs/architecture.md)
 - [Modelo de dados](docs/data-model.md)
 - [Scheduler, dependências e calendário](docs/scheduling.md)
@@ -136,6 +143,9 @@ o perfil normal do Windows. Veja o
 
 A versão estável mais recente é a
 [v0.2.7](https://github.com/machado-jean/chrono-project/releases/tag/v0.2.7).
+O primeiro pacote para o catálogo WinGet passou pelo CLA e por todas as etapas
+técnicas; o [PR #450697](https://github.com/microsoft/winget-pkgs/pull/450697)
+aguarda revisão de um moderador.
 O produto já cobre o fluxo principal de planejamento local. A validação em uma
 máquina Windows limpa e totalmente offline continua sendo o principal gate de
 distribuição pendente. Os próximos incrementos planejados incluem marcos,
@@ -150,8 +160,8 @@ possuem formulários próprios para bugs e melhorias. Antes de uma mudança
 estrutural, consulte `AGENTS.md` e as decisões em `docs/decisions/`.
 
 Consulte também [como contribuir](CONTRIBUTING.md), o
-[código de conduta](CODE_OF_CONDUCT.md), as opções de [suporte](SUPPORT.md) e a
-[política de segurança](SECURITY.md).
+[código de conduta](CODE_OF_CONDUCT.md), as opções de [suporte](SUPPORT.md), a
+[política de privacidade](PRIVACY.md) e a [política de segurança](SECURITY.md).
 
 O Chrono Project é distribuído sob a [licença MIT](LICENSE). Ao contribuir, você
 concorda que sua contribuição seja disponibilizada sob a mesma licença.

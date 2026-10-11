@@ -9,6 +9,7 @@
   </p>
   <p>
     <a href="https://github.com/machado-jean/chrono-project/releases/latest"><img src="https://img.shields.io/github/v/release/machado-jean/chrono-project?display_name=tag&sort=semver&label=release&color=087f8c" alt="Latest release" /></a>
+    <a href="https://github.com/machado-jean/chrono-project/releases"><img src="https://img.shields.io/github/downloads/machado-jean/chrono-project/total?label=downloads&color=087f8c" alt="Total GitHub release downloads" /></a>
     <a href="https://github.com/machado-jean/chrono-project/actions/workflows/ci.yml"><img src="https://github.com/machado-jean/chrono-project/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI" /></a>
     <img src="https://img.shields.io/badge/Windows-11%20x64-2563eb" alt="Windows 11 x64" />
     <img src="https://img.shields.io/badge/operation-offline-087a52" alt="Offline operation" />
@@ -120,7 +121,13 @@ profile. See [ADR 012](docs/decisions/012-shared-development-database.md).
 
 The detailed documentation is currently maintained in Brazilian Portuguese:
 
+- [Complete documentation index and review gate](docs/README.md)
+- [User guide (PT-BR)](docs/user-guide.md)
+- [Troubleshooting guide (PT-BR)](docs/troubleshooting.md)
 - [Roadmap and delivery history](docs/roadmap.md)
+- [Changelog](CHANGELOG.md)
+- [Privacy policy](PRIVACY.md)
+- [Architecture decision records (PT-BR)](docs/decisions/README.md)
 - [Architecture](docs/architecture.md)
 - [Data model](docs/data-model.md)
 - [Scheduler, dependencies, and calendars](docs/scheduling.md)
@@ -139,6 +146,9 @@ The detailed documentation is currently maintained in Brazilian Portuguese:
 
 The latest stable version is
 [v0.2.7](https://github.com/machado-jean/chrono-project/releases/tag/v0.2.7).
+The first WinGet catalog submission passed the CLA and every technical stage;
+[PR #450697](https://github.com/microsoft/winget-pkgs/pull/450697) is awaiting a
+moderator review.
 The main local planning workflow is implemented. Validation on a clean, fully
 offline Windows machine remains the primary distribution gate. Planned next
 increments include milestones, consolidated progress, saved views, bulk editing,
@@ -152,8 +162,8 @@ Before proposing a structural change, read `AGENTS.md` and the decisions in
 `docs/decisions/`.
 
 See also [contribution guidelines](CONTRIBUTING.md), the
-[code of conduct](CODE_OF_CONDUCT.md), [support options](SUPPORT.md), and the
-[security policy](SECURITY.md).
+[code of conduct](CODE_OF_CONDUCT.md), [support options](SUPPORT.md), the
+[privacy policy](PRIVACY.md), and the [security policy](SECURITY.md).
 
 Chrono Project is distributed under the [MIT License](LICENSE). By contributing,
 you agree that your contribution will be made available under the same license.

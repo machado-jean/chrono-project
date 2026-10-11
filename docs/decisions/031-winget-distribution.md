@@ -42,3 +42,10 @@ localização adicional. O instalador será declarado como `nullsoft`, escopo
 - instalação, upgrade e desinstalação silenciosos precisam ser testados antes
   de cada Pull Request ao `microsoft/winget-pkgs`.
 
+## Implementação
+
+A primeira submissão usa a versão 0.2.7 e foi aberta em 11 de outubro de 2026
+como [microsoft/winget-pkgs#450697](https://github.com/microsoft/winget-pkgs/pull/450697).
+O CLA e as dez etapas técnicas do catálogo foram aprovados. O PR permanece
+aberto, aguardando somente a revisão obrigatória de um moderador voluntário.
+
