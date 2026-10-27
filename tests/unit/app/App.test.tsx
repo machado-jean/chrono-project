@@ -1946,13 +1946,36 @@ describe("aplicação Chrono Project", () => {
     expect(screen.getByTestId("chronoproject-gantt")).not.toContainElement(verticalBar);
     fireEvent.input(verticalBar, { target: { value: "305" } });
     expect(ganttHarness.setScrollState).toHaveBeenCalledWith({ scrollTop: 305 });
-    expect(screen.getByText(/barra inferior para navegar pelas datas/i)).toBeVisible();
-    const horizontalScroll = screen.getByLabelText("Navegar pelas datas do Gantt");
+    const horizontalScroll = screen.getByRole("region", { name: "Rolagem horizontal do Gantt" });
     expect(screen.getByTestId("chronoproject-gantt")).not.toContainElement(horizontalScroll);
-    await waitFor(() => { expect(horizontalScroll).not.toBeDisabled(); });
-    fireEvent.input(horizontalScroll, { target: { value: "320" } });
+    await waitFor(() => {
+      expect(horizontalScroll.firstElementChild).toHaveStyle({ width: "1800px" });
+    });
+    horizontalScroll.scrollLeft = 320;
+    fireEvent.scroll(horizontalScroll);
     expect(timeline.scrollLeft).toBe(320);
     expect(ganttHarness.api.exec).toHaveBeenCalledWith("scroll-chart", { left: 320 });
+    timeline.scrollLeft = 480;
+    fireEvent.scroll(timeline);
+    expect(horizontalScroll.scrollLeft).toBe(480);
+    fireEvent.click(screen.getByRole("button", { name: "Opções" }));
+    expect(screen.getByText(/barra inferior para navegar pelas datas/i)).toBeVisible();
+  });
+
+  it("mantém filtros e opções do Gantt disponíveis durante a rolagem", async () => {
+    const repository = new MemoryWorkspaceRepository({
+      projects: [project()],
+      tasks: [scheduledTask(TASK_ID, "Planejar entrega", "2026-08-28")],
+    });
+    render(<App repository={repository} />);
+
+    fireEvent.click(await screen.findByRole("tab", { name: "Gantt" }));
+    expect(screen.getByText("Localizar e filtrar")).toBeVisible();
+    expect(screen.getByLabelText("Nome do projeto")).toBeVisible();
+    expect(screen.getByText("Localizar e filtrar")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Opções" }));
+    expect(screen.getByLabelText("Legenda do Gantt")).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Foco" })).not.toBeInTheDocument();
   });
 
   it("move uma tarefa livre pelo evento visual do Gantt", async () => {
@@ -2309,6 +2332,7 @@ describe("aplicação Chrono Project", () => {
     render(<App repository={repository} />);
 
     fireEvent.click(await screen.findByRole("tab", { name: "Gantt" }));
+    fireEvent.click(screen.getByRole("button", { name: "Opções" }));
     fireEvent.click(await screen.findByRole("button", {
       name: `Dependência ${relation.id}`,
     }));
@@ -2521,6 +2545,7 @@ describe("aplicação Chrono Project", () => {
     expect(within(dialog).queryByText("Análise indisponível:")).not.toBeInTheDocument();
     fireEvent.click(within(dialog).getByRole("button", { name: "Entendi" }));
     fireEvent.click(screen.getByRole("tab", { name: "Gantt" }));
+    fireEvent.click(screen.getByRole("button", { name: "Opções" }));
     const ganttLegend = screen.getByLabelText("Legenda do Gantt");
     expect(within(ganttLegend).getByText("Crítica")).toBeVisible();
     expect(within(ganttLegend).getByText("Quase crítica")).toBeVisible();

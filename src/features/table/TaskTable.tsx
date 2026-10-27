@@ -31,6 +31,7 @@ import {
   canTaskHaveChild,
   collectTaskTreeIds,
   flattenVisibleTasks,
+  MAX_TASK_HIERARCHY_LEVELS,
   type VisibleTask,
 } from "../../domain/tasks/hierarchy";
 import {
@@ -246,35 +247,39 @@ function PredecessorCell({
     readonly dependency: TaskDependency;
     readonly preview: DependencyImpactPreview;
   } | null>(null);
+  if (isSummary) return <span className="summary-dependency-label">Datas derivadas</span>;
+
   const taskById = new Map(tasks.map((candidate) => [candidate.id, candidate]));
   const outlineNumbers = buildTaskOutlineNumbers(tasks);
   const existing = dependencies.filter((dependency) => dependency.successorId === task.id);
   const existingIds = new Set(existing.map((dependency) => dependency.predecessorId));
-  const hierarchyOrder = flattenVisibleTasks(
-    tasks,
-    new Set(tasks.map(({ id }) => id)),
-  ).map(({ task }) => task);
-  const available = hierarchyOrder.filter(
-    (candidate) => {
-      if (candidate.id === task.id || existingIds.has(candidate.id)) return false;
-      const validationDependency: TaskDependency = {
-        id: "00000000-0000-4000-8000-000000000099",
-        projectId: task.projectId,
-        predecessorId: candidate.id,
-        successorId: task.id,
-        type: "FS",
-        lagDays: 0,
-        createdAt: task.updatedAt,
-        updatedAt: task.updatedAt,
-      };
-      try {
-        validateGraph(tasks, [...dependencies, validationDependency]);
-        return true;
-      } catch {
-        return false;
-      }
-    },
-  );
+  // Validar cada candidata percorre o grafo inteiro. Só fazemos esse trabalho quando
+  // o seletor/gerenciador está aberto, não para todas as linhas visíveis da Tabela.
+  const pickerIsOpen = pickerOpen;
+  const hierarchyOrder = pickerIsOpen
+    ? flattenVisibleTasks(tasks, new Set(tasks.map(({ id }) => id))).map(({ task }) => task)
+    : [];
+  const available = pickerIsOpen
+    ? hierarchyOrder.filter((candidate) => {
+        if (candidate.id === task.id || existingIds.has(candidate.id)) return false;
+        const validationDependency: TaskDependency = {
+          id: "00000000-0000-4000-8000-000000000099",
+          projectId: task.projectId,
+          predecessorId: candidate.id,
+          successorId: task.id,
+          type: "FS",
+          lagDays: 0,
+          createdAt: task.updatedAt,
+          updatedAt: task.updatedAt,
+        };
+        try {
+          validateGraph(tasks, [...dependencies, validationDependency]);
+          return true;
+        } catch {
+          return false;
+        }
+      })
+    : [];
   const normalizedSearch = searchQuery.trim().toLocaleLowerCase("pt-BR");
   const filteredAvailable = available.filter((candidate) => {
     const label = taskOutlineLabel(candidate, outlineNumbers).toLocaleLowerCase("pt-BR");
@@ -291,7 +296,7 @@ function PredecessorCell({
     createdAt: task.updatedAt,
     updatedAt: task.updatedAt,
   }));
-  const batchPreview = previewDependencies.length === 0 ? null : previewDependenciesImpact({
+  const batchPreview = !pickerOpen || previewDependencies.length === 0 ? null : previewDependenciesImpact({
     tasks,
     dependencies,
     calendars,
@@ -300,7 +305,7 @@ function PredecessorCell({
     action: "ADD",
   });
   const managedDependencies = existing.filter(({ id }) => managedIds.has(id));
-  const removalPreview = managedDependencies.length === 0 ? null : previewDependenciesImpact({
+  const removalPreview = !managerOpen || managedDependencies.length === 0 ? null : previewDependenciesImpact({
     tasks,
     dependencies,
     calendars,
@@ -308,8 +313,6 @@ function PredecessorCell({
     dependenciesToChange: managedDependencies,
     action: "REMOVE",
   });
-
-  if (isSummary) return <span className="summary-dependency-label">Datas derivadas</span>;
 
   const commitAddDependencies = async (): Promise<void> => {
     if (selectedTasks.length === 0) return;
@@ -426,8 +429,8 @@ function PredecessorCell({
         </ul>
       )}
       <div className="dependency-add">
-        <button ref={selectRef} className="dependency-picker-button" type="button" aria-label={`Adicionar predecessoras a ${task.title}`} disabled={disabled || isAdding || available.length === 0} onClick={() => { setPickerOpen(true); setAddError(null); }}>Adicionar…</button>
-        <button className="dependency-add-button" type="button" aria-label={`Adicionar predecessoras a ${task.title}`} title="Adicionar predecessoras" disabled={disabled || isAdding || available.length === 0} onClick={() => { setPickerOpen(true); setAddError(null); }}>+</button>
+        <button ref={selectRef} className="dependency-picker-button" type="button" aria-label={`Adicionar predecessoras a ${task.title}`} disabled={disabled || isAdding} onClick={() => { setPickerOpen(true); setAddError(null); }}>Adicionar…</button>
+        <button className="dependency-add-button" type="button" aria-label={`Adicionar predecessoras a ${task.title}`} title="Adicionar predecessoras" disabled={disabled || isAdding} onClick={() => { setPickerOpen(true); setAddError(null); }}>+</button>
         {existing.length < 2 ? null : <button className="dependency-manage-button" type="button" disabled={disabled} onClick={() => {
           setManagedIds(new Set());
           setManagedLagDaysById(Object.fromEntries(existing.map((dependency) => [dependency.id, dependency.lagDays])));
@@ -813,11 +816,20 @@ function TaskRow({
   const visibleTagsText = dirty ? tagsText : row.task.tags.join(", ");
   const detailsId = `task-details-${row.task.id}`;
   const codeHelpId = `task-code-help-${row.task.id}`;
-  const invalidParentIds = useMemo(() => collectTaskTreeIds(tasks, row.task.id), [row.task.id, tasks]);
-  const dependencyTaskIds = new Set(dependencies.flatMap(({ predecessorId, successorId }) => [predecessorId, successorId]));
-  const parentOptions = tasks.filter(
-    (task) => !invalidParentIds.has(task.id) && !dependencyTaskIds.has(task.id) && canTaskHaveChild(tasks, task.id),
+  // Estes dados só aparecem no painel Detalhes. Evitar percorrer a árvore inteira
+  // para cada linha enquanto ela está apenas sendo exibida ou expandida.
+  const invalidParentIds = useMemo(
+    () => showDetails ? collectTaskTreeIds(tasks, row.task.id) : new Set<string>(),
+    [row.task.id, showDetails, tasks],
   );
+  const dependencyTaskIds = showDetails
+    ? new Set(dependencies.flatMap(({ predecessorId, successorId }) => [predecessorId, successorId]))
+    : new Set<string>();
+  const parentOptions = showDetails
+    ? tasks.filter(
+        (task) => !invalidParentIds.has(task.id) && !dependencyTaskIds.has(task.id) && canTaskHaveChild(tasks, task.id),
+      )
+    : [];
   const taskCalendar = calendars.find(
     (calendar) => calendar.id === (visibleDraft.calendarId ?? projectCalendarId),
   ) ?? calendars[0];
@@ -825,7 +837,7 @@ function TaskRow({
   const comparison = taskCalendar === undefined
     ? null
     : compareTaskWithBaseline(visibleDraft, baselineTask, taskCalendar, todayDate);
-  const canHaveSubtask = canTaskHaveChild(tasks, row.task.id);
+  const canHaveSubtask = row.depth < MAX_TASK_HIERARCHY_LEVELS - 1;
   const existingPredecessorIds = new Set(
     dependencies
       .filter((dependency) => dependency.successorId === row.task.id)
@@ -1324,15 +1336,17 @@ export function TaskTable({
   const [templateDescription, setTemplateDescription] = useState("");
   const [dependencyParentId, setDependencyParentId] = useState<string | null>(null);
   const titleInput = useRef<HTMLInputElement>(null);
+  const tableShellRef = useRef<HTMLDivElement>(null);
   const tableScrollRef = useRef<HTMLDivElement>(null);
   const horizontalScrollRef = useRef<HTMLDivElement>(null);
   const [tableScrollWidth, setTableScrollWidth] = useState(0);
+  const [tableViewportHeight, setTableViewportHeight] = useState(590);
   const [taskColumnWidth, setTaskColumnWidth] = useState(initialTaskColumnWidth);
   const taskColumnResize = useRef<{ readonly pointerId: number; readonly startX: number; readonly startWidth: number } | null>(null);
   const [predecessorsColumnWidth, setPredecessorsColumnWidth] = useState(initialPredecessorsColumnWidth);
   const predecessorsColumnResize = useRef<{ readonly pointerId: number; readonly startX: number; readonly startWidth: number } | null>(null);
   const [todayDate, setTodayDate] = useState(localTodayDate);
-  const forcedExpandedIds = new Set(
+  const forcedExpandedIds = useMemo(() => new Set(
     tasks
       .filter(
         (task) =>
@@ -1341,16 +1355,29 @@ export function TaskTable({
           visibleTaskIds.has(task.parentId),
       )
       .map((task) => task.parentId as string),
+  ), [tasks, visibleTaskIds]);
+  const effectiveExpandedIds = useMemo(
+    () => new Set([...expandedTaskIds, ...forcedExpandedIds]),
+    [expandedTaskIds, forcedExpandedIds],
   );
-  const effectiveExpandedIds = new Set([...expandedTaskIds, ...forcedExpandedIds]);
-  const visibleTasks = flattenVisibleTasks(tasks, effectiveExpandedIds).filter(
-    ({ task }) => visibleTaskIds === undefined || visibleTaskIds.has(task.id),
+  const visibleTasks = useMemo(
+    () => flattenVisibleTasks(tasks, effectiveExpandedIds).filter(
+      ({ task }) => visibleTaskIds === undefined || visibleTaskIds.has(task.id),
+    ),
+    [effectiveExpandedIds, tasks, visibleTaskIds],
   );
-  const outlineNumbers = buildTaskOutlineNumbers(tasks);
-  const dependencyTaskIds = new Set(dependencies.flatMap(({ predecessorId, successorId }) => [predecessorId, successorId]));
-  const summaryIds = new Set(tasks.flatMap((task) => task.parentId === null ? [] : [task.parentId]));
-  const selectedEditableTasks = tasks.filter(
-    (task) => selectedTaskIds.has(task.id) && !summaryIds.has(task.id),
+  const outlineNumbers = useMemo(() => buildTaskOutlineNumbers(tasks), [tasks]);
+  const dependencyTaskIds = useMemo(
+    () => new Set(dependencies.flatMap(({ predecessorId, successorId }) => [predecessorId, successorId])),
+    [dependencies],
+  );
+  const summaryIds = useMemo(
+    () => new Set(tasks.flatMap((task) => task.parentId === null ? [] : [task.parentId])),
+    [tasks],
+  );
+  const selectedEditableTasks = useMemo(
+    () => tasks.filter((task) => selectedTaskIds.has(task.id) && !summaryIds.has(task.id)),
+    [selectedTaskIds, summaryIds, tasks],
   );
 
   useEffect(() => {
@@ -1427,6 +1454,26 @@ export function TaskTable({
       window.removeEventListener("resize", updateWidth);
     };
   }, [predecessorsColumnWidth, showBaselineColumns, taskColumnWidth, tasks.length]);
+
+  useEffect(() => {
+    const tableShell = tableShellRef.current;
+    if (tableShell === null) return;
+    const syncHeight = (): void => {
+      // Igual ao Gantt: a altura é do painel de dados; a barra horizontal tem
+      // uma faixa própria dentro do mesmo contêiner, sempre visível no rodapé.
+      const available = Math.floor(window.innerHeight - tableShell.getBoundingClientRect().top - 24);
+      const nextHeight = Math.max(280, Math.min(900, available));
+      setTableViewportHeight((current) => current === nextHeight ? current : nextHeight);
+    };
+    const workspace = tableShell.closest<HTMLElement>(".workspace-main");
+    syncHeight();
+    window.addEventListener("resize", syncHeight);
+    workspace?.addEventListener("scroll", syncHeight, { passive: true });
+    return () => {
+      window.removeEventListener("resize", syncHeight);
+      workspace?.removeEventListener("scroll", syncHeight);
+    };
+  }, [conflicts.length, tasks.length]);
 
   const handleTaskColumnResizeStart = (event: ReactPointerEvent<HTMLSpanElement>): void => {
     event.preventDefault();
@@ -1585,7 +1632,7 @@ export function TaskTable({
         </form>
       </div>
       {conflicts.length > 0 ? <div className="schedule-conflict-summary" role="status"><strong>{conflicts.length} {conflicts.length === 1 ? "conflito de agendamento" : "conflitos de agendamento"}</strong><span>Tarefas manuais foram preservadas. Abra a linha correspondente para revisar a data mínima indicada.</span></div> : null}
-      <div className="table-scroll-shell">
+      <div ref={tableShellRef} className="table-scroll-shell" style={{ "--table-viewport-height": `${String(tableViewportHeight)}px` } as CSSProperties}>
       <div ref={tableScrollRef} className="table-scroll" onScroll={(event) => { if (horizontalScrollRef.current !== null) horizontalScrollRef.current.scrollLeft = event.currentTarget.scrollLeft; }} onWheel={handleTableWheel}>
         <table
           className="task-table"

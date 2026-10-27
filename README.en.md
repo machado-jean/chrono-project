@@ -139,13 +139,13 @@ The detailed documentation is currently maintained in Brazilian Portuguese:
 - [Public GitHub organization](docs/github-governance.md)
 - [Release process](docs/release-process.md)
 - [WinGet publishing](docs/winget.md)
-- [v0.2.7 release notes](docs/releases/v0.2.7.md)
+- [v0.2.8 release notes](docs/releases/v0.2.8.md)
 - [Architecture decisions](docs/decisions/)
 
 ## Project status
 
-The latest stable version is
-[v0.2.7](https://github.com/machado-jean/chrono-project/releases/tag/v0.2.7).
+The version currently being prepared is
+[v0.2.8](https://github.com/machado-jean/chrono-project/releases/tag/v0.2.8).
 The first WinGet catalog submission passed the CLA and every technical stage;
 [PR #450697](https://github.com/microsoft/winget-pkgs/pull/450697) is awaiting a
 moderator review.

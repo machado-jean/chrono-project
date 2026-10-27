@@ -136,13 +136,13 @@ o perfil normal do Windows. Veja o
 - [Organização pública do GitHub](docs/github-governance.md)
 - [Processo de release](docs/release-process.md)
 - [Publicação no WinGet](docs/winget.md)
-- [Notas da v0.2.7](docs/releases/v0.2.7.md)
+- [Notas da v0.2.8](docs/releases/v0.2.8.md)
 - [Decisões arquiteturais](docs/decisions/)
 
 ## Estado do projeto
 
-A versão estável mais recente é a
-[v0.2.7](https://github.com/machado-jean/chrono-project/releases/tag/v0.2.7).
+A versão em preparação é a
+[v0.2.8](https://github.com/machado-jean/chrono-project/releases/tag/v0.2.8).
 O primeiro pacote para o catálogo WinGet passou pelo CLA e por todas as etapas
 técnicas; o [PR #450697](https://github.com/microsoft/winget-pkgs/pull/450697)
 aguarda revisão de um moderador.

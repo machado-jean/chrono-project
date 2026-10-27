@@ -94,15 +94,24 @@ menu de contexto oferece as principais ações sem exigir retorno à Tabela.
 
 ### Gantt
 
-Apresenta barras, resumos, progresso, calendários e relações. O painel
+Apresenta barras, resumos, progresso, calendários e relações. A legenda
+resumida permanece no cabeçalho sem ocupar a área do gráfico. Use **Opções**
+para abrir a ajuda de rolagem e o seletor de dependências. O painel
 **Inspecionar tarefa** é a alternativa acessível aos gestos. Tarefas manuais e
 resumos bloqueiam movimentos incompatíveis com suas regras.
+
+A barra horizontal permanece visível na base da linha do tempo. Use-a para
+navegar pelas datas sem precisar chegar à última atividade.
 
 ## 8. Filtros e análise
 
 Os filtros cobrem texto, status, prioridade, criticidade, responsáveis, datas e
 tags. Eles permanecem ativos ao alternar entre as views e podem limitar o
 conteúdo do PDF.
+
+Em telas menores, a rolagem permite que o cabeçalho do projeto saia de cena e
+mantém a barra de filtros fixada abaixo do menu do aplicativo. Assim, texto,
+status e demais critérios continuam disponíveis ao percorrer tarefas.
 
 O caminho crítico é opcional por projeto. Quando ativado, mostra a sequência de
 tarefas que controla o término, a folga em dias úteis e as tarefas quase

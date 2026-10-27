@@ -153,6 +153,7 @@ preencher lacunas históricas sem uma correção factual explícita.
 | [`v0.2.5.md`](releases/v0.2.5.md) | Interface Windows mais coesa. |
 | [`v0.2.6.md`](releases/v0.2.6.md) | Predecessoras em lote, histórico e caminho crítico. |
 | [`v0.2.7.md`](releases/v0.2.7.md) | Governança pública, publisher Windows e preparação WinGet. |
+| [`v0.2.8.md`](releases/v0.2.8.md) | Fluidez de Tabela e Gantt e rolagem persistente. |
 
 ## Testes e fixtures
 

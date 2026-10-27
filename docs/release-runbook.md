@@ -171,6 +171,15 @@ senha pode aparecer nesse arquivo.
 
 1. Ler `AGENTS.md`, este runbook, `docs/release-process.md` e
    `docs/releases/next.md`.
+
+2. Em janela reduzida, executar a regressão de rolagem descrita em
+   `docs/views.md`: barra horizontal do Gantt visível; cabeçalho do projeto
+   rolando até os filtros fixos; e rolagem de Tabela, Kanban e Gantt preservada
+   abaixo dos filtros, com os títulos de coluna da Tabela também visíveis. No
+   Gantt, repetir antes e depois da rolagem inicial para confirmar que ele ocupa
+   a área livre e mantém a barra horizontal.
+   Repetir o mesmo na Tabela e confirmar que a transição de altura é suave, os
+   títulos de colunas continuam fixos e a barra horizontal permanece acessível.
 2. Executar:
 
    ```powershell

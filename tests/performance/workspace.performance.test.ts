@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { Calendar } from "../../src/domain/calendars/calendar";
 import type { TaskDependency } from "../../src/domain/scheduling/dependency";
 import { rescheduleAffectedTasks } from "../../src/domain/scheduling/scheduler";
+import { analyzeCriticalPath } from "../../src/domain/scheduling/critical-path";
 import { flattenVisibleTasks } from "../../src/domain/tasks/hierarchy";
 import type { Task } from "../../src/domain/tasks/task";
 
@@ -100,5 +101,32 @@ describe("limites de desempenho do workspace", () => {
 
     expect(visible).toHaveLength(10_000);
     expect(elapsedMilliseconds).toBeLessThan(1_000);
+  });
+
+  it("analisa o caminho crítico de 1.000 tarefas sem travar uma interação", () => {
+    const tasks = createTasks(1_000);
+    const dependencies: TaskDependency[] = tasks.slice(1).map((task, index) => ({
+      id: dependencyId(index + 1),
+      projectId: PROJECT_ID,
+      predecessorId: taskId(index + 1),
+      successorId: task.id,
+      type: "FS",
+      lagDays: 0,
+      createdAt: NOW,
+      updatedAt: NOW,
+    }));
+
+    const startedAt = performance.now();
+    const result = analyzeCriticalPath({
+      tasks,
+      dependencies,
+      calendars: [continuousCalendar],
+      projectCalendarId: CALENDAR_ID,
+    });
+    const elapsedMilliseconds = performance.now() - startedAt;
+
+    expect(result.available).toBe(true);
+    expect(result.tasks).toHaveLength(1_000);
+    expect(elapsedMilliseconds).toBeLessThan(250);
   });
 });
