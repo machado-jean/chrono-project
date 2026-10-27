@@ -14,6 +14,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
   type MouseEvent,
   type SyntheticEvent,
 } from "react";
@@ -206,13 +207,16 @@ export function TaskGantt({
   const [announcement, setAnnouncement] = useState("");
   const [savingVisualEdit, setSavingVisualEdit] = useState(false);
   const [ganttRevision, setGanttRevision] = useState(0);
+  const [optionsOpen, setOptionsOpen] = useState(false);
   const contextMenuRef = useRef<HTMLDivElement>(null);
+  const ganttLayoutRef = useRef<HTMLDivElement>(null);
   const chartShellRef = useRef<HTMLDivElement>(null);
+  const horizontalScrollRef = useRef<HTMLDivElement>(null);
   const verticalOffsetRef = useRef(0);
   const [verticalOffset, setVerticalOffset] = useState(0);
   const [verticalMaximum, setVerticalMaximum] = useState(0);
-  const [timelineOffset, setTimelineOffset] = useState(0);
-  const [timelineMaximum, setTimelineMaximum] = useState(0);
+  const [timelineScrollWidth, setTimelineScrollWidth] = useState(0);
+  const [chartHeight, setChartHeight] = useState(590);
   const [contextMenu, setContextMenu] = useState<GanttContextMenuState | null>(null);
   const [contextPredecessorId, setContextPredecessorId] = useState("");
   const projection = useMemo(
@@ -262,7 +266,7 @@ export function TaskGantt({
     ? null
     : tasksById.get(contextMenu.taskId) ?? null;
   const contextStartDate = contextTask?.startDate ?? null;
-  const predecessorOptions = contextTask === null || contextStartDate === null
+  const predecessorOptions = contextMenu?.addPredecessor !== true || contextTask === null || contextStartDate === null
     ? []
     : allProjectTasks.filter((candidate) =>
       candidate.id !== contextTask.id &&
@@ -280,10 +284,28 @@ export function TaskGantt({
     const offset = Math.min(verticalMaximum, Math.max(0, requestedOffset));
     const verticalScroller = chartShellRef.current?.querySelector<HTMLElement>(".wx-gantt");
     verticalOffsetRef.current = offset;
-    setVerticalOffset(offset);
+    setVerticalOffset((current) => current === offset ? current : offset);
     if (verticalScroller !== null && verticalScroller !== undefined) verticalScroller.scrollTop = offset;
     ganttApi?.getStores().data.setState({ scrollTop: offset });
   }, [ganttApi, verticalMaximum]);
+
+  useEffect(() => {
+    const layout = ganttLayoutRef.current;
+    if (layout === null) return;
+    const syncHeight = (): void => {
+      const available = Math.floor(window.innerHeight - layout.getBoundingClientRect().top - 24);
+      const nextHeight = Math.max(280, Math.min(900, available));
+      setChartHeight((current) => current === nextHeight ? current : nextHeight);
+    };
+    const workspace = layout.closest<HTMLElement>(".workspace-main");
+    syncHeight();
+    window.addEventListener("resize", syncHeight);
+    workspace?.addEventListener("scroll", syncHeight, { passive: true });
+    return () => {
+      window.removeEventListener("resize", syncHeight);
+      workspace?.removeEventListener("scroll", syncHeight);
+    };
+  }, [optionsOpen, projection.tasks.length]);
 
   useEffect(() => {
     const chart = chartShellRef.current;
@@ -302,9 +324,20 @@ export function TaskGantt({
       }
     };
     applyHierarchyColors();
-    const observer = new MutationObserver(applyHierarchyColors);
+    let animationFrame: number | null = null;
+    const scheduleHierarchyColors = (): void => {
+      if (animationFrame !== null) return;
+      animationFrame = window.requestAnimationFrame(() => {
+        animationFrame = null;
+        applyHierarchyColors();
+      });
+    };
+    const observer = new MutationObserver(scheduleHierarchyColors);
     observer.observe(chart, { childList: true, subtree: true });
-    return () => { observer.disconnect(); };
+    return () => {
+      observer.disconnect();
+      if (animationFrame !== null) window.cancelAnimationFrame(animationFrame);
+    };
   }, [criticalityByTaskId, ganttRevision, projection.tasks]);
 
   useEffect(() => {
@@ -313,12 +346,17 @@ export function TaskGantt({
     let timeline: HTMLElement | null = null;
     let verticalScroller: HTMLElement | null = null;
     const syncFromTimeline = (): void => {
-      if (timeline !== null) setTimelineOffset(timeline.scrollLeft);
+      if (timeline !== null && horizontalScrollRef.current !== null) {
+        horizontalScrollRef.current.scrollLeft = timeline.scrollLeft;
+      }
     };
     const syncFromVertical = (): void => {
       if (verticalScroller === null) return;
-      verticalOffsetRef.current = verticalScroller.scrollTop;
-      setVerticalOffset(verticalScroller.scrollTop);
+      const offset = verticalScroller.scrollTop;
+      verticalOffsetRef.current = offset;
+      setVerticalOffset((current) => current === offset
+        ? current
+        : offset);
     };
     const measureTimeline = (): void => {
       ensureFullVerticalScrollRange(shell, ganttApi, projection.tasks.length);
@@ -335,7 +373,7 @@ export function TaskGantt({
         verticalScroller?.addEventListener("scroll", syncFromVertical, { passive: true });
       }
       if (timeline !== null) {
-        setTimelineMaximum(Math.max(0, timeline.scrollWidth - timeline.clientWidth));
+        setTimelineScrollWidth(Math.max(timeline.clientWidth, timeline.scrollWidth));
         syncFromTimeline();
       }
       if (verticalScroller !== null) {
@@ -346,16 +384,25 @@ export function TaskGantt({
         syncFromVertical();
       }
     };
+    let animationFrame: number | null = null;
+    const scheduleMeasurement = (): void => {
+      if (animationFrame !== null) return;
+      animationFrame = window.requestAnimationFrame(() => {
+        animationFrame = null;
+        measureTimeline();
+      });
+    };
     measureTimeline();
-    const mutationObserver = new MutationObserver(measureTimeline);
+    const mutationObserver = new MutationObserver(scheduleMeasurement);
     mutationObserver.observe(shell, { childList: true, subtree: true });
     const resizeObserver = typeof ResizeObserver === "undefined"
       ? null
-      : new ResizeObserver(measureTimeline);
+      : new ResizeObserver(scheduleMeasurement);
     resizeObserver?.observe(shell);
     return () => {
       mutationObserver.disconnect();
       resizeObserver?.disconnect();
+      if (animationFrame !== null) window.cancelAnimationFrame(animationFrame);
       timeline?.removeEventListener("scroll", syncFromTimeline);
       verticalScroller?.removeEventListener("scroll", syncFromVertical);
     };
@@ -427,11 +474,10 @@ export function TaskGantt({
     return () => { shell.removeEventListener("wheel", handleWheel, { capture: true }); };
   }, [applyVerticalScroll, ganttApi, projection.tasks.length, verticalMaximum]);
 
-  const scrollTimeline = (event: SyntheticEvent<HTMLInputElement>): void => {
-    const offset = Number(event.currentTarget.value);
+  const scrollTimeline = (event: SyntheticEvent<HTMLDivElement>): void => {
+    const offset = event.currentTarget.scrollLeft;
     const timeline = chartShellRef.current?.querySelector<HTMLElement>(".wx-chart");
     if (timeline !== null && timeline !== undefined) {
-      setTimelineOffset(offset);
       timeline.scrollLeft = offset;
       void ganttApi?.exec("scroll-chart", { left: offset });
     }
@@ -768,45 +814,46 @@ export function TaskGantt({
       <header className="view-heading gantt-heading">
         <div>
           <h2 id="gantt-title">Gráfico de Gantt</h2>
-          <p>Arraste o centro para mover; em tarefas automáticas, o intervalo FS é ajustado. Para criar ou excluir dependências FS, use o botão direito na tarefa ou na linha.</p>
+          <p className="gantt-heading-note">Arraste uma barra para ajustar datas e use Opções para legenda, dependências e ajuda.</p>
         </div>
-        <label className="gantt-scale-control">
-          <span>Escala</span>
-          <select value={scale} onChange={(event) => { setScale(event.target.value as GanttScale); }}>
-            <option value="DAY">Dias</option>
-            <option value="WEEK">Semanas</option>
-            <option value="MONTH">Meses</option>
-          </select>
-        </label>
+        <div className="gantt-header-controls" aria-label="Controles do Gantt">
+          <button type="button" disabled={disabled || savingVisualEdit || !canUndo} onClick={() => { void restoreHistory("UNDO"); }}>Desfazer</button>
+          <button type="button" disabled={disabled || savingVisualEdit || !canRedo} onClick={() => { void restoreHistory("REDO"); }}>Refazer</button>
+          <label className="gantt-scale-control">
+            <span>Escala</span>
+            <select value={scale} onChange={(event) => { setScale(event.target.value as GanttScale); }}>
+              <option value="DAY">Dias</option>
+              <option value="WEEK">Semanas</option>
+              <option value="MONTH">Meses</option>
+            </select>
+          </label>
+          <div className="gantt-legend gantt-compact-legend" aria-label="Legenda do Gantt">
+            <span><i className="legend-task" /> Tarefa</span>
+            <span><i className="legend-summary" /> Resumo</span>
+            {criticalityByTaskId.size === 0 ? null : (
+              <>
+                <span><i className="legend-critical" aria-hidden="true" /> Crítica</span>
+                <span><i className="legend-near-critical" aria-hidden="true" /> Quase crítica</span>
+              </>
+            )}
+            <span><i className="legend-weekend" /> Fim de semana</span>
+            <span><i className="legend-holiday" /> Feriado</span>
+            <span><i className="legend-link" /> Dependência</span>
+          </div>
+          <button type="button" className="gantt-toolbar-button" aria-expanded={optionsOpen} onClick={() => { setOptionsOpen((current) => !current); }}>Opções</button>
+        </div>
       </header>
       {savingVisualEdit ? <p className="gantt-saving" role="status">Salvando alteração do Gantt…</p> : null}
-      <div className="gantt-history-actions" aria-label="Histórico de alterações do Gantt">
-        <button type="button" disabled={disabled || savingVisualEdit || !canUndo} onClick={() => { void restoreHistory("UNDO"); }}>Desfazer</button>
-        <button type="button" disabled={disabled || savingVisualEdit || !canRedo} onClick={() => { void restoreHistory("REDO"); }}>Refazer</button>
-        {announcement.length > 0 ? <span key={announcement} role="status">{announcement}</span> : null}
-      </div>
+      {announcement.length > 0 ? <p className="gantt-toolbar-status" key={announcement} role="status">{announcement}</p> : null}
       {localError === null ? null : <p className="field-error gantt-error" role="alert">{localError}</p>}
 
-      <div className="gantt-legend" aria-label="Legenda do Gantt">
-        <span><i className="legend-task" /> Tarefa</span>
-        <span><i className="legend-summary" /> Resumo</span>
-        {criticalityByTaskId.size === 0 ? null : (
-          <>
-            <span><i className="legend-critical" aria-hidden="true" /> Crítica</span>
-            <span><i className="legend-near-critical" aria-hidden="true" /> Quase crítica</span>
-          </>
-        )}
-        <span><i className="legend-weekend" /> Final de semana</span>
-        <span><i className="legend-holiday" /> Feriado</span>
-        <span><i className="legend-link" /> Dependência FS</span>
-        <span>🔒 Datas travadas</span>
-      </div>
-      <p className="gantt-scroll-hint">
-        Use a roda do mouse para percorrer as atividades e a barra inferior para navegar pelas datas.
-      </p>
+      {optionsOpen ? <div className="gantt-options-panel">
+        <p className="gantt-scroll-hint">
+          Use a roda do mouse para percorrer atividades, a barra inferior para navegar pelas datas e o botão direito para criar ou excluir dependências FS.
+        </p>
 
-      {projection.links.length === 0 ? null : (
-        <div className="gantt-dependency-focus">
+        {projection.links.length === 0 ? null : (
+          <div className="gantt-dependency-focus">
           <label>
             <span>Dependência em foco</span>
             <select
@@ -830,8 +877,9 @@ export function TaskGantt({
               ? "Clique em uma linha ou escolha a relação para isolar seu caminho."
               : `Em foco: ${dependencyLabel(focusedDependency)}`}
           </p>
-        </div>
-      )}
+          </div>
+        )}
+      </div> : null}
 
       {projection.tasks.length === 0 ? (
         <div className="view-empty" role="status">
@@ -839,7 +887,11 @@ export function TaskGantt({
           <span>Defina início e duração na Tabela ou ajuste os filtros.</span>
         </div>
       ) : (
-        <div className="gantt-layout">
+        <div
+          ref={ganttLayoutRef}
+          className="gantt-layout"
+          style={{ "--gantt-chart-height": `${String(chartHeight)}px` } as CSSProperties}
+        >
           <div
             ref={chartShellRef}
             className={`gantt-chart-shell${focusedLink === null ? "" : " dependency-focus-active"}`}
@@ -895,17 +947,17 @@ export function TaskGantt({
             />
           </div>
 
-          <input
-            className="gantt-horizontal-scroll"
-            type="range"
-            aria-label="Navegar pelas datas do Gantt"
-            min={0}
-            max={Math.max(1, timelineMaximum)}
-            step={Math.max(1, Math.round(scaleConfig.cellWidth / 2))}
-            value={Math.min(timelineOffset, Math.max(1, timelineMaximum))}
-            disabled={timelineMaximum <= 0}
-            onInput={scrollTimeline}
-          />
+          <div
+            ref={horizontalScrollRef}
+            className="gantt-horizontal-scrollbar"
+            role="region"
+            aria-label="Rolagem horizontal do Gantt"
+            tabIndex={0}
+            title="Role horizontalmente para navegar pelas datas do cronograma"
+            onScroll={scrollTimeline}
+          >
+            <div style={{ width: `${String(timelineScrollWidth)}px` }} />
+          </div>
 
           {contextMenu === null ? null : (
             <div

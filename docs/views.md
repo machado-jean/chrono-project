@@ -62,6 +62,12 @@ visível da área da Tabela, sem exigir que o usuário percorra todas as tarefas
 para alcançar as colunas finais. A barra horizontal nativa do contêiner é
 ocultada; gestos horizontais do touchpad e `Shift` + roda continuam funcionando.
 
+Expandir uma tarefa apenas revela suas linhas; não grava no banco nem recalcula
+o cronograma. Para manter essa interação leve em projetos grandes, a validação
+completa de candidatas a predecessora e a prévia de impacto são preparadas só
+quando o seletor **Adicionar…** é aberto. Os detalhes de cada linha também só
+montam as opções de hierarquia quando o usuário os solicita.
+
 O clique direito em qualquer ponto da linha abre ações para detalhes, subtarefa,
 predecessora, trava de datas, duplicação, template e exclusão. Em caixas de
 texto, o mesmo menu claro começa com **Recortar**, **Copiar**, **Colar** e
@@ -123,7 +129,50 @@ de status, duplicar e excluir. O menu reutiliza o padrão da Tabela, fecha com
 O Gantt usa SVAR React Gantt 2.7.1 conforme o [ADR 013](decisions/013-svar-react-gantt.md).
 A roda do mouse sobre qualquer área do gráfico percorre verticalmente as
 atividades. A barra horizontal, mantida visível na base da linha do tempo,
-permite navegar entre datas sem deslocar o painel de inspeção.
+é uma rolagem nativa persistente, sincronizada com o gráfico e equivalente à da
+Tabela. Ela permite navegar entre datas sem descer até o fim das atividades nem
+deslocar o painel de inspeção.
+
+A altura do gráfico é medida conforme o espaço real abaixo do Gantt. Em janelas
+altas, ele ocupa a área livre; com o cabeçalho do projeto visível ou em janela
+menor, reduz sem esconder a barra horizontal.
+
+As atualizações visuais internas do Gantt são agrupadas por quadro de desenho:
+uma única interação pode alterar diversos elementos do gráfico, mas a medição
+da linha do tempo e a aplicação das cores de hierarquia/criticidade não são
+repetidas para cada mutação intermediária. O menu de predecessora também monta
+suas candidatas somente após a opção ser solicitada.
+
+A Tabela usa a mesma estrutura do Gantt: uma faixa para os dados e outra para a
+barra horizontal, ambas dentro do painel com altura medida. Isso mantém títulos
+de colunas e barra junto ao limite inferior da área útil. As transições de
+altura são curtas e discretas; a preferência do sistema por reduzir movimento
+as desativa.
+
+O cabeçalho compacto mantém escala, histórico, uma legenda resumida e
+**Opções** em uma única faixa. **Opções** revela a orientação de rolagem e o
+foco de dependência apenas quando necessário.
+
+A Tabela, o Kanban e o Gantt usam áreas roláveis próprias: os títulos de
+colunas da Tabela, os títulos de status do Kanban e os cabeçalhos do Gantt
+permanecem visíveis enquanto suas tarefas são percorridas.
+
+O cabeçalho do projeto acompanha a rolagem inicial e a barra de filtros se torna
+a referência fixa logo abaixo do menu. Isso conserva o contexto essencial em
+janelas pequenas sem reservar permanentemente o espaço do cabeçalho.
+
+### Regressão de rolagem
+
+Antes de uma release, reduza a janela e confirme: (1) a barra horizontal do
+Gantt aparece logo abaixo da linha do tempo; (2) ao rolar a página, o cabeçalho
+do projeto sai de cena e os filtros ficam fixos abaixo do menu; (3) com os
+filtros fixos, Tabela, Kanban e Gantt continuam rolando suas tarefas; e (4) na
+Tabela, os títulos de colunas ficam imediatamente abaixo dos filtros.
+Repita o item 1 tanto com o cabeçalho do projeto visível quanto depois da
+rolagem inicial, confirmando que o Gantt usa o espaço livre nas duas posições.
+Repita o mesmo teste na Tabela, confirmando transição suave, cabeçalhos fixos e
+barra horizontal visível.
+
 Uma barra vertical fina ocupa uma coluna própria entre o gráfico e o painel
 **Inspecionar tarefa**. Seu trilho não cobre tarefas ou dependências, possui uma
 área de interação ampliada e mantém zero no topo e o fim da lista embaixo. A

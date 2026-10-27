@@ -216,7 +216,7 @@ export function ProjectViews({
               criticalityByTaskId={criticalityByTaskId}
               disabled={disabled}
               onCreate={onCreate}
-              onSave={(task, updates) => onSave(task, updates)}
+              onSave={onSave}
               onSetSchedulingMode={onSetSchedulingMode}
               onMove={onMove}
               onDelete={onDelete}

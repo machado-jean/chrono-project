@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import chronoMark from "../assets/chrono-mark.png";
 import { ProjectHeader } from "../features/projects/ProjectHeader";
@@ -77,6 +77,8 @@ function App({ repository }: AppProps) {
   const [reopenProgress, setReopenProgress] = useState("99");
   const [criticalPathHelpOpen, setCriticalPathHelpOpen] = useState(false);
   const workspace = useWorkspace(activeRepository);
+  const saveWorkspaceTask = workspace.saveTask;
+  const selectedProjectTasks = workspace.selectedProjectTasks;
   const undoTaskEdit = workspace.undoTaskEdit;
   const redoTaskEdit = workspace.redoTaskEdit;
   const projectPeers = workspace.selectedProject === null
@@ -130,6 +132,9 @@ function App({ repository }: AppProps) {
     [criticalPath.available, taskFilters],
   );
   const filtersActive = hasActiveTaskFilters(effectiveTaskFilters);
+  const changeActiveView = (view: ProjectView): void => {
+    setActiveView(view);
+  };
   const matchingTasks = useMemo(
     () => filterTasks(workspace.selectedProjectTasks, effectiveTaskFilters, criticalityByTaskId),
     [criticalityByTaskId, effectiveTaskFilters, workspace.selectedProjectTasks],
@@ -150,15 +155,15 @@ function App({ repository }: AppProps) {
     );
   }, [completionRequest, workspace.selectedProjectTasks]);
 
-  const saveTaskWithCompletionReview = (
+  const saveTaskWithCompletionReview = useCallback((
     task: Task,
     dependencyUpdates: readonly TaskDependency[] = [],
   ): Promise<TaskSaveResult> => {
-    const currentTask = workspace.selectedProjectTasks.find((candidate) => candidate.id === task.id);
+    const currentTask = selectedProjectTasks.find((candidate) => candidate.id === task.id);
     const isCompleting = task.status === "COMPLETED" && currentTask?.status !== "COMPLETED";
     const isReopening = task.status !== "COMPLETED" && currentTask?.status === "COMPLETED";
     if (!isCompleting && !isReopening) {
-      return workspace.saveTask(task, dependencyUpdates);
+      return saveWorkspaceTask(task, dependencyUpdates);
     }
 
     setCompletionError(null);
@@ -172,7 +177,7 @@ function App({ repository }: AppProps) {
         resolve,
       });
     });
-  };
+  }, [saveWorkspaceTask, selectedProjectTasks]);
 
   const cancelCompletion = (): void => {
     if (completionRequest === null || completionConfirming) return;
@@ -294,7 +299,7 @@ function App({ repository }: AppProps) {
               onDelete={workspace.removeProject}
               onDuplicate={workspace.duplicateProject}
             />
-            <ProjectViewMenu activeView={activeView} onChange={setActiveView} />
+            <ProjectViewMenu activeView={activeView} onChange={changeActiveView} />
             {selectedCalendar === undefined ? null : (
               <CalendarSettings
                 key={selectedCalendar.updatedAt}
@@ -319,7 +324,7 @@ function App({ repository }: AppProps) {
       <ProjectViewRail
         activeView={activeView}
         disabled={workspace.selectedProject === null || workspace.isLoading}
-        onViewChange={setActiveView}
+        onViewChange={changeActiveView}
       />
       <ProjectSidebar
         collapsed={sidebarCollapsed}

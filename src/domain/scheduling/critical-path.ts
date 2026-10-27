@@ -66,27 +66,40 @@ export function analyzeCriticalPath({
   }
 
   const leafIds = new Set(scheduledLeaves.map(({ id }) => id));
+  const scheduledLeafById = new Map(scheduledLeaves.map((task) => [task.id, task]));
+  const taskByAnyId = new Map(tasks.map((task) => [task.id, task]));
   const childrenByParent = new Map<string, string[]>();
   for (const task of tasks) {
     if (task.parentId === null) continue;
-    childrenByParent.set(task.parentId, [...(childrenByParent.get(task.parentId) ?? []), task.id]);
+    const children = childrenByParent.get(task.parentId);
+    if (children === undefined) {
+      childrenByParent.set(task.parentId, [task.id]);
+    } else {
+      children.push(task.id);
+    }
   }
+  const controllingLeavesByTaskId = new Map<string, readonly string[]>();
   const controllingLeaves = (taskId: string): readonly string[] => {
     if (leafIds.has(taskId)) return [taskId];
+    const cached = controllingLeavesByTaskId.get(taskId);
+    if (cached !== undefined) return cached;
     const pending = [...(childrenByParent.get(taskId) ?? [])];
     const descendantLeaves: Task[] = [];
-    while (pending.length > 0) {
-      const id = pending.shift();
-      if (id === undefined) break;
-      const child = scheduledLeaves.find((task) => task.id === id);
+    for (let index = 0; index < pending.length; index += 1) {
+      const id = pending[index];
+      if (id === undefined) continue;
+      const child = scheduledLeafById.get(id);
       if (child !== undefined) descendantLeaves.push(child);
-      pending.push(...(childrenByParent.get(id) ?? []));
+      const children = childrenByParent.get(id);
+      if (children !== undefined) pending.push(...children);
     }
     const latestEnd = descendantLeaves.reduce(
       (latest, task) => task.endDate !== null && task.endDate > latest ? task.endDate : latest,
       "",
     );
-    return descendantLeaves.filter(({ endDate }) => endDate === latestEnd).map(({ id }) => id);
+    const controlling = descendantLeaves.filter(({ endDate }) => endDate === latestEnd).map(({ id }) => id);
+    controllingLeavesByTaskId.set(taskId, controlling);
+    return controlling;
   };
   const edges = dependencies.flatMap((dependency): TaskDependency[] => {
     if (!leafIds.has(dependency.successorId)) return [];
@@ -156,27 +169,23 @@ export function analyzeCriticalPath({
       isNearCritical: totalSlackDays > 0 && totalSlackDays <= nearCriticalThresholdDays,
     };
   });
-  const criticalityById = new Map(leafCriticalities.map((entry) => [entry.taskId, entry]));
-  const summaryCriticalities = tasks.flatMap((task): TaskCriticality[] => {
-    if (!summaryIds.has(task.id)) return [];
-    const pending = [...(childrenByParent.get(task.id) ?? [])];
-    const descendantEntries: TaskCriticality[] = [];
-    while (pending.length > 0) {
-      const id = pending.shift();
-      if (id === undefined) break;
-      const entry = criticalityById.get(id);
-      if (entry !== undefined) descendantEntries.push(entry);
-      pending.push(...(childrenByParent.get(id) ?? []));
+  const summarySlackById = new Map<string, number>();
+  for (const entry of leafCriticalities) {
+    let parentId = taskByAnyId.get(entry.taskId)?.parentId ?? null;
+    while (parentId !== null) {
+      const current = summarySlackById.get(parentId);
+      if (current === undefined || entry.totalSlackDays < current) {
+        summarySlackById.set(parentId, entry.totalSlackDays);
+      }
+      parentId = taskByAnyId.get(parentId)?.parentId ?? null;
     }
-    if (descendantEntries.length === 0) return [];
-    const totalSlackDays = Math.min(...descendantEntries.map(({ totalSlackDays }) => totalSlackDays));
-    return [{
-      taskId: task.id,
-      totalSlackDays,
-      isCritical: totalSlackDays <= 0,
-      isNearCritical: totalSlackDays > 0 && totalSlackDays <= nearCriticalThresholdDays,
-    }];
-  });
+  }
+  const summaryCriticalities = [...summarySlackById].map(([taskId, totalSlackDays]) => ({
+    taskId,
+    totalSlackDays,
+    isCritical: totalSlackDays <= 0,
+    isNearCritical: totalSlackDays > 0 && totalSlackDays <= nearCriticalThresholdDays,
+  }));
 
   return {
     available: true,
