@@ -14,6 +14,8 @@ const COLORS = {
   blueDark: "#1E40AF",
   green: "#0F9F83",
   greenDark: "#087565",
+  critical: "#A92D26",
+  nearCritical: "#7957C8",
   softBlue: "#E8F0FF",
   softGray: "#F3F6FA",
   white: "#FFFFFF",
@@ -142,6 +144,53 @@ function summarySection(report: ProjectReport): PdfNode[] {
   ];
 }
 
+function criticalPathSection(report: ProjectReport): PdfNode[] {
+  const analysis = report.criticalPath;
+  if (analysis?.available !== true) return [];
+  const criticalCount = report.rows.filter((row) => row.criticality?.isCritical === true).length;
+  const nearCriticalCount = report.rows.filter((row) => row.criticality?.isNearCritical === true).length;
+  const target = analysis.targetEndDate === null
+    ? "Sem prazo-limite global"
+    : `Meta ${formatDate(analysis.targetEndDate)}${analysis.projectTargetSlackDays === null ? "" : ` · ${analysis.projectTargetSlackDays >= 0 ? "+" : ""}${String(analysis.projectTargetSlackDays)}d`}`;
+
+  return [
+    { text: "Indicadores do cronograma", style: "sectionSmall", margin: [0, 0, 0, 7] },
+    {
+      columns: [
+        {
+          columns: [
+            { text: `Crítica · folga zero (${String(criticalCount)})`, style: "criticalLegendCritical" },
+          ],
+        },
+        {
+          columns: [
+            { text: `Quase crítica · 1–2 dias de folga (${String(nearCriticalCount)})`, style: "criticalLegendNear" },
+          ],
+        },
+        { text: target, style: "criticalLegendMeta", alignment: "right" },
+      ],
+      columnGap: 10,
+      fillColor: COLORS.softGray,
+      margin: [0, 0, 0, 14],
+    },
+  ];
+}
+
+function taskLabelCell(row: ProjectReport["rows"][number]): PdfNode {
+  const marker = row.criticality?.isCritical === true
+    ? { text: "[Crítica] ", color: COLORS.critical, bold: true }
+    : row.criticality?.isNearCritical === true
+      ? { text: "[Quase crítica] ", color: COLORS.nearCritical, bold: true }
+      : null;
+  return {
+    text: [
+      ...(marker === null ? [] : [marker]),
+      { text: row.label, bold: row.isSummary },
+    ],
+    margin: [row.depth * 7, 0, 0, 0],
+  };
+}
+
 function taskTable(report: ProjectReport): PdfNode {
   const includeBaseline = report.options.includeBaseline !== false && report.rows.some(
     (row) => row.baselineStartDate !== null || row.baselineEndDate !== null,
@@ -164,11 +213,7 @@ function taskTable(report: ProjectReport): PdfNode {
       (text) => ({ text, style: "tableHeader", fillColor: COLORS.ink, color: COLORS.white }),
     ),
     ...report.rows.map((row) => [
-      {
-        text: row.label,
-        bold: row.isSummary,
-        margin: [row.depth * 7, 0, 0, 0],
-      },
+      taskLabelCell(row),
       row.statusLabel,
       formatDate(row.startDate),
       formatDate(row.endDate),
@@ -310,9 +355,57 @@ function ganttTable(report: ProjectReport): PdfNode {
   };
 }
 
+function ganttLegend(report: ProjectReport): PdfNode {
+  const includesBaseline = report.options.includeBaseline !== false && report.rows.some(
+    (row) => row.baselineStartDate !== null || row.baselineEndDate !== null,
+  );
+  const sample = (kind: "TASK" | "SUMMARY" | "CRITICAL" | "NEAR" | "WEEKEND" | "DEPENDENCY" | "BASELINE"): PdfNode => {
+    const rectangle = (color: string): readonly Record<string, unknown>[] => [
+      { type: "rect", x: 2, y: 2, w: 16, h: 9, color },
+    ];
+    if (kind === "TASK") return { width: 22, canvas: rectangle(COLORS.blue) };
+    if (kind === "SUMMARY") return { width: 22, canvas: rectangle(COLORS.green) };
+    if (kind === "WEEKEND") return { width: 22, canvas: rectangle("#E5E9F0") };
+    if (kind === "BASELINE") return { width: 22, canvas: [{ type: "line", x1: 2, y1: 6.5, x2: 18, y2: 6.5, lineColor: COLORS.muted, lineWidth: 2.5 }] };
+    if (kind === "DEPENDENCY") {
+      return { width: 22, canvas: [
+        { type: "line", x1: 2, y1: 6.5, x2: 18, y2: 6.5, lineColor: COLORS.muted, lineWidth: 1.25 },
+        { type: "line", x1: 14, y1: 2.5, x2: 18, y2: 6.5, lineColor: COLORS.muted, lineWidth: 1.25 },
+        { type: "line", x1: 14, y1: 10.5, x2: 18, y2: 6.5, lineColor: COLORS.muted, lineWidth: 1.25 },
+      ] };
+    }
+    const color = kind === "CRITICAL" ? COLORS.critical : COLORS.nearCritical;
+    return { width: 22, canvas: [
+      { type: "rect", x: 2, y: 1, w: 16, h: 11, color: COLORS.white, lineColor: color, lineWidth: 2.25, ...(kind === "NEAR" ? { dash: { length: 2, space: 1 } } : {}) },
+    ] };
+  };
+  const item = (kind: Parameters<typeof sample>[0], label: string): PdfNode => ({
+    columns: [
+      sample(kind),
+      { text: label, style: "ganttLegendText" },
+    ],
+    width: "auto",
+  });
+  const items: PdfNode[] = [
+    item("TASK", "Tarefa"),
+    item("SUMMARY", "Resumo"),
+    item("CRITICAL", "Crítica"),
+    item("NEAR", "Quase crítica"),
+    item("WEEKEND", "Fim de semana"),
+    item("DEPENDENCY", "Dependência"),
+  ];
+  if (includesBaseline) items.push(item("BASELINE", "Plano de referência"));
+  return {
+    columns: items,
+    columnGap: 7,
+    margin: [0, 0, 0, 7],
+  };
+}
+
 export function buildProjectPdfDefinition(report: ProjectReport): PdfDefinition {
   const content: PdfNode[] = [...reportHeader(report, "Relatório de planejamento")];
   if (report.options.format === "REPORT") content.push(...summarySection(report));
+  content.push(...criticalPathSection(report));
   if (report.options.format === "REPORT" || report.options.format === "TASKS") {
     content.push({ text: "Atividades", style: "section", margin: [0, 4, 0, 8] }, taskTable(report));
     content.push(...detailSections(report));
@@ -324,6 +417,7 @@ export function buildProjectPdfDefinition(report: ProjectReport): PdfDefinition 
       margin: [0, 4, 0, 8],
       ...(report.options.format === "REPORT" ? { pageBreak: "before" } : {}),
     });
+    content.push(ganttLegend(report));
     content.push(ganttTable(report));
   }
 
@@ -350,6 +444,10 @@ export function buildProjectPdfDefinition(report: ProjectReport): PdfDefinition 
       metricNote: { fontSize: 6.5, color: COLORS.muted },
       chartLabel: { fontSize: 7, color: COLORS.muted },
       chartValue: { fontSize: 7, bold: true },
+      criticalLegendCritical: { fontSize: 7.5, color: COLORS.critical },
+      criticalLegendNear: { fontSize: 7.5, color: COLORS.nearCritical },
+      criticalLegendMeta: { fontSize: 7.5, color: COLORS.muted },
+      ganttLegendText: { fontSize: 7.2, color: COLORS.muted },
       tableHeader: { fontSize: 7.5, bold: true },
       detailTitle: { fontSize: 9, bold: true, color: COLORS.ink },
       detailMeta: { fontSize: 7, color: COLORS.muted },

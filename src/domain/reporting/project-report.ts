@@ -6,6 +6,7 @@ import {
   type ScheduleHealth,
 } from "../planning/baseline";
 import type { TaskDependency } from "../scheduling/dependency";
+import type { CriticalPathAnalysis, TaskCriticality } from "../scheduling/critical-path";
 import { flattenVisibleTasks } from "../tasks/hierarchy";
 import { buildTaskOutlineNumbers, taskOutlineLabel } from "../tasks/outline-number";
 import {
@@ -57,6 +58,7 @@ export interface ProjectReportRow {
   readonly notes: string | null;
   readonly predecessors: readonly string[];
   readonly predecessorIds: readonly string[];
+  readonly criticality: TaskCriticality | null;
 }
 
 export interface ProjectReport {
@@ -70,6 +72,7 @@ export interface ProjectReport {
   readonly scheduledCount: number;
   readonly timelineStart: string | null;
   readonly timelineEnd: string | null;
+  readonly criticalPath: CriticalPathAnalysis | null;
 }
 
 interface BuildProjectReportInput {
@@ -81,6 +84,7 @@ interface BuildProjectReportInput {
   readonly visibleTaskIds?: ReadonlySet<string>;
   readonly options: ProjectPdfOptions;
   readonly generatedAt?: string;
+  readonly criticalPath?: CriticalPathAnalysis | null;
 }
 
 function emptyCounts<T extends string>(values: readonly T[]): Record<T, number> {
@@ -106,6 +110,7 @@ export function buildProjectReport({
   visibleTaskIds,
   options,
   generatedAt = new Date().toISOString(),
+  criticalPath = null,
 }: BuildProjectReportInput): ProjectReport {
   if (
     options.timelineStart !== null &&
@@ -125,6 +130,7 @@ export function buildProjectReport({
     .filter(({ task }) => scopedIds.has(task.id));
   const tasksById = new Map(tasks.map((task) => [task.id, task]));
   const baselineByTaskId = new Map(baselineTasks.map((task) => [task.taskId, task]));
+  const criticalityByTaskId = new Map(criticalPath?.tasks.map((entry) => [entry.taskId, entry]) ?? []);
   const today = generatedAt.slice(0, 10);
 
   const rows = orderedTasks.map(({ task, depth }): ProjectReportRow => {
@@ -169,6 +175,7 @@ export function buildProjectReport({
       notes: task.notes,
       predecessors: predecessorLabels,
       predecessorIds,
+      criticality: criticalityByTaskId.get(task.id) ?? null,
     };
   });
 
@@ -196,5 +203,6 @@ export function buildProjectReport({
     scheduledCount: scheduledRows.length,
     timelineStart: options.timelineStart ?? naturalStart,
     timelineEnd: options.timelineEnd ?? naturalEnd,
+    criticalPath,
   };
 }

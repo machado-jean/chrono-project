@@ -757,6 +757,8 @@ button.baseline-status.active { cursor: pointer; color: #175cd3; font-weight: 70
 .pdf-export-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .pdf-export-grid label { display: grid; gap: 5px; color: #596879; font-size: 11px; font-weight: 650; }
 .pdf-export-grid input, .pdf-export-grid select { width: 100%; min-height: 34px; padding: 6px 8px; color: #2e3b4b; background: #f9fafb; border: 1px solid #d3dae3; border-radius: 6px; font-size: 12px; }
+.pdf-export-message { position: fixed; right: 20px; bottom: 20px; z-index: 70; display: inline-flex; align-items: center; gap: 3px; max-width: min(360px, calc(100vw - 40px)); min-width: 0; padding: 10px 12px; color: #27435a; background: #f8fbfc; border: 1px solid #b8d1dc; border-left: 3px solid #00899a; border-radius: 5px; box-shadow: 0 4px 14px rgb(22 34 53 / 14%); font-size: 12px; line-height: 1.2; white-space: nowrap; }
+.pdf-export-message > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pdf-export-dialog footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
 .pdf-export-dialog footer button { min-height: 34px; padding: 7px 12px; }
 .pdf-export-dialog:focus { outline: none; }
