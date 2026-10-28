@@ -306,7 +306,7 @@ Prepare o projeto **Auditoria — planejamento avançado** com
    observando que os
    filtros permanecem ao trocar de view;
 5. no Gantt, alternar Dias, Semanas e Meses;
-6. conferir 15 tarefas, seis relações FS, cinco níveis de hierarquia, barras de
+6. conferir 21 tarefas, seis relações FS, cinco níveis de hierarquia, barras de
    progresso e uma sucessora com quatro predecessoras;
 7. conferir a numeração até `1.1.1.1.1.` nas três views;
 8. verificar que tarefas-resumo refletem o intervalo completo dos descendentes;

@@ -24,6 +24,13 @@ publicada.
 - observadores internos do Gantt agrupados por quadro de desenho e lista de
   predecessoras do menu contextual adiada até sua abertura, evitando reações
   repetidas a uma mesma atualização visual;
+- relatórios PDF passam a usar a mesma análise de caminho crítico da interface,
+  com indicadores de meta, contornos de criticidade, legenda vetorial e
+  cabeçalho repetido em cada página do Gantt;
+- confirmação de PDF salva como notificação flutuante, sem deslocar os
+  controles do cabeçalho;
+- massa de auditoria ampliada para 21 tarefas, assegurando teste manual do
+  Gantt paginado;
 - novas mudanças do aplicativo devem ser registradas aqui antes do próximo
   ciclo de release.
 
