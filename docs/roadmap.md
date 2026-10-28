@@ -1718,7 +1718,7 @@ matriz no host, na VM limpa e no CI Windows.
 ### 7 de outubro de 2026 — Massa complementar e comportamento dos menus
 
 - O banco local recebeu o projeto isolado **Auditoria — planejamento avançado**,
-  com 15 tarefas, cinco níveis, seis relações FS, uma sucessora com quatro
+  com 21 tarefas, cinco níveis, seis relações FS, uma sucessora com quatro
   predecessoras, predecessora-resumo, lag, quatro responsáveis e três tarefas
   sem responsável.
 - O gerador `npm run dev:seed-advanced-audit` é idempotente, recria somente esse

@@ -175,7 +175,7 @@ tarefas `MANUAL` não são alteradas e seus avisos são reconstruídos.
 O cenário atual é preparado com `npm run dev:seed-advanced-audit`, com o
 aplicativo fechado. O comando cria ou recria no banco local o projeto
 **Auditoria — planejamento avançado**; o banco não é versionado e deve ser
-protegido por backup quando contiver outros dados relevantes. A massa possui 15
+protegido por backup quando contiver outros dados relevantes. A massa possui 21
 tarefas, seis dependências FS, cinco níveis de hierarquia, quatro responsáveis
 distintos, tarefas sem responsável e uma sucessora com quatro predecessoras.
 
@@ -189,7 +189,7 @@ distintos, tarefas sem responsável e uma sucessora com quatro predecessoras.
 | Atividade com folga | ramo independente | valida folga maior sem realce crítico |
 | Atividade manual bloqueada | tarefa `MANUAL` | preserva datas e informa conflito quando provocado |
 
-Fechar e reabrir o aplicativo deve preservar as 15 tarefas, as seis relações,
+Fechar e reabrir o aplicativo deve preservar as 21 tarefas, as seis relações,
 os responsáveis, a preferência do caminho crítico e o modo manual.
 
 Para auditar a propagação nos dois sentidos, altere uma predecessora de

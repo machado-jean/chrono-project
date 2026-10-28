@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import type { Project } from "../../../src/domain/projects/project";
 import { buildProjectPdfDefinition, generateProjectPdf } from "../../../src/domain/reporting/project-report-pdf";
+import { buildGanttSvgPages } from "../../../src/domain/reporting/project-report-gantt-svg";
 import { buildProjectReport, type ProjectPdfOptions } from "../../../src/domain/reporting/project-report";
 import type { TaskDependency } from "../../../src/domain/scheduling/dependency";
 import type { Task } from "../../../src/domain/tasks/task";
@@ -90,9 +91,21 @@ const options: ProjectPdfOptions = {
   timelineEnd: null,
 };
 
+const criticalPath = {
+  available: true,
+  reason: null,
+  projectEndDate: "2026-09-10",
+  targetEndDate: "2026-09-12",
+  projectTargetSlackDays: 2,
+  tasks: [
+    { taskId: PARENT_ID, totalSlackDays: 0, isCritical: true, isNearCritical: false },
+    { taskId: CHILD_ID, totalSlackDays: 2, isCritical: false, isNearCritical: true },
+  ],
+} as const;
+
 describe("relatório PDF de projeto", () => {
   it("preserva hierarquia, resumo, indicadores e predecessoras", () => {
-    const report = buildProjectReport({ project, tasks, dependencies, options, generatedAt: NOW });
+    const report = buildProjectReport({ project, tasks, dependencies, options, generatedAt: NOW, criticalPath });
 
     expect(report.rows.map((row) => row.label)).toEqual([
       "1. Planejar entrega",
@@ -105,6 +118,8 @@ describe("relatório PDF de projeto", () => {
     expect(report.averageProgress).toBe(75);
     expect(report.timelineStart).toBe("2026-09-08");
     expect(report.timelineEnd).toBe("2026-09-10");
+    expect(report.rows[0]?.criticality?.isCritical).toBe(true);
+    expect(report.rows[1]?.criticality?.totalSlackDays).toBe(2);
   });
 
   it("limita o relatório à projeção visível quando solicitado", () => {
@@ -131,7 +146,7 @@ describe("relatório PDF de projeto", () => {
   });
 
   it("cria definição completa e um PDF válido no cliente", async () => {
-    const report = buildProjectReport({ project, tasks, dependencies, options, generatedAt: NOW });
+    const report = buildProjectReport({ project, tasks, dependencies, options, generatedAt: NOW, criticalPath });
     const definition = buildProjectPdfDefinition(report);
     const bytes = await generateProjectPdf(report);
     const artifactPath = process.env.CHRONO_PROJECT_PDF_ARTIFACT;
@@ -145,7 +160,25 @@ describe("relatório PDF de projeto", () => {
     expect(JSON.stringify(definition)).toContain(">09</text>");
     expect(JSON.stringify(definition)).toContain('<path d=');
     expect(JSON.stringify(definition)).toContain('fill=\\"#F3F6FA\\"');
+    expect(JSON.stringify(definition)).toContain("Indicadores do cronograma");
+    expect(JSON.stringify(definition)).toContain("#A92D26");
+    expect(JSON.stringify(definition)).toContain("#7957C8");
     expect(new TextDecoder().decode(bytes.slice(0, 5))).toBe("%PDF-");
     expect(bytes.length).toBeGreaterThan(10_000);
+  });
+
+  it("repete o cabeçalho do Gantt em todas as páginas", () => {
+    const paginatedTasks = Array.from({ length: 19 }, (_, index) => task({
+      id: `20000000-0000-4000-8000-${String(index + 10).padStart(12, "0")}`,
+      parentId: null,
+      title: `Atividade de cronograma ${String(index + 1)}`,
+      position: index,
+    }));
+    const report = buildProjectReport({ project, tasks: paginatedTasks, dependencies: [], options, generatedAt: NOW });
+    const pages = buildGanttSvgPages(report);
+
+    expect(pages).toHaveLength(2);
+    expect(pages.every((page) => page.svg.includes(">Atividade</text>"))).toBe(true);
+    expect(pages.every((page) => page.svg.includes(">TER</text>"))).toBe(true);
   });
 });

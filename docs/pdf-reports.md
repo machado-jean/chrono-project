@@ -16,7 +16,15 @@ um projeto e selecione **Gerar PDF** no cabeçalho do projeto.
   cada data, colunas alternadas facilitam acompanhar muitas linhas e finais de
   semana usam fundo distinto. Dependências FS são desenhadas com cotovelos e
   setas; uma linha tracejada entrando pela borda indica origem fora da página ou
-  do período selecionado.
+  do período selecionado. A legenda usa amostras vetoriais para tarefa, resumo,
+  criticidade, proximidade do caminho crítico, fim de semana, dependência e,
+  quando presente, plano de referência.
+
+Quando o projeto possui análise de caminho crítico disponível, o relatório
+inclui a quantidade de tarefas críticas e quase críticas e a margem até a meta
+final. No Gantt, críticas recebem contorno vermelho contínuo e quase críticas,
+contorno roxo tracejado. Em documentos com mais de 18 atividades, cada página
+do Gantt repete o cabeçalho de atividade e a escala de datas.
 
 ## Opções
 
@@ -35,6 +43,9 @@ possui uma linha de base ativa.
 O intervalo temporal enquadra o gráfico, mas não remove atividades. Itens sem
 cronograma ou fora da janela recebem indicação textual. O seletor nativo permite
 escolher nome e pasta antes da gravação.
+Depois da gravação, a aplicação mostra uma confirmação flutuante com o nome do
+arquivo; o caminho completo fica disponível como dica e não desloca os controles
+do cabeçalho.
 
 ## Conteúdo e privacidade
 

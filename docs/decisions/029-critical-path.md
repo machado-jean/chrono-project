@@ -36,6 +36,9 @@ relação FS válida entre tarefas programadas, a análise é declarada indispon
 - Tabela, Gantt e filtros consomem o mesmo resultado determinístico.
 - O realce combina texto/forma/contorno e não depende somente de cor.
 - Mudanças de datas, calendários ou dependências recalculam a projeção em memória.
-- PDF e explicação detalhada da predecessora controladora podem ser adicionados
-  depois sem migration.
+- Os relatórios PDF consomem a mesma projeção: apresentam os indicadores do
+  cronograma, marcam barras críticas e quase críticas e mantêm uma legenda
+  vetorial correspondente ao Gantt.
+- A explicação detalhada da predecessora controladora pode ser adicionada depois
+  sem migration.
 - A auditoria de desempenho específica foi adiada até a conclusão das features.
