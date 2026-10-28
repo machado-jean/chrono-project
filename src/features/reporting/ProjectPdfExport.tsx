@@ -12,6 +12,7 @@ import {
 } from "../../domain/reporting/project-report";
 import { generateProjectPdf } from "../../domain/reporting/project-report-pdf";
 import type { TaskDependency } from "../../domain/scheduling/dependency";
+import type { CriticalPathAnalysis } from "../../domain/scheduling/critical-path";
 import type { Task } from "../../domain/tasks/task";
 
 interface ProjectPdfExportProps {
@@ -20,6 +21,7 @@ interface ProjectPdfExportProps {
   readonly dependencies: readonly TaskDependency[];
   readonly calendars: readonly Calendar[];
   readonly baselineTasks: readonly BaselineTask[];
+  readonly criticalPath: CriticalPathAnalysis;
   readonly visibleTaskIds: ReadonlySet<string>;
   readonly filtersActive: boolean;
   readonly disabled: boolean;
@@ -32,8 +34,23 @@ const FORMAT_DESCRIPTIONS: Readonly<Record<ProjectPdfFormat, { readonly title: s
   GANTT: { title: "Cronograma Gantt", description: "Linha do tempo visual para compartilhar ou imprimir." },
 };
 
+const FORMAT_FILE_SUFFIX: Readonly<Record<ProjectPdfFormat, string>> = {
+  REPORT: "relatorio",
+  TASKS: "atividades",
+  GANTT: "gantt",
+};
+
 function safeFilename(name: string): string {
-  return name.trim().replace(/[<>:"/\\|?*]+/g, "-").replace(/\s+/g, "-") || "projeto";
+  const normalized = name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return normalized || "projeto";
+}
+
+function filenameFromPath(path: string): string {
+  return path.split(/[\\/]/).at(-1) || path;
 }
 
 function scheduleBoundary(tasks: readonly Task[], boundary: "startDate" | "endDate"): string {
@@ -47,6 +64,7 @@ export function ProjectPdfExport({
   dependencies,
   calendars,
   baselineTasks,
+  criticalPath,
   visibleTaskIds,
   filtersActive,
   disabled,
@@ -61,7 +79,7 @@ export function ProjectPdfExport({
   const [includeBaseline, setIncludeBaseline] = useState(true);
   const [timelineStart, setTimelineStart] = useState("");
   const [timelineEnd, setTimelineEnd] = useState("");
-  const [message, setMessage] = useState<string | null>(null);
+  const [message, setMessage] = useState<{ readonly filename: string; readonly path: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const visibleCount = useMemo(
     () => tasks.filter((task) => visibleTaskIds.has(task.id)).length,
@@ -87,6 +105,7 @@ export function ProjectPdfExport({
         dependencies,
         calendars,
         baselineTasks,
+        criticalPath,
         visibleTaskIds,
         options: {
           format,
@@ -100,12 +119,12 @@ export function ProjectPdfExport({
       });
       const bytes = await generateProjectPdf(report);
       const path = await onSave(
-        `${safeFilename(project.name)}-${format.toLocaleLowerCase()}-chronoproject`,
+        `${safeFilename(project.name)}-${FORMAT_FILE_SUFFIX[format]}`,
         Array.from(bytes),
       );
       if (path === null) return;
       setOpen(false);
-      setMessage(`PDF salvo em ${path}`);
+      setMessage({ filename: filenameFromPath(path), path });
     } catch (operationError) {
       setError(operationError instanceof Error ? operationError.message : String(operationError));
     } finally {
@@ -118,7 +137,11 @@ export function ProjectPdfExport({
       <button className="secondary-button pdf-export-trigger" type="button" disabled={disabled} onClick={showDialog}>
         Gerar PDF
       </button>
-      {message !== null ? <span className="pdf-export-message" role="status">{message}</span> : null}
+      {message !== null ? (
+        <span className="pdf-export-message" role="status" title={`PDF salvo em ${message.path}`}>
+          PDF salvo: <span>{message.filename}</span>
+        </span>
+      ) : null}
       {open ? (
         <ModalDialog
           className="pdf-export-dialog"

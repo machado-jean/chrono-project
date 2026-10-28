@@ -101,6 +101,11 @@ function pageSvg(rows: readonly ProjectReportRow[], allRows: readonly ProjectRep
     const progress = row.isSummary ? "#087565" : "#1E40AF";
     parts.push(`<rect x="${bar.x}" y="${y}" width="${bar.width}" height="10" rx="1.5" fill="${color}"/>`);
     parts.push(`<rect x="${bar.x}" y="${y}" width="${bar.width * row.progress / 100}" height="10" rx="1.5" fill="${progress}"/>`);
+    if (row.criticality?.isCritical === true) {
+      parts.push(`<rect x="${bar.x - 1}" y="${y - 1}" width="${bar.width + 2}" height="12" rx="2" fill="none" stroke="#A92D26" stroke-width="2"/>`);
+    } else if (row.criticality?.isNearCritical === true) {
+      parts.push(`<rect x="${bar.x - 1}" y="${y - 1}" width="${bar.width + 2}" height="12" rx="2" fill="none" stroke="#7957C8" stroke-width="2" stroke-dasharray="3 2"/>`);
+    }
   });
   parts.push(`<line x1="0" y1="${height}" x2="${WIDTH}" y2="${height}" stroke="#D8DEE8" stroke-width="0.45"/></svg>`);
   return parts.join("");

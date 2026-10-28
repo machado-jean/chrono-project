@@ -396,6 +396,7 @@ function App({ repository }: AppProps) {
                     dependencies={workspace.selectedProjectDependencies}
                     calendars={workspace.calendars}
                     baselineTasks={workspace.activeBaselineTasks}
+                    criticalPath={criticalPath}
                     visibleTaskIds={visibleTaskIds}
                     filtersActive={filtersActive}
                     disabled={workspace.isSaving || workspace.selectedProjectTasks.length === 0}
