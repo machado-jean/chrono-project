@@ -178,14 +178,14 @@ function criticalPathSection(report: ProjectReport): PdfNode[] {
 
 function taskLabelCell(row: ProjectReport["rows"][number]): PdfNode {
   const marker = row.criticality?.isCritical === true
-    ? { text: "[Crítica] ", color: COLORS.critical, bold: true }
+    ? { text: "[Crítica] ", style: "criticalMarker" }
     : row.criticality?.isNearCritical === true
-      ? { text: "[Quase crítica] ", color: COLORS.nearCritical, bold: true }
+      ? { text: "[Quase crítica] ", style: "nearCriticalMarker" }
       : null;
   return {
     text: [
       ...(marker === null ? [] : [marker]),
-      { text: row.label, bold: row.isSummary },
+      row.isSummary ? { text: row.label, style: "summaryTaskLabel" } : { text: row.label },
     ],
     margin: [row.depth * 7, 0, 0, 0],
   };
@@ -447,6 +447,9 @@ export function buildProjectPdfDefinition(report: ProjectReport): PdfDefinition 
       criticalLegendCritical: { fontSize: 7.5, color: COLORS.critical },
       criticalLegendNear: { fontSize: 7.5, color: COLORS.nearCritical },
       criticalLegendMeta: { fontSize: 7.5, color: COLORS.muted },
+      criticalMarker: { bold: true, color: COLORS.critical },
+      nearCriticalMarker: { bold: true, color: COLORS.nearCritical },
+      summaryTaskLabel: { bold: true },
       ganttLegendText: { fontSize: 7.2, color: COLORS.muted },
       tableHeader: { fontSize: 7.5, bold: true },
       detailTitle: { fontSize: 9, bold: true, color: COLORS.ink },
