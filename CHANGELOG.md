@@ -9,7 +9,7 @@ schema e dados é descrita nas notas detalhadas.
 O escopo ainda não publicado está em
 [`docs/releases/next.md`](docs/releases/next.md).
 
-O candidato em preparação é [0.2.8](docs/releases/v0.2.8.md).
+O candidato em preparação é [0.2.9](docs/releases/v0.2.9.md).
 
 ## Versões publicadas
 

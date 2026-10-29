@@ -299,5 +299,5 @@ sobrescritas.
 
 Feriados municipais continuam sendo exceções manuais, pois dependem do município
 do usuário e não têm cobertura nacional uniforme na fonte adotada. A integração
-usa `date-holidays` 3.36.0 sob demanda, sem acesso à internet. Código e dados
+usa `date-holidays` 3.38.0 sob demanda, sem acesso à internet. Código e dados
 possuem as atribuições registradas em `THIRD_PARTY_NOTICES.md`.

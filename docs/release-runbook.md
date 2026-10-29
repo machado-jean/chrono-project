@@ -116,7 +116,9 @@ Antes de cada comando, usar a mediana recente daquele mesmo gate como referênci
   enquanto houver progresso, interrompendo o turno se permanecer ativa ao
   completar dois minutos;
 - mediana acima de 120 segundos, ou etapa sem histórico confiável: iniciar em
-  sessão persistente, fornecer o monitor e pausar imediatamente;
+  sessão persistente e acompanhar normalmente até completar dois minutos;
+  pausar somente se continuar ativa após esse limite ou se houver espera
+  interativa confirmada;
 - instaladores padrão/offline com cache aquecido podem ser acompanhados até o
   limite de dois minutos; uma espera confirmada em `Password:` deve ser
   comunicada imediatamente. Publicação remota continua sendo executada pelo
@@ -138,6 +140,43 @@ do início ao código de saída, além dos tempos internos exibidos por Cargo, V
 ou Vitest. Para instaladores, registrar separadamente build Rust, NSIS, espera
 interativa e total. Sem essa medição, não inferir a duração total a partir da
 linha `Finished ... profile` do Cargo.
+
+### Referências de duração e acompanhamento
+
+O relatório de cada candidato deve registrar a duração total de todos os gates.
+Antes do candidato seguinte, atualizar a tabela abaixo com a **mediana das três
+execuções mais recentes** do mesmo gate. A referência orienta o acompanhamento;
+nunca substitui o limite máximo de dois minutos.
+
+| Gate | Referência inicial | Conduta |
+| --- | ---: | --- |
+| `npm ci` | 10 s | executar normalmente; confirmar o lockfile instalado. |
+| `npm run check` | 30 s | executar normalmente; registrar a contagem de testes. |
+| `npm run test:e2e` | 40 s | executar normalmente com cache aquecido. |
+| `npm run test:performance` | 1 s | executar normalmente. |
+| `npm audit --audit-level=low` | 2 s | registrar separadamente vulnerabilidades sem correção segura. |
+| Cargo fmt | 1 s | executar normalmente. |
+| Cargo check/test/Clippy com cache aquecido | até 15 s | executar normalmente; primeiro build de worktree pode ultrapassar dois minutos. |
+| Executável sem bundle | 60 s | iniciar em sessão persistente e fazer uma verificação ao terminar. |
+| Instalador padrão | 80 s | iniciar em sessão persistente; checar também a assinatura. |
+| Instalador offline | acima de 120 s | iniciar em sessão persistente; acompanhar por até dois minutos e só então pausar se ainda estiver ativo. |
+
+Depois de iniciar uma etapa, evitar consultas repetidas: a primeira verificação
+deve ocorrer quando o comando terminar, quando o usuário avisar uma espera
+interativa ou quando se aproximar de dois minutos. Toda verificação de término
+deve confirmar os dois lados abaixo antes de marcar o item como aprovado:
+
+1. **Processo:** não há `cargo`, `rustc`, `makensis` ou host `cmd`/`node` ligado
+   ao comando de build.
+2. **Resultado:** o arquivo esperado existe, tem versão/tamanho coerentes e,
+   quando aplicável, a assinatura `.sig` foi gerada. Em seguida, calcular o
+   SHA-256 e copiar o resultado para o staging.
+
+Se o host `cmd`/`node` permanecer ativo sem `cargo`, `rustc` ou `makensis`, não
+tratar como término: inspecionar a sessão, pois isso normalmente indica espera
+interativa de assinatura. Para uma chave conhecida sem passphrase, usar
+`TAURI_SIGNING_PRIVATE_KEY_PASSWORD` como string vazia no processo do build em
+vez de depender de um Enter encaminhado por pipe.
 
 Pausar o turno do agente não reduz CPU, memória ou I/O consumidos pelo comando
 já iniciado. A pausa existe para não manter o agente consultando repetidamente
