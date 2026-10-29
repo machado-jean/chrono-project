@@ -605,8 +605,12 @@ describe("aplicação Chrono Project", () => {
     fireEvent.click(screen.getByText("Arquivo"));
     fireEvent.click(screen.getByRole("button", { name: "Importar pacote" }));
     const dialog = await screen.findByRole("dialog", { name: "Escolher conteúdo para importar" });
-    fireEvent.change(within(dialog).getByLabelText("Ação para Projeto existente"), { target: { value: "IGNORE" } });
-    fireEvent.change(within(dialog).getByLabelText("Ação para Projeto novo"), { target: { value: "COPY" } });
+    const existingProjectAction = within(dialog).getByLabelText("Ação para Projeto existente");
+    const newProjectAction = within(dialog).getByLabelText("Ação para Projeto novo");
+    fireEvent.change(existingProjectAction, { target: { value: "IGNORE" } });
+    await waitFor(() => expect(existingProjectAction).toHaveValue("IGNORE"));
+    fireEvent.change(newProjectAction, { target: { value: "COPY" } });
+    await waitFor(() => expect(newProjectAction).toHaveValue("COPY"));
     fireEvent.click(within(dialog).getByRole("button", { name: "Importar seleção" }));
 
     await waitFor(() => {

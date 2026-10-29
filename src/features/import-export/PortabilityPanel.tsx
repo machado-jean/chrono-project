@@ -208,9 +208,10 @@ export function PortabilityPanel({
                     aria-label={`Ação para ${project.name}`}
                     value={projectChoices[project.id] ?? "IGNORE"}
                     onChange={(event) => {
+                      const choice = event.currentTarget.value as ProjectChoice;
                       setProjectChoices((current) => ({
                         ...current,
-                        [project.id]: event.target.value as ProjectChoice,
+                        [project.id]: choice,
                       }));
                     }}
                   >
@@ -232,9 +233,10 @@ export function PortabilityPanel({
                     type="checkbox"
                     checked={templateChoices.has(template.id)}
                     onChange={(event) => {
+                      const selected = event.currentTarget.checked;
                       setTemplateChoices((current) => {
                         const next = new Set(current);
-                        if (event.target.checked) next.add(template.id); else next.delete(template.id);
+                        if (selected) next.add(template.id); else next.delete(template.id);
                         return next;
                       });
                     }}
