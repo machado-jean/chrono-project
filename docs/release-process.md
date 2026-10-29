@@ -7,6 +7,9 @@ precisa estar aprovado, sem criar um segundo quality gate para a tag.
 O procedimento operacional completo, incluindo executável, instaladores,
 assinaturas, staging, scripts e protocolo de espera, está em
 [`release-runbook.md`](release-runbook.md) e deve ser seguido integralmente.
+Ele também mantém as referências de duração por gate e exige a confirmação de
+processo encerrado **e** artefato gerado antes de qualquer etapa ser marcada
+como concluída.
 
 O agente prepara artefatos, documentação interna e conteúdo do GitHub Release.
 O usuário executa pessoalmente as etapas remotas finais: commit e push em uma

@@ -10,9 +10,9 @@ A seleção seguiu a ordem definida em `AGENTS.md`: compatibilidade, estabilidad
 - O scaffold foi criado com o utilitário oficial `create-tauri-app` ([guia oficial](https://v2.tauri.app/start/create-project/)).
 - Node 24 é a linha Active LTS escolhida; foi usado o patch x64 disponível no índice oficial em 26/08/2026 ([releases do Node](https://nodejs.org/en/about/previous-releases), [distribuição 24.x](https://nodejs.org/dist/latest-v24.x/)).
 - Rust 1.98.0 é stable e foi instalado pelo Rustup oficial com o host MSVC x64 ([anúncio 1.98.0](https://blog.rust-lang.org/2026/08/20/Rust-1.98.0/), [instalação](https://www.rust-lang.org/tools/install)).
-- Vite 8.2 é suportado e aceita Node `^20.19 || >=22.12` ([política de releases](https://vite.dev/releases)).
-- React 19.2 é a linha estável atual ([versões do React](https://react.dev/versions)).
-- TypeScript 7.0.2 não foi adotado porque `typescript-eslint` 8.68.0 declara suporte a TypeScript `<6.1.0`. TypeScript 6.0.3 é a versão estável mais recente dentro da faixa compatível.
+- Vite 8.3 é suportado e aceita Node `^20.19 || >=22.12` ([política de releases](https://vite.dev/releases)).
+- React 19.3 é a linha estável resolvida no candidato ([versões do React](https://react.dev/versions)).
+- TypeScript 6.0.3 permanece compatível com `typescript-eslint` 8.72.0.
 
 ## Ferramentas-base
 
@@ -43,25 +43,25 @@ portanto o recurso não foi habilitado nem alterado.
 | @tauri-apps/cli | 2.11.4 | MIT/Apache-2.0 | CLI local |
 | Tauri (crate) | 2.11.5 | MIT/Apache-2.0 | shell desktop |
 | tauri-build | 2.6.3 | MIT/Apache-2.0 | build nativo |
-| React / React DOM | 19.2.8 | MIT | apresentação |
+| React / React DOM | 19.3.1 | MIT | apresentação |
 | TypeScript | 6.0.3 | Apache-2.0 | linguagem e typecheck |
-| Vite | 8.2.2 | MIT | servidor e build frontend |
-| @vitejs/plugin-react | 6.1.0 | MIT | integração React/Vite |
-| ESLint / typescript-eslint | 10.9.1 / 8.68.0 | MIT | lint estrito e type-aware |
-| Vitest | 4.1.11 | MIT | testes TypeScript |
+| Vite | 8.3.5 | MIT | servidor e build frontend |
+| @vitejs/plugin-react | 6.1.2 | MIT | integração React/Vite |
+| ESLint / typescript-eslint | 10.13.0 / 8.72.0 | MIT | lint estrito e type-aware |
+| Vitest | 4.1.12 | MIT | testes TypeScript |
 | Tauri SQL plugin | 2.4.0 | MIT/Apache-2.0 | SQLite e migrations |
 | SQLx | 0.8.6 | MIT/Apache-2.0 | teste nativo da migration |
 | SQLite runtime | 3.46.0 | domínio público | persistência embarcada |
 | Tauri Log plugin | 2.9.0 | MIT/Apache-2.0 | logs locais |
-| SVAR React Gantt | 2.7.1 | MIT | renderer local do Gantt, carregado sob demanda |
-| date-holidays | 3.36.0 | ISC (código) / CC BY-SA 3.0 (dados) | catálogo offline de feriados brasileiros, carregado sob demanda |
+| SVAR React Gantt | 2.8.1 | MIT | renderer local do Gantt, carregado sob demanda |
+| date-holidays | 3.38.0 | ISC (código) / CC BY-SA 3.0 (dados) | catálogo offline de feriados brasileiros, carregado sob demanda |
 | Tauri Dialog plugin | 2.7.2 | MIT/Apache-2.0 | seletores nativos de exportação/importação |
 | Tauri Opener plugin | 2.5.4 | MIT/Apache-2.0 | abertura restrita dos instaladores publicados no navegador padrão |
-| Playwright Core | 1.62.1 | Apache-2.0 | diagnóstico CDP local da janela Tauri; sem navegador incorporado |
-| pdfmake / @types/pdfmake | 0.3.11 / 0.3.3 | MIT | relatórios PDF locais com tabelas e gráficos vetoriais, carregados sob demanda |
-| zip (crate) | 8.6.0 | MIT | leitura e escrita estrita de `.chronoproject` |
+| Playwright Core | 1.64.1 | Apache-2.0 | diagnóstico CDP local da janela Tauri; sem navegador incorporado |
+| pdfmake / @types/pdfmake | 0.3.12 / 0.3.3 | MIT | relatórios PDF locais com tabelas e gráficos vetoriais, carregados sob demanda |
+| zip (crate) | 9.1.0 | MIT | leitura e escrita estrita de `.chronoproject` |
 | sha2 (crate) | 0.11.0 | MIT/Apache-2.0 | integridade SHA-256 dos pacotes |
-| uuid (crate) | 1.26.0 | MIT/Apache-2.0 | remapeamento na importação como cópia |
+| uuid (crate) | 1.28.0 | MIT/Apache-2.0 | remapeamento na importação como cópia |
 | chrono (crate) | 0.4.45 | MIT/Apache-2.0 | timestamps e nomes de backup |
 
 O renderer PDF e as fontes Roboto ficam em chunks carregados somente ao gerar
@@ -97,9 +97,9 @@ npm install
 npm run tauri add sql
 cargo add tauri-plugin-sql --features sqlite
 npm run tauri add log
-npm install @svar-ui/react-gantt@2.7.1 --save-exact
-npm install --save-dev --save-exact playwright-core@1.62.1
-npm install --save-exact pdfmake@0.3.11
+npm install @svar-ui/react-gantt@2.8.1 --save-exact
+npm install --save-dev --save-exact playwright-core@1.64.1
+npm install --save-exact pdfmake@0.3.12
 npm install --save-dev --save-exact @types/pdfmake@0.3.3
 cd src-tauri
 cargo add tauri-plugin-dialog@2.7.2
@@ -344,7 +344,7 @@ testes nativos cobrem especificamente portabilidade, integridade, rollback e
 restauração. O release de teste foi gerado por último e o log confirmou schema
 4 usando `.local/data/chronoproject.sqlite`.
 
-Depois da Fase 6, `date-holidays` 3.36.0 foi adicionada somente ao projeto, sem
+Depois da Fase 6, `date-holidays` (atual 3.38.0) foi adicionada somente ao projeto, sem
 instalação global. O chunk do catálogo é carregado quando a prévia de feriados é
 solicitada; atribuição e licença estão em `THIRD_PARTY_NOTICES.md`. Foram
 aprovados 84 testes TypeScript/React, 29 testes Rust/SQLite, lint, typecheck,
@@ -383,7 +383,7 @@ foi instalado provisoriamente no perfil Cargo durante a investigação e removid
 com `cargo uninstall tauri-driver`; nenhuma ferramenta E2E permaneceu global.
 Ele não é requisito para compilar, testar, instalar ou executar o produto.
 
-Também foi avaliado `playwright-core` 1.62.1 como cliente CDP. Ele não possui
+Também foi avaliado `playwright-core` 1.64.1 como cliente CDP. Ele não possui
 dependências transitivas, não baixa navegador e manteve `npm audit` limpo. No
 WebView2 151 deste host, contudo, a ativação da automação provoca
 `HRESULT 0x800700AA` ao criar a janela. O mesmo sintoma está registrado a partir

@@ -1,6 +1,6 @@
 # Avisos de terceiros
 
-## date-holidays 3.36.0
+## date-holidays 3.38.0
 
 O Chrono Project usa a biblioteca `date-holidays` para oferecer uma prévia offline de
 feriados nacionais e estaduais do Brasil.
@@ -25,7 +25,7 @@ projeto. A capability nativa restringe os endereços permitidos.
 - projeto: <https://github.com/tauri-apps/plugins-workspace/tree/v2/plugins/opener>;
 - documentação: <https://v2.tauri.app/plugin/opener/>.
 
-## Playwright Core 1.62.1
+## Playwright Core 1.64.1
 
 O Chrono Project usa `playwright-core` somente no diagnóstico local da automação da
 janela Tauri. O pacote não incorpora navegador, não é necessário no gate E2E em

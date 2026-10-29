@@ -4,7 +4,7 @@ Este é o registro vivo de execução do Chrono Project. Ele traduz o roadmap de
 
 `AGENTS.md` continua sendo a fonte de verdade para produto, arquitetura e regras operacionais. Este documento não substitui a especificação e não deve introduzir escopo incompatível com ela.
 
-Última atualização: **11 de outubro de 2026**.
+Última atualização: **29 de outubro de 2026**.
 
 ## Como manter este documento
 
@@ -31,13 +31,13 @@ Não usar percentuais subjetivos. O progresso deve ser demonstrado por entregáv
 
 | Item | Estado |
 | --- | --- |
-| Etapa do produto | v0.2.7 publicada; submissão ao WinGet validada |
+| Etapa do produto | candidato v0.2.9 preparado; submissão ao WinGet segue aguardando moderador |
 | Fase ativa | Hardening e distribuição Windows |
 | Próxima fase | Aprovação do moderador do WinGet e definição do próximo incremento |
-| Versão da aplicação | `0.2.7` |
+| Versão da aplicação | `0.2.9` |
 | Versão do schema SQLite | `9` |
-| Último commit de referência | `28b4ad1` — manifests WinGet e documentação de submissão |
-| Branch de trabalho | `main`; atualização de governança/documentação ainda não commitada |
+| Último commit de referência | `90630f5` — toolchain de frontend conciliado e importação estabilizada |
+| Branch de trabalho | `release/v0.2.9`; candidato local em preparação |
 | Checkpoints obrigatórios | A, B, C e D concluídos; E preparado localmente |
 | Funcionalidades de negócio | Core, scheduler, views, reutilização e portabilidade implementados |
 
@@ -1112,7 +1112,7 @@ matriz no host, na VM limpa e no CI Windows.
 - Feriados oficiais são pré-selecionados. Feriados bancários e pontos
   facultativos são exibidos com sua classificação e exigem seleção consciente.
 - Exceções já cadastradas nunca são sobrescritas pela importação.
-- `date-holidays` 3.36.0 foi adicionada localmente e carregada sob demanda; o
+- `date-holidays` (atual 3.38.0) é carregada localmente sob demanda; o
   código é ISC e os dados são CC BY-SA 3.0, com atribuição em
   `THIRD_PARTY_NOTICES.md`.
 - Nenhuma migration foi necessária: as datas escolhidas usam a entidade de
