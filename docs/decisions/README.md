@@ -23,7 +23,7 @@ histórico.
 | [004](004-date-only.md) | Datas `date-only` | Aceito |
 | [005](005-local-first.md) | Arquitetura local-first | Aceito |
 | [006](006-no-sync-v1.md) | Sem sincronização na V1 | Aceito |
-| [007](007-portuguese-interface.md) | Interface em português | Aceito |
+| [007](007-portuguese-interface.md) | Interface em português | Substituído parcialmente pelo ADR 032 |
 | [008](008-configurable-working-week.md) | Semana útil configurável | Aceito |
 | [009](009-fs-scheduling-policy.md) | Política FS reativa | Aceito/revisado |
 | [010](010-task-calendar-override.md) | Calendário por tarefa | Aceito |
@@ -48,5 +48,6 @@ histórico.
 | [029](029-critical-path.md) | Caminho crítico e margem | Aceito |
 | [030](030-mit-license.md) | Licença MIT | Implementado |
 | [031](031-winget-distribution.md) | Distribuição WinGet | Implementado; submissão em revisão |
+| [032](032-interface-localization.md) | Localização da interface | Aceito |
 
-O próximo número disponível é **032**.
+O próximo número disponível é **033**.

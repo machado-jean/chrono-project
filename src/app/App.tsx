@@ -20,9 +20,11 @@ import { useWorkspace } from "../state/use-workspace";
 import "./App.css";
 import { scheduleYears } from "../domain/calendars/official-holidays";
 import { WorkspaceHelpMenu } from "../components/WorkspaceHelpMenu";
+import { LanguageMenu } from "../components/LanguageMenu";
 import { WorkspaceMenuBar } from "../components/WorkspaceMenuBar";
 import { TextContextMenu } from "../components/TextContextMenu";
 import { ModalDialog } from "../components/ModalDialog";
+import { LanguageProvider, useLanguage } from "../i18n/language";
 import type { Task } from "../domain/tasks/task";
 import { TASK_PRIORITY_LABELS, TASK_STATUS_LABELS } from "../domain/tasks/task";
 import { collectTaskTreeIds } from "../domain/tasks/hierarchy";
@@ -65,7 +67,8 @@ function suggestedReopenProgress(task: Task): number {
   return 99;
 }
 
-function App({ repository }: AppProps) {
+function AppContent({ repository }: AppProps) {
+  const { t } = useLanguage();
   const activeRepository = useMemo(() => repository ?? new TauriWorkspaceRepository(), [repository]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeView, setActiveView] = useState<ProjectView>("TABLE");
@@ -259,7 +262,7 @@ function App({ repository }: AppProps) {
   return (
     <div className={`app-shell${sidebarCollapsed ? " sidebar-collapsed" : ""}`}>
       <TextContextMenu />
-      <a className="skip-link" href="#workspace-content">Ir para o conteúdo principal</a>
+      <a className="skip-link" href="#workspace-content">{t("app.skipToContent")}</a>
       <WorkspaceMenuBar
         sidebarCollapsed={sidebarCollapsed}
         canGoBack={selectedProjectIndex > 0}
@@ -319,6 +322,7 @@ function App({ repository }: AppProps) {
             />
           </>
         )}
+        <LanguageMenu />
         <WorkspaceHelpMenu />
       </WorkspaceMenuBar>
       <ProjectViewRail
@@ -345,22 +349,22 @@ function App({ repository }: AppProps) {
         {workspace.error !== null ? (
           <div className="error-banner" role="alert">
             <span>{workspace.error}</span>
-            <button type="button" aria-label="Fechar mensagem de erro" onClick={workspace.clearError}>Fechar</button>
+            <button type="button" aria-label={t("app.closeError")} onClick={workspace.clearError}>{t("app.close")}</button>
           </div>
         ) : null}
 
         {workspace.isLoading ? (
           <section className="center-state" aria-live="polite">
             <div className="loading-indicator" aria-hidden="true" />
-            <h1>Carregando seu workspace…</h1>
-            <p>Os dados permanecem neste computador.</p>
+            <h1>{t("app.loading")}</h1>
+            <p>{t("app.localData")}</p>
           </section>
         ) : workspace.selectedProject === null ? (
           <>
             <section className="center-state">
               <img className="empty-illustration" src={chronoMark} alt="" />
-              <h1>Organize seu primeiro projeto</h1>
-              <p>Use o botão “+” ao lado de Projetos para criar um espaço de planejamento.</p>
+              <h1>{t("app.emptyTitle")}</h1>
+              <p>{t("app.emptyDescription")}</p>
             </section>
           </>
         ) : (
@@ -447,7 +451,7 @@ function App({ repository }: AppProps) {
           </div>
         )}
 
-        {workspace.isSaving ? <div className="saving-toast" role="status">Salvando no dispositivo…</div> : null}
+        {workspace.isSaving ? <div className="saving-toast" role="status">{t("app.saving")}</div> : null}
       </main>
       {completionRequest === null ? null : (
         <ModalDialog
@@ -549,6 +553,14 @@ function App({ repository }: AppProps) {
         </ModalDialog>
       )}
     </div>
+  );
+}
+
+function App({ repository }: AppProps) {
+  return (
+    <LanguageProvider>
+      {repository === undefined ? <AppContent /> : <AppContent repository={repository} />}
+    </LanguageProvider>
   );
 }
 

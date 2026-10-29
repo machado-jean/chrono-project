@@ -1808,9 +1808,10 @@ matriz no host, na VM limpa e no CI Windows.
 - O README principal foi condensado como página de produto em PT-BR, usando a
   marca oficial, badges verificáveis, downloads permanentes e acesso rápido à
   documentação técnica.
-- `README.en.md` apresenta o mesmo produto em inglês e informa explicitamente
-  que a interface do aplicativo ainda está disponível apenas em português do
-  Brasil.
+- `README.en.md` apresentou o mesmo produto em inglês e, naquele momento,
+  informou explicitamente que a interface do aplicativo ainda estava disponível
+  apenas em português do Brasil. O ADR 032 substitui essa condição: a interface
+  passou a oferecer também inglês com seleção local persistente.
 - A política de branding passou a registrar o uso da marca, badges, links de
   download e topics no GitHub.
 - A apresentação inicial declarou de forma transparente a ausência de licença;

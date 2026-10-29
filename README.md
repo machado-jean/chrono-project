@@ -47,6 +47,7 @@ virar uma planilha genérica ou um painel SaaS.
 | Cronograma | Dependências Término–Início, múltiplas predecessoras, lag, dias úteis, feriados e propagação automática |
 | Análise | Plano de referência, desvios, prazo-limite, saúde, caminho crítico, folga e margem da meta |
 | Visualizações | Tabela editável, Kanban por status e Gantt hierárquico sincronizados sobre os mesmos dados |
+| Idioma | Interface em Português (Brasil) e inglês, com seleção local persistente e sem traduzir os dados do projeto |
 | Produtividade | Edição inline, ações em massa, menus de contexto, histórico, `Ctrl+Z` e `Ctrl+Shift+Z` |
 | Reutilização | Duplicação de tarefas e projetos, templates de árvores e preservação de relações internas |
 | Portabilidade | Exportação `.chronoproject`, importação seletiva, backup verificado e relatórios PDF locais |

@@ -9,11 +9,10 @@ import {
 } from "../../domain/tasks/outline-number";
 import {
   TASK_STATUSES,
-  TASK_STATUS_LABELS,
-  TASK_PRIORITY_LABELS,
   type Task,
   type TaskStatus,
 } from "../../domain/tasks/task";
+import { useLanguage } from "../../i18n/language";
 import { taskSaveWasCancelled, taskSaveSucceeded, type TaskSaveResult } from "../../domain/tasks/task-save";
 
 interface TaskKanbanProps {
@@ -66,6 +65,7 @@ export function TaskKanban({
   onDuplicate,
   onDelete,
 }: TaskKanbanProps) {
+  const { priorityLabel, statusLabel, t } = useLanguage();
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
   const [dropTargetStatus, setDropTargetStatus] = useState<TaskStatus | null>(null);
   const [savingTaskId, setSavingTaskId] = useState<string | null>(null);
@@ -97,7 +97,7 @@ export function TaskKanban({
     try {
       const saved = await onSave({ ...task, status });
       if (taskSaveSucceeded(saved)) {
-        setAnnouncement(`${task.title} movida para ${TASK_STATUS_LABELS[status]}.`);
+        setAnnouncement(`${task.title} ${t("kanban.movedTo")} ${statusLabel(status)}.`);
       } else if (!taskSaveWasCancelled(saved)) {
         setLocalError("Não foi possível salvar o novo status. A tarefa permaneceu na coluna anterior.");
       }
@@ -140,7 +140,7 @@ export function TaskKanban({
       .filter((status) => status !== contextMenu.task.status)
       .map((status) => ({
         id: `status-${status}`,
-        label: `Mover para ${TASK_STATUS_LABELS[status]}`,
+        label: `${t("kanban.moveTo")} ${statusLabel(status)}`,
         disabled: disabled || savingTaskId === contextMenu.task.id,
         onSelect: () => { void changeStatus(contextMenu.task, status); },
       } satisfies ContextMenuItem)),
@@ -175,8 +175,8 @@ export function TaskKanban({
     <section className="kanban-section" aria-labelledby="kanban-title">
       <header className="view-heading">
         <div>
-          <h2 id="kanban-title">Quadro Kanban</h2>
-          <p>Arraste um cartão ou altere o campo “Status”.</p>
+          <h2 id="kanban-title">{t("kanban.title")}</h2>
+          <p>{t("kanban.description")}</p>
         </div>
         <span>{String(tasks.length)} tarefa{tasks.length === 1 ? "" : "s"}</span>
       </header>
@@ -185,11 +185,11 @@ export function TaskKanban({
 
       {tasks.length === 0 ? (
         <div className="view-empty" role="status">
-          <strong>Nenhuma tarefa corresponde aos filtros.</strong>
-          <span>Limpe ou ajuste os filtros para recuperar os cartões.</span>
+          <strong>{t("kanban.noTasks")}</strong>
+          <span>{t("kanban.adjustFilters")}</span>
         </div>
       ) : (
-        <div className="kanban-board" aria-label="Tarefas organizadas por status">
+        <div className="kanban-board" aria-label={t("kanban.board")}>
           {TASK_STATUSES.map((status) => {
             const columnTasks = tasks.filter((task) => task.status === status);
             return (
@@ -200,12 +200,12 @@ export function TaskKanban({
                 data-kanban-status={status}
               >
                 <header>
-                  <h3 id={`kanban-${status}`}>{TASK_STATUS_LABELS[status]}</h3>
+                  <h3 id={`kanban-${status}`}>{statusLabel(status)}</h3>
                   <span aria-label={`${String(columnTasks.length)} tarefas`}>{String(columnTasks.length)}</span>
                 </header>
                 <div className="kanban-cards">
                   {columnTasks.length === 0 ? (
-                    <p className="kanban-column-empty">Solte uma tarefa aqui</p>
+                    <p className="kanban-column-empty">{t("kanban.dropHere")}</p>
                   ) : columnTasks.map((task) => {
                     const predecessors = dependencies.filter(
                       (dependency) => dependency.successorId === task.id,
@@ -257,7 +257,7 @@ export function TaskKanban({
                             <strong>{titleWithoutMatchingOutline(task.title, outlineNumber)}</strong>
                           </div>
                           <div className="kanban-card-actions">
-                            {summaryIds.has(task.id) ? <span>Resumo</span> : null}
+                            {summaryIds.has(task.id) ? <span>{t("kanban.summary")}</span> : null}
                             <button
                               ref={contextMenu?.task.id === task.id ? contextMenuButtonRef : undefined}
                               type="button"
@@ -274,7 +274,7 @@ export function TaskKanban({
                         </div>
                         <div className="kanban-meta">
                           <span className={`priority priority-${task.priority.toLocaleLowerCase()}`}>
-                            {TASK_PRIORITY_LABELS[task.priority]}
+                            {priorityLabel(task.priority)}
                           </span>
                           <span>{taskDates(task)}</span>
                         </div>
@@ -287,12 +287,12 @@ export function TaskKanban({
                           {task.assignee === null ? null : <span>{task.assignee}</span>}
                         </div>
                         {task.tags.length === 0 ? null : (
-                          <ul className="kanban-tags" aria-label="Tags">
+                          <ul className="kanban-tags" aria-label={t("kanban.tags")}>
                             {task.tags.map((tag) => <li key={tag}>{tag}</li>)}
                           </ul>
                         )}
                         <label className="kanban-move">
-                          <span>Status</span>
+                          <span>{t("kanban.status")}</span>
                           <select
                             aria-label={`Status de ${task.title}`}
                             value={task.status}
@@ -303,7 +303,7 @@ export function TaskKanban({
                           >
                             {TASK_STATUSES.map((candidate) => (
                               <option value={candidate} key={candidate}>
-                                {TASK_STATUS_LABELS[candidate]}
+                                {statusLabel(candidate)}
                               </option>
                             ))}
                           </select>

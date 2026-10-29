@@ -15,6 +15,7 @@ import { TaskFilterBar } from "./TaskFilterBar";
 import { ViewErrorBoundary } from "./ViewErrorBoundary";
 import { PROJECT_VIEW_LABELS, type ProjectView } from "./project-view";
 import type { TaskFilters } from "./task-filters";
+import { useLanguage } from "../../i18n/language";
 
 const TaskGantt = lazy(async () => {
   const module = await import("../gantt/TaskGantt");
@@ -87,6 +88,7 @@ interface ProjectViewRailProps {
 }
 
 export function ProjectViewRail({ activeView, disabled = false, onViewChange }: ProjectViewRailProps) {
+  const { t, viewLabel } = useLanguage();
   const moveTabFocus = (event: KeyboardEvent<HTMLButtonElement>, view: ProjectView): void => {
     const views = Object.keys(PROJECT_VIEW_LABELS) as ProjectView[];
     const currentIndex = views.indexOf(view);
@@ -105,15 +107,15 @@ export function ProjectViewRail({ activeView, disabled = false, onViewChange }: 
   };
 
   return (
-    <nav className="view-rail" aria-label="Visualização do projeto" role="tablist">
+    <nav className="view-rail" aria-label={t("view.projectView")} role="tablist">
       {(Object.keys(PROJECT_VIEW_LABELS) as ProjectView[]).map((view) => (
         <button
           key={view}
           type="button"
           role="tab"
           id={`view-tab-${view.toLocaleLowerCase()}`}
-          aria-label={PROJECT_VIEW_LABELS[view]}
-          title={PROJECT_VIEW_LABELS[view]}
+          aria-label={viewLabel(view)}
+          title={viewLabel(view)}
           aria-selected={activeView === view}
           aria-controls={`view-panel-${view.toLocaleLowerCase()}`}
           tabIndex={activeView === view ? 0 : -1}

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type MouseEvent, type SyntheticEvent } from "react";
 
-import { PROJECT_STATUS_LABELS, type Project } from "../../domain/projects/project";
+import type { Project } from "../../domain/projects/project";
+import { useLanguage } from "../../i18n/language";
 
 interface ProjectSidebarProps {
   readonly collapsed: boolean;
@@ -34,6 +35,7 @@ export function ProjectSidebar({
   onExport,
   onDelete,
 }: ProjectSidebarProps) {
+  const { projectStatusLabel, t } = useLanguage();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
   const [name, setName] = useState("");
@@ -72,7 +74,7 @@ export function ProjectSidebar({
 
   const deleteProject = (project: Project): void => {
     setContextMenu(null);
-    if (window.confirm(`Excluir definitivamente “${project.name}” e todas as suas tarefas? Esta ação não pode ser desfeita.`)) {
+    if (window.confirm(`${t("sidebar.deleteConfirm")} (${project.name})`)) {
       void onDelete(project.id);
     }
   };
@@ -83,11 +85,11 @@ export function ProjectSidebar({
     setExportNotice(null);
     try {
       const path = await onExport(project);
-      if (path !== null) setExportNotice({ kind: "success", text: `Projeto exportado para ${path}` });
+      if (path !== null) setExportNotice({ kind: "success", text: `${t("sidebar.exported")} ${path}` });
     } catch (error) {
       setExportNotice({
         kind: "error",
-        text: error instanceof Error ? error.message : "Não foi possível exportar o projeto.",
+        text: error instanceof Error ? error.message : t("sidebar.exportError"),
       });
     } finally {
       setExportingProjectId(null);
@@ -105,22 +107,22 @@ export function ProjectSidebar({
   };
 
   return (
-    <aside className={`project-sidebar${collapsed ? " collapsed" : ""}`} aria-label="Projetos">
+    <aside className={`project-sidebar${collapsed ? " collapsed" : ""}`} aria-label={t("project.projects")}>
       {collapsed ? (
         null
       ) : (
         <>
       <div className="brand-block">
-        <strong className="brand-context">Projetos</strong>
+        <strong className="brand-context">{t("project.projects")}</strong>
       </div>
 
       <div className="sidebar-heading">
-        <h2>Recentes</h2>
+        <h2>{t("project.recent")}</h2>
         <button
           className="icon-button"
           type="button"
-          aria-label="Criar projeto"
-          title="Criar projeto"
+          aria-label={t("project.create")}
+          title={t("project.create")}
           disabled={disabled}
           onClick={() => { setShowCreateForm((visible) => !visible); }}
         >+</button>
@@ -129,22 +131,22 @@ export function ProjectSidebar({
       {showCreateForm ? (
         <form className="create-project-form" onSubmit={(event) => void handleSubmit(event)}>
           <label>
-            Nome
+            {t("project.name")}
             <input autoFocus required value={name} disabled={disabled} onChange={(event) => { setName(event.target.value); }} />
           </label>
           <label>
-            Descrição
+            {t("project.description")}
             <textarea rows={2} value={description} disabled={disabled} onChange={(event) => { setDescription(event.target.value); }} />
           </label>
           <div className="form-actions">
-            <button className="primary-button compact" type="submit" disabled={disabled}>Criar</button>
-            <button className="text-button" type="button" onClick={() => { setShowCreateForm(false); }}>Cancelar</button>
+            <button className="primary-button compact" type="submit" disabled={disabled}>{t("project.createAction")}</button>
+            <button className="text-button" type="button" onClick={() => { setShowCreateForm(false); }}>{t("app.cancel")}</button>
           </div>
         </form>
       ) : null}
 
-      <nav className="project-list" aria-label="Lista de projetos">
-        {visibleProjects.length === 0 ? <p className="sidebar-empty">Nenhum projeto nesta lista.</p> : visibleProjects.map((project) => (
+      <nav className="project-list" aria-label={t("sidebar.list")}>
+        {visibleProjects.length === 0 ? <p className="sidebar-empty">{t("sidebar.empty")}</p> : visibleProjects.map((project) => (
           <button
             className={project.id === selectedProjectId ? "project-item selected" : "project-item"}
             type="button"
@@ -156,7 +158,7 @@ export function ProjectSidebar({
             <span className="project-color" aria-hidden="true" />
             <span>
               <strong>{project.name}</strong>
-              <small>{PROJECT_STATUS_LABELS[project.status]}{project.isArchived ? " · Arquivado" : ""}</small>
+              <small>{projectStatusLabel(project.status)}{project.isArchived ? ` · ${t("sidebar.archived")}` : ""}</small>
             </span>
           </button>
         ))}
@@ -164,9 +166,9 @@ export function ProjectSidebar({
 
       <label className="archive-toggle">
         <input type="checkbox" checked={showArchived} onChange={(event) => { setShowArchived(event.target.checked); }} />
-        Mostrar arquivados
+        {t("sidebar.showArchived")}
       </label>
-      {exportingProjectId === null ? null : <p className="sidebar-operation-message" role="status">Exportando projeto…</p>}
+      {exportingProjectId === null ? null : <p className="sidebar-operation-message" role="status">{t("sidebar.exporting")}</p>}
       {exportNotice === null ? null : (
         <p className={`sidebar-operation-message ${exportNotice.kind}`} role={exportNotice.kind === "error" ? "alert" : "status"}>
           {exportNotice.text}
@@ -177,21 +179,21 @@ export function ProjectSidebar({
           ref={contextMenuRef}
           className="project-context-menu"
           role="menu"
-          aria-label={`Ações de ${contextMenu.project.name}`}
+          aria-label={`${t("sidebar.actions")} ${contextMenu.project.name}`}
           style={{ left: contextMenu.x, top: contextMenu.y }}
         >
           <strong>{contextMenu.project.name}</strong>
           <button role="menuitem" type="button" disabled={disabled || exportingProjectId !== null} onClick={() => { void exportProject(contextMenu.project); }}>
-            Exportar projeto…
+            {t("sidebar.export")}
           </button>
           <button role="menuitem" type="button" disabled={disabled} onClick={() => {
             setContextMenu(null);
             void onArchive({ ...contextMenu.project, isArchived: !contextMenu.project.isArchived });
           }}>
-            {contextMenu.project.isArchived ? "Restaurar projeto" : "Arquivar projeto"}
+            {contextMenu.project.isArchived ? t("sidebar.restore") : t("sidebar.archive")}
           </button>
           <button className="danger-menu-item" role="menuitem" type="button" disabled={disabled} onClick={() => { deleteProject(contextMenu.project); }}>
-            Excluir projeto…
+            {t("sidebar.delete")}
           </button>
         </div>
       )}

@@ -14,6 +14,7 @@ import { generateProjectPdf } from "../../domain/reporting/project-report-pdf";
 import type { TaskDependency } from "../../domain/scheduling/dependency";
 import type { CriticalPathAnalysis } from "../../domain/scheduling/critical-path";
 import type { Task } from "../../domain/tasks/task";
+import { useLanguage } from "../../i18n/language";
 
 interface ProjectPdfExportProps {
   readonly project: Project;
@@ -27,12 +28,6 @@ interface ProjectPdfExportProps {
   readonly disabled: boolean;
   readonly onSave: (suggestedName: string, bytes: readonly number[]) => Promise<string | null>;
 }
-
-const FORMAT_DESCRIPTIONS: Readonly<Record<ProjectPdfFormat, { readonly title: string; readonly description: string }>> = {
-  REPORT: { title: "Relatório completo", description: "Resumo, gráficos, atividades e cronograma Gantt." },
-  TASKS: { title: "Lista de atividades", description: "Tabela hierárquica com datas, progresso e predecessoras." },
-  GANTT: { title: "Cronograma Gantt", description: "Linha do tempo visual para compartilhar ou imprimir." },
-};
 
 const FORMAT_FILE_SUFFIX: Readonly<Record<ProjectPdfFormat, string>> = {
   REPORT: "relatorio",
@@ -70,6 +65,12 @@ export function ProjectPdfExport({
   disabled,
   onSave,
 }: ProjectPdfExportProps) {
+  const { t } = useLanguage();
+  const formatDescriptions: Readonly<Record<ProjectPdfFormat, { readonly title: string; readonly description: string }>> = {
+    REPORT: { title: t("pdf.format.report.title"), description: t("pdf.format.report.description") },
+    TASKS: { title: t("pdf.format.tasks.title"), description: t("pdf.format.tasks.description") },
+    GANTT: { title: t("pdf.format.gantt.title"), description: t("pdf.format.gantt.description") },
+  };
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [format, setFormat] = useState<ProjectPdfFormat>("REPORT");
@@ -135,11 +136,11 @@ export function ProjectPdfExport({
   return (
     <>
       <button className="secondary-button pdf-export-trigger" type="button" disabled={disabled} onClick={showDialog}>
-        Gerar PDF
+        {t("pdf.generate")}
       </button>
       {message !== null ? (
-        <span className="pdf-export-message" role="status" title={`PDF salvo em ${message.path}`}>
-          PDF salvo: <span>{message.filename}</span>
+        <span className="pdf-export-message" role="status" title={`${t("pdf.saved")} ${message.path}`}>
+          {t("pdf.saved")} <span>{message.filename}</span>
         </span>
       ) : null}
       {open ? (
@@ -152,43 +153,43 @@ export function ProjectPdfExport({
         >
           <header>
             <div>
-              <h2 id="pdf-export-title">Gerar PDF do projeto</h2>
-              <p id="pdf-export-description">Configure uma saída pronta para compartilhar ou imprimir.</p>
+              <h2 id="pdf-export-title">{t("pdf.title")}</h2>
+              <p id="pdf-export-description">{t("pdf.description")}</p>
             </div>
-            <button type="button" aria-label="Fechar exportação PDF" disabled={busy} onClick={() => { setOpen(false); }}>×</button>
+            <button type="button" aria-label={t("pdf.close")} disabled={busy} onClick={() => { setOpen(false); }}>×</button>
           </header>
 
           <fieldset className="pdf-format-options">
-            <legend>Conteúdo</legend>
-            {(Object.keys(FORMAT_DESCRIPTIONS) as ProjectPdfFormat[]).map((candidate) => (
+            <legend>{t("pdf.content")}</legend>
+            {(Object.keys(formatDescriptions) as ProjectPdfFormat[]).map((candidate) => (
               <label className={format === candidate ? "selected" : ""} key={candidate}>
                 <input type="radio" name="pdf-format" value={candidate} checked={format === candidate} onChange={() => { setFormat(candidate); }} />
-                <span><strong>{FORMAT_DESCRIPTIONS[candidate].title}</strong><small>{FORMAT_DESCRIPTIONS[candidate].description}</small></span>
+                <span><strong>{formatDescriptions[candidate].title}</strong><small>{formatDescriptions[candidate].description}</small></span>
               </label>
             ))}
           </fieldset>
 
           <div className="pdf-export-grid">
             <label>
-              Atividades
+              {t("pdf.tasks")}
               <select value={scope} onChange={(event) => { setScope(event.target.value as ProjectPdfScope); }}>
-                <option value="ALL">Todas ({tasks.length})</option>
-                <option value="VISIBLE" disabled={!filtersActive}>Visíveis pelos filtros ({visibleCount})</option>
+                <option value="ALL">{t("pdf.allTasks")} ({tasks.length})</option>
+                <option value="VISIBLE" disabled={!filtersActive}>{t("pdf.visibleTasks")} ({visibleCount})</option>
               </select>
             </label>
             <label>
-              Papel
+              {t("pdf.paper")}
               <select value={pageSize} onChange={(event) => { setPageSize(event.target.value as ProjectPdfPageSize); }}>
-                <option value="A4">A4 paisagem</option>
-                <option value="A3">A3 paisagem</option>
+                <option value="A4">A4 {t("pdf.landscape")}</option>
+                <option value="A3">A3 {t("pdf.landscape")}</option>
               </select>
             </label>
             <label>
-              Cronograma de
+              {t("pdf.scheduleFrom")}
               <input type="date" value={timelineStart} onChange={(event) => { setTimelineStart(event.target.value); }} />
             </label>
             <label>
-              Cronograma até
+              {t("pdf.scheduleTo")}
               <input type="date" value={timelineEnd} onChange={(event) => { setTimelineEnd(event.target.value); }} />
             </label>
           </div>
@@ -196,21 +197,21 @@ export function ProjectPdfExport({
           {(format === "REPORT" || format === "TASKS") ? (
             <label className="pdf-detail-option">
               <input type="checkbox" checked={includeDetails} onChange={(event) => { setIncludeDetails(event.target.checked); }} />
-              Incluir descrições, responsáveis, tags e observações
+              {t("pdf.includeDetails")}
             </label>
           ) : null}
           {baselineTasks.length > 0 ? (
             <label className="pdf-detail-option">
               <input type="checkbox" checked={includeBaseline} onChange={(event) => { setIncludeBaseline(event.target.checked); }} />
-              Incluir plano de referência e desvios
+              {t("pdf.includeBaseline")}
             </label>
           ) : null}
-          <p className="pdf-export-note">O PDF é gerado localmente. Nenhum dado é enviado para a internet.</p>
+          <p className="pdf-export-note">{t("pdf.localOnly")}</p>
           {error !== null ? <p className="portability-error" role="alert">{error}</p> : null}
           <footer>
-            <button type="button" className="secondary-button" data-dialog-initial-focus disabled={busy} onClick={() => { setOpen(false); }}>Cancelar</button>
+            <button type="button" className="secondary-button" data-dialog-initial-focus disabled={busy} onClick={() => { setOpen(false); }}>{t("pdf.cancel")}</button>
             <button type="button" className="primary-button" disabled={busy || tasks.length === 0} onClick={() => { void generate(); }}>
-              {busy ? "Gerando PDF…" : "Escolher local e salvar"}
+              {busy ? t("pdf.generating") : t("pdf.save")}
             </button>
           </footer>
         </ModalDialog>

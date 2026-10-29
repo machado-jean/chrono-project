@@ -1,9 +1,5 @@
-import {
-  TASK_PRIORITIES,
-  TASK_PRIORITY_LABELS,
-  TASK_STATUSES,
-  TASK_STATUS_LABELS,
-} from "../../domain/tasks/task";
+import { TASK_PRIORITIES, TASK_STATUSES } from "../../domain/tasks/task";
+import { useLanguage } from "../../i18n/language";
 import { EMPTY_TASK_FILTERS, UNASSIGNED_FILTER_VALUE, type TaskFilters } from "./task-filters";
 
 interface TaskFilterBarProps {
@@ -23,6 +19,7 @@ export function TaskFilterBar({
   criticalPathAvailable,
   onChange,
 }: TaskFilterBarProps) {
+  const { priorityLabel, statusLabel, t } = useLanguage();
   const update = (changes: Partial<TaskFilters>): void => {
     onChange({ ...filters, ...changes });
   };
@@ -31,57 +28,57 @@ export function TaskFilterBar({
     <section className="task-filters" aria-labelledby="task-filters-title">
       <div className="filter-heading">
         <div>
-          <strong id="task-filters-title">Localizar e filtrar</strong>
-          <span aria-live="polite">{String(resultCount)} de {String(totalCount)} tarefas</span>
+          <strong id="task-filters-title">{t("filters.title")}</strong>
+          <span aria-live="polite">{String(resultCount)} {t("filters.countJoin")} {String(totalCount)} {t("project.tasks")}</span>
         </div>
         <button
           type="button"
           className="text-button filter-clear"
           onClick={() => { onChange(EMPTY_TASK_FILTERS); }}
         >
-          Limpar filtros
+          {t("filters.clear")}
         </button>
       </div>
       <div className="filter-grid">
         <label className="filter-search">
-          <span>Texto</span>
+          <span>{t("filters.text")}</span>
           <input
             type="search"
-            placeholder="Título, código, responsável…"
+            placeholder={t("filters.searchPlaceholder")}
             value={filters.query}
             onChange={(event) => { update({ query: event.target.value }); }}
           />
         </label>
         <label>
-          <span>Status</span>
+          <span>{t("filters.status")}</span>
           <select
             value={filters.status}
             onChange={(event) => {
               update({ status: event.target.value as TaskFilters["status"] });
             }}
           >
-            <option value="ALL">Todos</option>
+            <option value="ALL">{t("filters.allMasc")}</option>
             {TASK_STATUSES.map((status) => (
-              <option key={status} value={status}>{TASK_STATUS_LABELS[status]}</option>
+              <option key={status} value={status}>{statusLabel(status)}</option>
             ))}
           </select>
         </label>
         <label>
-          <span>Prioridade</span>
+          <span>{t("filters.priority")}</span>
           <select
             value={filters.priority}
             onChange={(event) => {
               update({ priority: event.target.value as TaskFilters["priority"] });
             }}
           >
-            <option value="ALL">Todas</option>
+            <option value="ALL">{t("filters.allFem")}</option>
             {TASK_PRIORITIES.map((priority) => (
-              <option key={priority} value={priority}>{TASK_PRIORITY_LABELS[priority]}</option>
+              <option key={priority} value={priority}>{priorityLabel(priority)}</option>
             ))}
           </select>
         </label>
         <label>
-          <span>De</span>
+          <span>{t("filters.from")}</span>
           <input
             type="date"
             value={filters.dateFrom}
@@ -89,7 +86,7 @@ export function TaskFilterBar({
           />
         </label>
         <label>
-          <span>Até</span>
+          <span>{t("filters.to")}</span>
           <input
             type="date"
             value={filters.dateTo}
@@ -97,7 +94,7 @@ export function TaskFilterBar({
           />
         </label>
         <label>
-          <span>Cronograma</span>
+          <span>{t("filters.schedule")}</span>
           <select
             disabled={!criticalPathAvailable}
             value={filters.criticality}
@@ -105,15 +102,15 @@ export function TaskFilterBar({
               update({ criticality: event.target.value as TaskFilters["criticality"] });
             }}
           >
-            <option value="ALL">{criticalPathAvailable ? "Todas" : "Desativado"}</option>
-            <option value="CRITICAL">Caminho crítico</option>
-            <option value="NEAR_CRITICAL">Próximas do crítico</option>
+            <option value="ALL">{criticalPathAvailable ? t("filters.allFem") : t("filters.disabled")}</option>
+            <option value="CRITICAL">{t("filters.critical")}</option>
+            <option value="NEAR_CRITICAL">{t("filters.nearCritical")}</option>
           </select>
         </label>
         <div className="filter-multi">
-          <span>Responsável</span>
+          <span>{t("filters.assignee")}</span>
           <details>
-            <summary>{filters.assignees.length === 0 ? "Todos" : `${String(filters.assignees.length)} selecionado${filters.assignees.length === 1 ? "" : "s"}`}</summary>
+            <summary>{filters.assignees.length === 0 ? t("filters.allMasc") : `${String(filters.assignees.length)} ${filters.assignees.length === 1 ? t("filters.selected") : t("filters.selectedPlural")}`}</summary>
             <div className="filter-multi-options">
               {[UNASSIGNED_FILTER_VALUE, ...availableAssignees].map((assignee) => (
                 <label key={assignee}>
@@ -126,14 +123,14 @@ export function TaskFilterBar({
                         : filters.assignees.filter((candidate) => candidate !== assignee) });
                     }}
                   />
-                  <span>{assignee === UNASSIGNED_FILTER_VALUE ? "Sem responsável" : assignee}</span>
+                  <span>{assignee === UNASSIGNED_FILTER_VALUE ? t("filters.unassigned") : assignee}</span>
                 </label>
               ))}
             </div>
           </details>
         </div>
         <label>
-          <span>Tag</span>
+          <span>{t("filters.tag")}</span>
           <input
             type="search"
             placeholder="Ex.: frontend"

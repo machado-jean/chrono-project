@@ -9,6 +9,7 @@ import {
   CHRONO_PROJECT_OFFLINE_INSTALLER_URL,
 } from "../domain/updates/release";
 import { ModalDialog } from "./ModalDialog";
+import { useLanguage } from "../i18n/language";
 
 let automaticUpdateCheck: Promise<Update | null> | null = null;
 
@@ -22,6 +23,7 @@ interface WorkspaceHelpMenuProps {
 }
 
 export function WorkspaceHelpMenu({ automatic = true }: WorkspaceHelpMenuProps) {
+  const { t } = useLanguage();
   const [appVersion, setAppVersion] = useState(packagedVersion);
   const [checking, setChecking] = useState(automatic);
   const [installing, setInstalling] = useState(false);
@@ -137,49 +139,49 @@ export function WorkspaceHelpMenu({ automatic = true }: WorkspaceHelpMenuProps) 
   return (
     <>
     <details ref={menuRef} className="workspace-menu help-menu" name="workspace-menu">
-      <summary>Ajuda</summary>
+      <summary>{t("menu.help")}</summary>
       <div className="workspace-menu-popover help-menu-popover">
-        <strong>Orientações rápidas</strong>
-        <p>A Tabela é a visualização principal para editar tarefas e dependências.</p>
-        <p>Kanban e Gantt usam as mesmas tarefas e refletem as alterações salvas.</p>
-        <p>Feriados municipais podem ser criados manualmente no menu Calendário.</p>
+        <strong>{t("help.quickGuide")}</strong>
+        <p>{t("help.tableGuide")}</p>
+        <p>{t("help.viewsGuide")}</p>
+        <p>{t("help.calendarGuide")}</p>
         <button
           className="shortcuts-menu-button"
           type="button"
           aria-keyshortcuts="Control+/"
           onClick={() => { setShowShortcuts(true); }}
         >
-          Atalhos de teclado
+          {t("help.shortcuts")}
           <kbd>Ctrl + /</kbd>
         </button>
         <hr />
         <section className="update-check" aria-labelledby="update-check-title">
-          <strong id="update-check-title">Atualizações</strong>
-          <small>Versão instalada: {appVersion}</small>
-          <small>Verificação automática ao abrir.</small>
+          <strong id="update-check-title">{t("help.updates")}</strong>
+          <small>{t("help.installedVersion")} {appVersion}</small>
+          <small>{t("help.autoCheck")}</small>
           <button type="button" disabled={checking} onClick={() => { void checkForUpdates(); }}>
-            {checking ? "Verificando…" : "Verificar atualizações"}
+            {checking ? t("help.checking") : t("help.checkUpdates")}
           </button>
           <div className="update-check-result" aria-live="polite">
             {availableUpdate === null ? null : (
               <>
-                <p>Versão {availableUpdate.version} disponível.</p>
+                <p>{t("help.updateAvailablePrefix")} {availableUpdate.version} {t("help.updateAvailableSuffix")}</p>
                 <button type="button" disabled={installing} onClick={() => { void installUpdate(); }}>
-                  {installing ? "Atualizando…" : "Baixar e instalar atualização"}
+                  {installing ? t("help.updating") : t("help.downloadInstall")}
                 </button>
                 <button className="text-update-button" type="button" onClick={() => { void openInstaller(CHRONO_PROJECT_OFFLINE_INSTALLER_URL); }}>
-                  Baixar instalador offline
+                  {t("help.downloadOffline")}
                 </button>
               </>
             )}
-            {checkedCurrent ? <p>Você já está na versão mais recente ({appVersion}).</p> : null}
+            {checkedCurrent ? <p>{t("help.currentVersion")} ({appVersion}).</p> : null}
             {progress === null ? null : <p>{progress}</p>}
             {error === null ? null : <p className="update-check-error" role="alert">{error}</p>}
           </div>
         </section>
         <hr />
-        <small>Operação local e offline; falhas na consulta de atualizações não impedem o uso.</small>
-        <small>Licenças de terceiros: THIRD_PARTY_NOTICES.md</small>
+        <small>{t("help.offline")}</small>
+        <small>{t("help.licenses")}</small>
       </div>
     </details>
     {showShortcuts ? (
@@ -191,10 +193,10 @@ export function WorkspaceHelpMenu({ automatic = true }: WorkspaceHelpMenuProps) 
       >
         <header>
           <div>
-            <h2 id="keyboard-shortcuts-title">Atalhos de teclado</h2>
-            <p id="keyboard-shortcuts-description">Navegue pelo Chrono Project sem tirar as mãos do teclado.</p>
+            <h2 id="keyboard-shortcuts-title">{t("help.shortcutsTitle")}</h2>
+            <p id="keyboard-shortcuts-description">{t("help.shortcutsDescription")}</p>
           </div>
-          <button type="button" aria-label="Fechar atalhos" onClick={() => { setShowShortcuts(false); }}>×</button>
+          <button type="button" aria-label={t("help.closeShortcuts")} onClick={() => { setShowShortcuts(false); }}>×</button>
         </header>
         <dl className="shortcut-list">
           <div><dt><kbd>Ctrl + /</kbd></dt><dd>Abrir esta lista de atalhos</dd></div>
@@ -208,7 +210,7 @@ export function WorkspaceHelpMenu({ automatic = true }: WorkspaceHelpMenuProps) 
           <div><dt><kbd>←</kbd> <kbd>→</kbd></dt><dd>Alternar entre Tabela, Kanban e Gantt</dd></div>
           <div><dt><kbd>Home</kbd> / <kbd>End</kbd></dt><dd>Ir para a primeira ou última visualização</dd></div>
         </dl>
-        <footer><button type="button" data-dialog-initial-focus onClick={() => { setShowShortcuts(false); }}>Fechar</button></footer>
+        <footer><button type="button" data-dialog-initial-focus onClick={() => { setShowShortcuts(false); }}>{t("app.close")}</button></footer>
       </ModalDialog>
     ) : null}
     </>

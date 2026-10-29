@@ -1,8 +1,10 @@
 import { isTauri } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useEffect, useState } from "react";
+import { useLanguage } from "../i18n/language";
 
 export function WindowControls() {
+  const { t } = useLanguage();
   const [maximized, setMaximized] = useState(false);
 
   useEffect(() => {
@@ -45,19 +47,19 @@ export function WindowControls() {
   };
 
   return (
-    <div className="window-controls" aria-label="Controles da janela">
-      <button type="button" aria-label="Minimizar janela" title="Minimizar" onClick={() => { void minimize(); }}>
+    <div className="window-controls" aria-label={t("window.controls")}>
+      <button type="button" aria-label={t("window.minimize")} title={t("window.minimize")} onClick={() => { void minimize(); }}>
         <span className="window-control-minimize" aria-hidden="true" />
       </button>
       <button
         type="button"
-        aria-label={maximized ? "Restaurar janela" : "Maximizar janela"}
-        title={maximized ? "Restaurar" : "Maximizar"}
+        aria-label={maximized ? t("window.restore") : t("window.maximize")}
+        title={maximized ? t("window.restore") : t("window.maximize")}
         onClick={() => { void toggleMaximize(); }}
       >
         <span className={`window-control-maximize${maximized ? " restored" : ""}`} aria-hidden="true" />
       </button>
-      <button className="window-control-close" type="button" aria-label="Fechar janela" title="Fechar" onClick={() => { void close(); }}>
+      <button className="window-control-close" type="button" aria-label={t("window.close")} title={t("window.close")} onClick={() => { void close(); }}>
         <span aria-hidden="true">×</span>
       </button>
     </div>

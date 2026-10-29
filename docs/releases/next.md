@@ -6,15 +6,18 @@ publicada.
 
 ## Escopo confirmado
 
-Ainda não há escopo confirmado após a v0.2.9. Novas mudanças devem ser
-registradas aqui antes do próximo ciclo de release.
+- interface localizável em Português (Brasil) e English, com preferência
+  persistida apenas no dispositivo;
+- tradução dos menus, navegação, controles de janela, views, filtros, ações de
+  projeto, PDF, baseline e explicação do caminho crítico;
+- dados do usuário e formato do banco preservados sem tradução automática.
 
 ## Compatibilidade e dados
 
 - sem mudança de schema SQLite;
 - formato `.chronoproject` inalterado;
 - diretório de dados `chronoproject` inalterado;
-- não há mudança em preparação.
+- não há migration nem mudança de dados em preparação.
 
 ## Gates automatizados
 

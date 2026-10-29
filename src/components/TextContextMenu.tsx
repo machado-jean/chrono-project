@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { ContextMenu, type ContextMenuItem } from "./ContextMenu";
+import { useLanguage } from "../i18n/language";
 import {
   clipboardErrorMessage,
   copyControlValue,
@@ -25,6 +26,7 @@ function isFormControl(target: EventTarget | null): target is FormContext["contr
 }
 
 export function TextContextMenu() {
+  const { t } = useLanguage();
   const [context, setContext] = useState<FormContext | null>(null);
   const [error, setError] = useState<string | null>(null);
   const originRef = useRef<HTMLElement | null>(null);
@@ -62,25 +64,25 @@ export function TextContextMenu() {
     items = [
     {
       id: "cut",
-      label: "Recortar",
+      label: t("clipboard.cut"),
       disabled: selected.length === 0 || readOnly,
         onSelect: () => { runClipboardAction(() => copyTextSelection(selection, true)); },
     },
     {
       id: "copy",
-      label: "Copiar",
+      label: t("clipboard.copy"),
       disabled: selected.length === 0,
         onSelect: () => { runClipboardAction(() => copyTextSelection(selection, false)); },
     },
     {
       id: "paste",
-      label: "Colar",
+      label: t("clipboard.paste"),
       disabled: readOnly,
         onSelect: () => { runClipboardAction(() => pasteTextSelection(selection)); },
     },
     {
       id: "select-all",
-      label: "Selecionar tudo",
+      label: t("clipboard.selectAll"),
         onSelect: () => { selection.control.focus(); selection.control.select(); },
     },
     ];
@@ -88,7 +90,7 @@ export function TextContextMenu() {
     const control = context.control;
     items = [{
       id: "copy-value",
-      label: control instanceof HTMLSelectElement ? "Copiar opção" : "Copiar valor",
+      label: control instanceof HTMLSelectElement ? t("clipboard.copyOption") : t("clipboard.copyValue"),
       disabled: control.value.length === 0,
       onSelect: () => { runClipboardAction(() => copyControlValue(control)); },
     }];
@@ -98,8 +100,8 @@ export function TextContextMenu() {
     <>
       {context === null ? null : (
         <ContextMenu
-          ariaLabel="Edição de campo"
-          heading="Editar campo"
+          ariaLabel={t("clipboard.fieldEditing")}
+          heading={t("clipboard.editField")}
           items={items}
           returnFocusRef={originRef}
           x={context.x}

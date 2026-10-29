@@ -3,6 +3,7 @@ import { useState } from "react";
 import { ModalDialog } from "../../components/ModalDialog";
 import type { Project } from "../../domain/projects/project";
 import type { CriticalPathAnalysis } from "../../domain/scheduling/critical-path";
+import { useLanguage } from "../../i18n/language";
 
 interface CriticalPathControlProps {
   readonly project: Project;
@@ -20,16 +21,15 @@ function displayDate(value: string | null, emptyLabel: string): string {
   return `${day}/${month}/${year}`;
 }
 
-function targetMarginLabel(days: number | null, targetEndDate: string | null, available: boolean): string {
-  if (targetEndDate === null) return "Sem meta";
-  if (!available || days === null) return "Indisponível";
-  if (days === 0) return "Sem margem";
-  if (days > 0) return `+${String(days)} dias úteis`;
-  return `${String(days)} dias úteis`;
-}
-
 export function CriticalPathControl({ project, targetEndDate, analysis, open, disabled, onOpenChange, onSave }: CriticalPathControlProps) {
+  const { t } = useLanguage();
   const [busy, setBusy] = useState(false);
+  const targetMarginLabel = (days: number | null): string => {
+    if (targetEndDate === null) return t("critical.noTarget");
+    if (!analysis.available || days === null) return t("critical.unavailable");
+    if (days === 0) return t("critical.noMargin");
+    return `${days > 0 ? "+" : ""}${String(days)} ${t("critical.workDays")}`;
+  };
 
   const toggle = async (): Promise<void> => {
     const enabling = !project.criticalPathEnabled;
@@ -45,15 +45,15 @@ export function CriticalPathControl({ project, targetEndDate, analysis, open, di
   return (
     <div className={`critical-path-control${project.criticalPathEnabled ? " active" : ""}`}>
       <span className="critical-path-inline-label">
-        <strong>Caminho crítico</strong>
-        <small>{project.criticalPathEnabled ? "Ativo" : "Inativo"}</small>
+        <strong>{t("critical.title")}</strong>
+        <small>{project.criticalPathEnabled ? t("critical.active") : t("critical.inactive")}</small>
       </span>
       <button
         className="critical-path-switch compact"
         type="button"
         role="switch"
         aria-checked={project.criticalPathEnabled}
-        aria-label="Exibir análise do caminho crítico"
+        aria-label={t("critical.toggle")}
         disabled={disabled || busy}
         onClick={() => { void toggle(); }}
       >
@@ -63,7 +63,7 @@ export function CriticalPathControl({ project, targetEndDate, analysis, open, di
       <button
         className="critical-path-info"
         type="button"
-        aria-label="Entender caminho crítico"
+        aria-label={t("critical.help")}
         aria-haspopup="dialog"
         onClick={() => { onOpenChange(true); }}
       >
@@ -81,21 +81,21 @@ export function CriticalPathControl({ project, targetEndDate, analysis, open, di
         >
           <header>
             <div>
-              <h2 id="critical-path-dialog-title">Caminho crítico e meta do projeto</h2>
-              <p id="critical-path-dialog-description">Identifique a cadeia que controla o término e acompanhe separadamente a margem até a meta.</p>
+              <h2 id="critical-path-dialog-title">{t("critical.dialogTitle")}</h2>
+              <p id="critical-path-dialog-description">{t("critical.dialogDescription")}</p>
             </div>
-            <button type="button" aria-label="Fechar caminho crítico" disabled={busy} onClick={() => { onOpenChange(false); }}>×</button>
+            <button type="button" aria-label={t("critical.close")} disabled={busy} onClick={() => { onOpenChange(false); }}>×</button>
           </header>
 
-          <div className="critical-path-explainer" aria-label="Exemplo visual do caminho crítico">
+          <div className="critical-path-explainer" aria-label={t("critical.exampleLabel")}>
             <svg className="critical-path-network" viewBox="0 0 640 210" role="img" aria-labelledby="critical-path-example-title critical-path-example-description">
-              <title id="critical-path-example-title">Rede de exemplo com dois caminhos</title>
-              <desc id="critical-path-example-description">A atividade A se divide entre B e C. Os dois ramos convergem em D e terminam em E. A, C, D e E formam o caminho crítico de treze dias. B possui três dias de folga.</desc>
+              <title id="critical-path-example-title">{t("critical.exampleTitle")}</title>
+              <desc id="critical-path-example-description">{t("critical.exampleDescription")}</desc>
               <defs>
                 <marker id="network-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" /></marker>
                 <marker id="critical-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" /></marker>
               </defs>
-              <text className="network-caption" x="18" y="22">Duas rotas possíveis até o mesmo término</text>
+              <text className="network-caption" x="18" y="22">{t("critical.caption")}</text>
               <path className="network-edge critical" d="M 83 108 L 142 108 L 176 153 L 237 153" markerEnd="url(#critical-arrow)" />
               <path className="network-edge" d="M 83 102 L 142 102 L 176 61 L 237 61" markerEnd="url(#network-arrow)" />
               <path className="network-edge" d="M 283 61 L 320 61 L 354 102 L 397 102" markerEnd="url(#network-arrow)" />
@@ -109,35 +109,35 @@ export function CriticalPathControl({ project, targetEndDate, analysis, open, di
               <g className="network-finish" transform="translate(605 105)"><line x1="-24" y1="-30" x2="-24" y2="30" /><text x="-14" y="-3">Fim</text><text x="-14" y="13">13d</text></g>
             </svg>
             <div className="critical-path-reading">
-              <strong>O caminho crítico é a rota mais longa da rede.</strong>
+              <strong>{t("critical.explanation")}</strong>
               <ol>
-                <li><b>A → C → D → E</b> soma 13 dias e controla o término: qualquer atraso nessa rota atrasa o projeto.</li>
-                <li><b>A → B → D → E</b> soma 10 dias: B pode atrasar até 3 dias sem mudar o término.</li>
-                <li>O maior prazo-limite é comparado depois e gera somente a margem global da meta.</li>
+                <li>{t("critical.pathOne")}</li>
+                <li>{t("critical.pathTwo")}</li>
+                <li>{t("critical.pathThree")}</li>
               </ol>
             </div>
           </div>
 
           <div className="critical-path-summary">
-            <div className="critical-path-metrics" aria-label="Resumo do caminho crítico e da meta">
+            <div className="critical-path-metrics" aria-label={t("critical.summary")}>
               <div>
-                <span>Término previsto</span>
-                <output>{displayDate(analysis.projectEndDate, "Indisponível")}</output>
+                <span>{t("critical.projectEnd")}</span>
+                <output>{displayDate(analysis.projectEndDate, t("critical.unavailable"))}</output>
               </div>
               <div className={targetEndDate === null ? "missing" : ""}>
-                <span>Meta final</span>
-                <output>{displayDate(targetEndDate, "Sem prazo-limite")}</output>
+                <span>{t("critical.finalTarget")}</span>
+                <output>{displayDate(targetEndDate, t("critical.noDeadline"))}</output>
               </div>
               <div className="margin">
-                <span>Margem global</span>
-                <output>{targetMarginLabel(analysis.projectTargetSlackDays, targetEndDate, analysis.available)}</output>
+                <span>{t("critical.globalMargin")}</span>
+                <output>{targetMarginLabel(analysis.projectTargetSlackDays)}</output>
               </div>
             </div>
-            <p className="critical-path-metrics-note">A meta é o maior prazo-limite das tarefas não canceladas. Ela não define o caminho crítico; apenas permite calcular a margem global.</p>
-            {!analysis.available && analysis.reason !== null ? <p className="critical-path-unavailable" role="status"><strong>Análise indisponível:</strong> {analysis.reason}</p> : null}
-            {project.criticalPathEnabled && targetEndDate === null ? <p className="critical-path-missing-target">Sem prazo-limite, o caminho crítico continua disponível; apenas a margem da meta não é calculada.</p> : null}
+            <p className="critical-path-metrics-note">{t("critical.targetNote")}</p>
+            {!analysis.available && analysis.reason !== null ? <p className="critical-path-unavailable" role="status"><strong>{t("critical.analysisUnavailable")}</strong> {analysis.reason}</p> : null}
+            {project.criticalPathEnabled && targetEndDate === null ? <p className="critical-path-missing-target">{t("critical.missingTarget")}</p> : null}
             <footer>
-              <button className="primary-button" type="button" onClick={() => { onOpenChange(false); }}>Entendi</button>
+              <button className="primary-button" type="button" onClick={() => { onOpenChange(false); }}>{t("critical.understood")}</button>
             </footer>
           </div>
         </ModalDialog>

@@ -71,6 +71,7 @@ obrigatório **Windows quality gate**.
 | [`docs/import-export.md`](import-export.md) | Pacote `.chronoproject`, importação, backup e segurança. | Mudança de schema aceito, formato, limites ou portabilidade. |
 | [`docs/pdf-reports.md`](pdf-reports.md) | Tipos, opções, limites e privacidade dos relatórios PDF. | Mudança no conteúdo ou geração de PDF. |
 | [`docs/ux-accessibility.md`](ux-accessibility.md) | Contratos de teclado, foco, contraste e validação acessível. | Mudança de interação, menu, diálogo, atalho ou identidade visual. |
+| [`docs/decisions/032-interface-localization.md`](decisions/032-interface-localization.md) | Decisão de idiomas locais e limites de tradução da interface. | Inclusão de idioma, novo texto público ou alteração de persistência da preferência. |
 | [`docs/branding.md`](branding.md) | Marca, ativos, composição do símbolo e uso na interface. | Mudança de logo, ícone, cores ou integração visual. |
 | [`docs/environment.md`](environment.md) | Toolchain reproduzível, versões e histórico técnico do ambiente. | Toda atualização de Node, npm, Rust, Tauri ou dependência principal. |
 | [`docs/roadmap.md`](roadmap.md) | Estado atual, fases e registro cronológico de evolução. | Toda entrega, adiamento, marco ou nova pendência. |

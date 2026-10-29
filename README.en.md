@@ -38,8 +38,9 @@ on the user's computer. Normal operation is fully offline after installation.
 It is designed to provide the density and productivity of desktop software
 without becoming a generic spreadsheet or SaaS dashboard.
 
-> The application interface is currently available in Brazilian Portuguese.
-> This English README documents the product for international readers.
+> The application interface is available in Brazilian Portuguese and English.
+> Use the **Language** menu in the app to switch immediately; project data is
+> never translated automatically.
 
 ## Highlights
 
@@ -49,6 +50,7 @@ without becoming a generic spreadsheet or SaaS dashboard.
 | Scheduling | Finish-to-Start dependencies, multiple predecessors, lag, working days, holidays, and automatic propagation |
 | Analysis | Baselines, variance, deadlines, health, critical path, slack, and project-target margin |
 | Views | Synchronized editable Table, status Kanban, and hierarchical Gantt over one source of truth |
+| Language | Brazilian Portuguese and English UI, with a persistent local selector that never translates project data |
 | Productivity | Inline editing, bulk actions, context menus, history, `Ctrl+Z`, and `Ctrl+Shift+Z` |
 | Reuse | Task/project duplication, tree templates, and preservation of internal relationships |
 | Portability | `.chronoproject` export, selective import, verified backup, and local PDF reports |

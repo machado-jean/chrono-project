@@ -28,10 +28,10 @@ import type { TaskDependency } from "../../domain/scheduling/dependency";
 import type { TaskCriticality } from "../../domain/scheduling/critical-path";
 import {
   TASK_STATUSES,
-  TASK_STATUS_LABELS,
   type Task,
   type TaskStatus,
 } from "../../domain/tasks/task";
+import { useLanguage } from "../../i18n/language";
 import { taskSaveSucceeded, type TaskSaveResult } from "../../domain/tasks/task-save";
 import {
   buildTaskOutlineNumbers,
@@ -197,6 +197,7 @@ export function TaskGantt({
   onCreateDependency,
   onDeleteDependency,
 }: TaskGanttProps) {
+  const { statusLabel, t } = useLanguage();
   const [scale, setScale] = useState<GanttScale>("DAY");
   const [ganttApi, setGanttApi] = useState<IApi | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
@@ -798,7 +799,7 @@ export function TaskGantt({
     try {
       const saved = await onSave({ ...selectedTask, status });
       if (taskSaveSucceeded(saved)) {
-        setAnnouncement(`${selectedTask.title}: status alterado para ${TASK_STATUS_LABELS[status]}.`);
+        setAnnouncement(`${selectedTask.title}: ${t("kanban.movedTo")} ${statusLabel(status)}.`);
         setSelectedTaskId(selectedTask.id);
         resetGanttProjection();
       }
@@ -813,34 +814,34 @@ export function TaskGantt({
     <section className="gantt-section" aria-labelledby="gantt-title">
       <header className="view-heading gantt-heading">
         <div>
-          <h2 id="gantt-title">Gráfico de Gantt</h2>
-          <p className="gantt-heading-note">Arraste uma barra para ajustar datas e use Opções para legenda, dependências e ajuda.</p>
+          <h2 id="gantt-title">{t("gantt.title")}</h2>
+          <p className="gantt-heading-note">{t("gantt.description")}</p>
         </div>
-        <div className="gantt-header-controls" aria-label="Controles do Gantt">
-          <button type="button" disabled={disabled || savingVisualEdit || !canUndo} onClick={() => { void restoreHistory("UNDO"); }}>Desfazer</button>
-          <button type="button" disabled={disabled || savingVisualEdit || !canRedo} onClick={() => { void restoreHistory("REDO"); }}>Refazer</button>
+        <div className="gantt-header-controls" aria-label={t("gantt.controls")}>
+          <button type="button" disabled={disabled || savingVisualEdit || !canUndo} onClick={() => { void restoreHistory("UNDO"); }}>{t("gantt.undo")}</button>
+          <button type="button" disabled={disabled || savingVisualEdit || !canRedo} onClick={() => { void restoreHistory("REDO"); }}>{t("gantt.redo")}</button>
           <label className="gantt-scale-control">
-            <span>Escala</span>
+            <span>{t("gantt.scale")}</span>
             <select value={scale} onChange={(event) => { setScale(event.target.value as GanttScale); }}>
-              <option value="DAY">Dias</option>
-              <option value="WEEK">Semanas</option>
-              <option value="MONTH">Meses</option>
+              <option value="DAY">{t("gantt.days")}</option>
+              <option value="WEEK">{t("gantt.weeks")}</option>
+              <option value="MONTH">{t("gantt.months")}</option>
             </select>
           </label>
-          <div className="gantt-legend gantt-compact-legend" aria-label="Legenda do Gantt">
-            <span><i className="legend-task" /> Tarefa</span>
-            <span><i className="legend-summary" /> Resumo</span>
+          <div className="gantt-legend gantt-compact-legend" aria-label={t("gantt.legend")}>
+            <span><i className="legend-task" /> {t("gantt.task")}</span>
+            <span><i className="legend-summary" /> {t("gantt.summary")}</span>
             {criticalityByTaskId.size === 0 ? null : (
               <>
-                <span><i className="legend-critical" aria-hidden="true" /> Crítica</span>
-                <span><i className="legend-near-critical" aria-hidden="true" /> Quase crítica</span>
+                <span><i className="legend-critical" aria-hidden="true" /> {t("gantt.critical")}</span>
+                <span><i className="legend-near-critical" aria-hidden="true" /> {t("gantt.nearCritical")}</span>
               </>
             )}
-            <span><i className="legend-weekend" /> Fim de semana</span>
-            <span><i className="legend-holiday" /> Feriado</span>
-            <span><i className="legend-link" /> Dependência</span>
+            <span><i className="legend-weekend" /> {t("gantt.weekend")}</span>
+            <span><i className="legend-holiday" /> {t("gantt.holiday")}</span>
+            <span><i className="legend-link" /> {t("gantt.dependency")}</span>
           </div>
-          <button type="button" className="gantt-toolbar-button" aria-expanded={optionsOpen} onClick={() => { setOptionsOpen((current) => !current); }}>Opções</button>
+          <button type="button" className="gantt-toolbar-button" aria-expanded={optionsOpen} onClick={() => { setOptionsOpen((current) => !current); }}>{t("gantt.options")}</button>
         </div>
       </header>
       {savingVisualEdit ? <p className="gantt-saving" role="status">Salvando alteração do Gantt…</p> : null}
@@ -1009,25 +1010,25 @@ export function TaskGantt({
           )}
 
           <aside className="gantt-inspector" aria-labelledby="gantt-inspector-title">
-            <h3 id="gantt-inspector-title">Inspecionar tarefa</h3>
+            <h3 id="gantt-inspector-title">{t("gantt.inspector")}</h3>
             <label>
-              <span>Tarefa</span>
+              <span>{t("gantt.task")}</span>
               <select
                 aria-label="Tarefa selecionada no Gantt"
                 value={selectedTask?.id ?? ""}
                 onChange={(event) => { selectTask(event.target.value || null); }}
               >
-                <option value="">Selecione no gráfico</option>
+                <option value="">{t("gantt.selectOnChart")}</option>
                 {tasks.map((task) => <option value={task.id} key={task.id}>{taskOutlineLabel(task, outlineNumbers)}</option>)}
               </select>
             </label>
             {selectedTask === null ? (
-              <p className="gantt-inspector-empty">Selecione uma barra ou uma tarefa para revisar seus dados.</p>
+              <p className="gantt-inspector-empty">{t("gantt.selectHint")}</p>
             ) : (
               <>
                 <dl>
                   <div className="gantt-status-row">
-                    <dt>Status</dt>
+                    <dt>{t("filters.status")}</dt>
                     <dd>
                       <select
                         aria-label={`Status de ${selectedTask.title}`}
@@ -1036,13 +1037,13 @@ export function TaskGantt({
                         onChange={(event) => { void saveStatus(event.target.value as TaskStatus); }}
                       >
                         {TASK_STATUSES.map((status) => (
-                          <option value={status} key={status}>{TASK_STATUS_LABELS[status]}</option>
+                          <option value={status} key={status}>{statusLabel(status)}</option>
                         ))}
                       </select>
                     </dd>
                   </div>
-                  <div><dt>Datas</dt><dd>{selectedTask.schedulingMode === "MANUAL" ? "🔒 Travadas" : "🔓 Automáticas"}</dd></div>
-                  <div><dt>Progresso</dt><dd>{String(selectedTask.progress)}%</dd></div>
+                  <div><dt>{t("gantt.dates")}</dt><dd>{selectedTask.schedulingMode === "MANUAL" ? "🔒 Travadas" : "🔓 Automáticas"}</dd></div>
+                  <div><dt>{t("gantt.progress")}</dt><dd>{String(selectedTask.progress)}%</dd></div>
                   {selectedTaskCriticality === null ? null : (
                     <div>
                       <dt>Folga CPM</dt>
@@ -1052,7 +1053,7 @@ export function TaskGantt({
                 </dl>
                 <form className="gantt-schedule-form" onSubmit={(event) => { void saveSchedule(event); }}>
                   <label>
-                    <span>Início</span>
+                    <span>{t("gantt.start")}</span>
                     <input
                       type="date"
                       required
@@ -1062,7 +1063,7 @@ export function TaskGantt({
                     />
                   </label>
                   <label>
-                    <span>Duração útil</span>
+                    <span>{t("gantt.duration")}</span>
                     <input
                       type="number"
                       min={1}
@@ -1080,7 +1081,7 @@ export function TaskGantt({
                     <p className="gantt-summary-note">A data inicial segue as predecessoras. Mover a barra ajusta automaticamente o lag FS; a duração continua editável.</p>
                   ) : (
                     <button className="primary-button" type="submit" disabled={disabled}>
-                      Salvar cronograma
+                      {t("gantt.saveSchedule")}
                     </button>
                   )}
                   {!isSummary && selectedHasPredecessors ? (

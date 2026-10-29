@@ -159,3 +159,9 @@ Campos de texto preservam o desfazer próprio do editor.
 - teste uma restauração antes de depender de um único backup;
 - não compartilhe projetos reais, bancos ou logs sem sanitização;
 - consulte [Solução de problemas](troubleshooting.md) antes de remover dados.
+## Idioma da interface
+
+Na barra de menus, abra **Idioma** e selecione **Português (Brasil)** ou
+**English**. A alteração é imediata e fica salva somente neste computador. Ela
+traduz controles, menus, janelas, mensagens e rótulos do aplicativo; os dados
+que você escreveu no projeto, como nomes de tarefas e tags, não são alterados.

@@ -1,6 +1,7 @@
 import { useState, type SyntheticEvent } from "react";
 
 import type { TaskTemplate, TaskTemplateItem } from "../../domain/templates/template";
+import { useLanguage } from "../../i18n/language";
 
 interface TemplateLibraryProps {
   readonly templates: readonly TaskTemplate[];
@@ -27,6 +28,7 @@ export function TemplateLibrary({
   onApply,
   onDelete,
 }: TemplateLibraryProps) {
+  const { t } = useLanguage();
   const [startDates, setStartDates] = useState<Readonly<Record<string, string>>>({});
 
   const apply = async (
@@ -40,18 +42,18 @@ export function TemplateLibrary({
   return (
     <details className="workspace-menu template-library" name="workspace-menu">
       <summary>
-        <span>Templates</span>
+        <span>{t("menu.templates")}</span>
         <span className="template-count">{templates.length}</span>
       </summary>
       <div className="workspace-menu-popover template-library-content">
         <div className="template-library-heading">
           <div>
-            <h2>Aplicar estrutura</h2>
-            <p>O destino atual é <strong>{projectName}</strong>. Datas serão calculadas pelo scheduler.</p>
+            <h2>{t("template.applyStructure")}</h2>
+            <p>{t("template.destination")} <strong>{projectName}</strong>. Datas serão calculadas pelo scheduler.</p>
           </div>
         </div>
         {templates.length === 0 ? (
-          <p className="template-empty">Abra os detalhes de uma tarefa e use “Salvar árvore como template”.</p>
+          <p className="template-empty">{t("template.empty")}</p>
         ) : (
           <ul className="template-list">
             {templates.map((template) => {
@@ -65,7 +67,7 @@ export function TemplateLibrary({
                   </div>
                   <form onSubmit={(event) => { void apply(event, template.id); }}>
                     <label>
-                      Data inicial
+                      {t("template.startDate")}
                       <input
                         type="date"
                         required
@@ -79,7 +81,7 @@ export function TemplateLibrary({
                         }}
                       />
                     </label>
-                    <button className="primary-button" type="submit" disabled={disabled}>Aplicar</button>
+                    <button className="primary-button" type="submit" disabled={disabled}>{t("template.apply")}</button>
                     <button
                       className="danger-button"
                       type="button"
@@ -90,7 +92,7 @@ export function TemplateLibrary({
                         }
                       }}
                     >
-                      Excluir
+                      {t("template.delete")}
                     </button>
                   </form>
                 </li>

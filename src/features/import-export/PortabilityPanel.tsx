@@ -7,6 +7,7 @@ import type {
   WorkspaceRepository,
 } from "../../repositories/workspace-repository";
 import { safeFilename } from "./safe-filename";
+import { useLanguage } from "../../i18n/language";
 
 interface PortabilityPanelProps {
   readonly repository: WorkspaceRepository;
@@ -29,6 +30,7 @@ export function PortabilityPanel({
   disabled,
   onWorkspaceChanged,
 }: PortabilityPanelProps) {
+  const { t } = useLanguage();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -109,9 +111,9 @@ export function PortabilityPanel({
   return (
     <>
       <details className="workspace-menu portability-menu" name="workspace-menu">
-        <summary>Arquivo</summary>
+        <summary>{t("menu.file")}</summary>
         <div className="workspace-menu-popover portability-menu-popover">
-          <div className="portability-actions" aria-label="Portabilidade e backup">
+          <div className="portability-actions" aria-label={t("file.portability")}>
         {selectedProject !== null ? (
           <button
             type="button"
@@ -126,7 +128,7 @@ export function PortabilityPanel({
               });
             }}
           >
-            Exportar projeto
+            {t("file.exportProject")}
           </button>
         ) : null}
         <button
@@ -139,10 +141,10 @@ export function PortabilityPanel({
             });
           }}
         >
-          Exportar workspace
+          {t("file.exportWorkspace")}
         </button>
         <button type="button" disabled={disabled || busy} onClick={chooseImport}>
-          Importar pacote
+          {t("file.importPackage")}
         </button>
         <button
           type="button"
@@ -154,13 +156,13 @@ export function PortabilityPanel({
             });
           }}
         >
-          Criar backup
+          {t("file.createBackup")}
         </button>
         <button type="button" disabled={disabled || busy} onClick={chooseRestore}>
-          Restaurar backup
+          {t("file.restoreBackup")}
         </button>
         <details className="portability-more">
-          <summary>Mais opções</summary>
+          <summary>{t("file.moreOptions")}</summary>
           <button
             type="button"
             disabled={disabled || busy}
@@ -170,13 +172,13 @@ export function PortabilityPanel({
               });
             }}
           >
-            Abrir pasta de backups automáticos
+            {t("file.openBackups")}
           </button>
         </details>
           </div>
         </div>
       </details>
-      {busy ? <span className="portability-status" role="status">Processando dados locais…</span> : null}
+      {busy ? <span className="portability-status" role="status">{t("file.processing")}</span> : null}
       {message !== null ? <p className="portability-message" role="status">{message}</p> : null}
       {error !== null ? <p className="portability-error" role="alert">{error}</p> : null}
 
