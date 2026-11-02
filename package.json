@@ -50,7 +50,7 @@
     "dev:seed-advanced-audit": "cargo run --manifest-path src-tauri/Cargo.toml --example seed_advanced_planning_audit -- --apply"
   },
   "dependencies": {
-    "@svar-ui/react-gantt": "2.8.1",
+    "@svar-ui/react-gantt": "2.8.2",
     "@tauri-apps/api": "2.11.1",
     "@tauri-apps/plugin-log": "2.9.0",
     "@tauri-apps/plugin-opener": "2.5.4",
@@ -58,7 +58,7 @@
     "@tauri-apps/plugin-sql": "2.4.0",
     "@tauri-apps/plugin-updater": "2.10.1",
     "date-holidays": "3.38.0",
-    "pdfmake": "0.3.12",
+    "pdfmake": "0.3.13",
     "react": "19.3.1",
     "react-dom": "19.3.1"
   },
