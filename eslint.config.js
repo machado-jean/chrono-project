@@ -7,13 +7,18 @@ import tseslint from "typescript-eslint";
 export default tseslint.config(
   {
     ignores: [
+      ".local/**",
       "coverage/**",
       "dist/**",
       "node_modules/**",
+      "output/**",
       "playwright-report/**",
       "src-tauri/gen/**",
       "src-tauri/target/**",
       "test-results/**",
+      "test-data/**",
+      "temp/**",
+      "tmp/**",
     ],
   },
   {

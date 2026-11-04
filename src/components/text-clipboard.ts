@@ -74,7 +74,8 @@ export async function copyControlValue(control: HTMLInputElement | HTMLSelectEle
   await clipboard().writeText(value);
 }
 
-export function clipboardErrorMessage(error: unknown): string {
+export function clipboardErrorMessage(error: unknown, english = false): string {
+  if (english) return "Unable to access the clipboard.";
   const detail = error instanceof Error && error.message.trim().length > 0
     ? ` ${error.message}`
     : "";

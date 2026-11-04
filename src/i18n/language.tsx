@@ -655,9 +655,22 @@ const LanguageContext = createContext<LanguageContextValue>(
   createLanguageValue("pt-BR", () => undefined),
 );
 
+export function detectSystemLanguage(systemLanguages: readonly string[]): SupportedLanguage {
+  for (const candidate of systemLanguages) {
+    const normalized = candidate.toLocaleLowerCase();
+    if (normalized.startsWith("pt")) return "pt-BR";
+    if (normalized.startsWith("en")) return "en";
+  }
+  return "pt-BR";
+}
+
 function readInitialLanguage(): SupportedLanguage {
   const saved = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
-  return saved === "en" || saved === "pt-BR" ? saved : "pt-BR";
+  if (saved === "en" || saved === "pt-BR") return saved;
+  const systemLanguages = window.navigator.languages.length > 0
+    ? window.navigator.languages
+    : [window.navigator.language];
+  return detectSystemLanguage(systemLanguages);
 }
 
 export function LanguageProvider({ children }: { readonly children: ReactNode }) {

@@ -9,6 +9,7 @@ const HEADER_HEIGHT = 44;
 const ROW_HEIGHT = 20;
 const ROWS_PER_PAGE = 18;
 const WEEKDAYS = ["SEG", "TER", "QUA", "QUI", "SEX", "SÁB", "DOM"] as const;
+const WEEKDAYS_EN = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"] as const;
 
 export interface GanttSvgPage { readonly svg: string; readonly width: number }
 
@@ -36,7 +37,13 @@ function baselineRange(row: ProjectReportRow, start: string, end: string, dayWid
   };
 }
 
-function pageSvg(rows: readonly ProjectReportRow[], allRows: readonly ProjectReportRow[], start: string, end: string): string {
+function pageSvg(
+  rows: readonly ProjectReportRow[],
+  allRows: readonly ProjectReportRow[],
+  start: string,
+  end: string,
+  english: boolean,
+): string {
   const days = Math.max(1, calendarDaysBetween(start, end) + 1);
   const dayWidth = TIMELINE_WIDTH / days;
   const height = HEADER_HEIGHT + rows.length * ROW_HEIGHT;
@@ -44,7 +51,7 @@ function pageSvg(rows: readonly ProjectReportRow[], allRows: readonly ProjectRep
   const allRowsById = new Map(allRows.map((row) => [row.id, row]));
   const parts: string[] = [`<svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH}" height="${height}" viewBox="0 0 ${WIDTH} ${height}">`,
     `<rect width="${WIDTH}" height="${height}" fill="#fff"/><rect width="${WIDTH}" height="${HEADER_HEIGHT}" fill="#162235"/>`,
-    `<text x="8" y="26" fill="#fff" font-family="Arial" font-size="9" font-weight="700">Atividade</text>`];
+    `<text x="8" y="26" fill="#fff" font-family="Arial" font-size="9" font-weight="700">${english ? "Task" : "Atividade"}</text>`];
 
   for (let index = 0; index < days; index += 1) {
     const date = addCalendarDays(start, index);
@@ -53,7 +60,7 @@ function pageSvg(rows: readonly ProjectReportRow[], allRows: readonly ProjectRep
     const fill = weekend ? "#E5E9F0" : index % 2 === 0 ? "#F3F6FA" : "#FFFFFF";
     parts.push(`<rect x="${x}" y="${HEADER_HEIGHT}" width="${dayWidth}" height="${height - HEADER_HEIGHT}" fill="${fill}"/>`);
     parts.push(`<rect x="${x}" width="${dayWidth}" height="${HEADER_HEIGHT}" fill="${weekend ? "#334155" : index % 2 === 0 ? "#1E2E45" : "#162235"}"/>`);
-    parts.push(`<text x="${x + dayWidth / 2}" y="20" text-anchor="middle" fill="#fff" font-family="Arial" font-size="${days <= 31 ? 6 : 5}" font-weight="700">${WEEKDAYS[weekday(date) - 1]}</text>`);
+    parts.push(`<text x="${x + dayWidth / 2}" y="20" text-anchor="middle" fill="#fff" font-family="Arial" font-size="${days <= 31 ? 6 : 5}" font-weight="700">${(english ? WEEKDAYS_EN : WEEKDAYS)[weekday(date) - 1]}</text>`);
     parts.push(`<text x="${x + dayWidth / 2}" y="32" text-anchor="middle" fill="#fff" font-family="Arial" font-size="${days <= 31 ? 7 : 5.5}">${date.slice(-2)}</text>`);
     parts.push(`<line x1="${x}" y1="0" x2="${x}" y2="${height}" stroke="#CBD2DC" stroke-width="0.35"/>`);
   }
@@ -116,7 +123,7 @@ export function buildGanttSvgPages(report: ProjectReport): readonly GanttSvgPage
   const pages: GanttSvgPage[] = [];
   for (let index = 0; index < report.rows.length; index += ROWS_PER_PAGE) {
     const rows = report.rows.slice(index, index + ROWS_PER_PAGE);
-    pages.push({ svg: pageSvg(rows, report.rows, report.timelineStart, report.timelineEnd), width: WIDTH });
+    pages.push({ svg: pageSvg(rows, report.rows, report.timelineStart, report.timelineEnd, report.options.language === "en"), width: WIDTH });
   }
   return pages;
 }

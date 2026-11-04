@@ -39,9 +39,9 @@ export function ProjectActionsMenu({
   onDelete,
   onDuplicate,
 }: ProjectActionsMenuProps) {
-  const { t } = useLanguage();
+  const { language, t } = useLanguage();
   const confirmDelete = (): void => {
-    if (window.confirm(`Excluir definitivamente “${project.name}” e todas as suas tarefas? Esta ação não pode ser desfeita.`)) {
+    if (window.confirm(language === "en" ? `Permanently delete “${project.name}” and all its tasks? This action cannot be undone.` : `Excluir definitivamente “${project.name}” e todas as suas tarefas? Esta ação não pode ser desfeita.`)) {
       void onDelete(project.id);
     }
   };

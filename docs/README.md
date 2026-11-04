@@ -72,6 +72,7 @@ obrigatório **Windows quality gate**.
 | [`docs/pdf-reports.md`](pdf-reports.md) | Tipos, opções, limites e privacidade dos relatórios PDF. | Mudança no conteúdo ou geração de PDF. |
 | [`docs/ux-accessibility.md`](ux-accessibility.md) | Contratos de teclado, foco, contraste e validação acessível. | Mudança de interação, menu, diálogo, atalho ou identidade visual. |
 | [`docs/decisions/032-interface-localization.md`](decisions/032-interface-localization.md) | Decisão de idiomas locais e limites de tradução da interface. | Inclusão de idioma, novo texto público ou alteração de persistência da preferência. |
+| [`docs/decisions/033-internal-brazilian-holiday-catalog.md`](decisions/033-internal-brazilian-holiday-catalog.md) | Catálogo local de feriados brasileiros sem dependência de terceiros. | Alteração das regras nacionais, estaduais ou móveis do catálogo. |
 | [`docs/branding.md`](branding.md) | Marca, ativos, composição do símbolo e uso na interface. | Mudança de logo, ícone, cores ou integração visual. |
 | [`docs/environment.md`](environment.md) | Toolchain reproduzível, versões e histórico técnico do ambiente. | Toda atualização de Node, npm, Rust, Tauri ou dependência principal. |
 | [`docs/roadmap.md`](roadmap.md) | Estado atual, fases e registro cronológico de evolução. | Toda entrega, adiamento, marco ou nova pendência. |
@@ -133,6 +134,7 @@ o histórico.
 | [`029-critical-path.md`](decisions/029-critical-path.md) | Caminho crítico, folga e margem da meta. |
 | [`030-mit-license.md`](decisions/030-mit-license.md) | Licenciamento MIT. |
 | [`031-winget-distribution.md`](decisions/031-winget-distribution.md) | Identidade e estratégia de distribuição WinGet. |
+| [`033-internal-brazilian-holiday-catalog.md`](decisions/033-internal-brazilian-holiday-catalog.md) | Catálogo brasileiro interno de feriados. |
 
 ## Notas históricas de release
 
@@ -156,6 +158,8 @@ preencher lacunas históricas sem uma correção factual explícita.
 | [`v0.2.7.md`](releases/v0.2.7.md) | Governança pública, publisher Windows e preparação WinGet. |
 | [`v0.2.8.md`](releases/v0.2.8.md) | Fluidez de Tabela e Gantt e rolagem persistente. |
 | [`v0.2.9.md`](releases/v0.2.9.md) | Relatórios PDF críticos, importação estável e atualização coordenada de dependências. |
+| [`v0.3.0.md`](releases/v0.3.0.md) | Localização PT-BR/EN, catálogo interno de feriados e hardening de dependências. |
+| [`v0.3.0.en.md`](releases/v0.3.0.en.md) | English release notes for v0.3.0. |
 
 ## Testes e fixtures
 

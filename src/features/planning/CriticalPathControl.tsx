@@ -22,7 +22,7 @@ function displayDate(value: string | null, emptyLabel: string): string {
 }
 
 export function CriticalPathControl({ project, targetEndDate, analysis, open, disabled, onOpenChange, onSave }: CriticalPathControlProps) {
-  const { t } = useLanguage();
+  const { language, t } = useLanguage();
   const [busy, setBusy] = useState(false);
   const targetMarginLabel = (days: number | null): string => {
     if (targetEndDate === null) return t("critical.noTarget");
@@ -101,12 +101,12 @@ export function CriticalPathControl({ project, targetEndDate, analysis, open, di
               <path className="network-edge" d="M 283 61 L 320 61 L 354 102 L 397 102" markerEnd="url(#network-arrow)" />
               <path className="network-edge critical" d="M 283 153 L 320 153 L 354 108 L 397 108" markerEnd="url(#critical-arrow)" />
               <path className="network-edge critical" d="M 443 105 L 510 105" markerEnd="url(#critical-arrow)" />
-              <g className="network-node critical" transform="translate(58 105)"><polygon points="0,-25 25,0 0,25 -25,0" /><text y="4">A</text><text className="duration" y="40">4 dias</text></g>
-              <g className="network-node" transform="translate(260 61)"><rect x="-23" y="-20" width="46" height="40" /><text y="4">B</text><text className="duration" y="36">2 dias</text><text className="slack" y="51">folga +3d</text></g>
-              <g className="network-node critical" transform="translate(260 153)"><polygon points="0,-25 25,0 0,25 -25,0" /><text y="4">C</text><text className="duration" y="40">5 dias</text></g>
-              <g className="network-node critical" transform="translate(420 105)"><polygon points="0,-25 25,0 0,25 -25,0" /><text y="4">D</text><text className="duration" y="40">3 dias</text></g>
-              <g className="network-node critical" transform="translate(535 105)"><polygon points="0,-25 25,0 0,25 -25,0" /><text y="4">E</text><text className="duration" y="40">1 dia</text></g>
-              <g className="network-finish" transform="translate(605 105)"><line x1="-24" y1="-30" x2="-24" y2="30" /><text x="-14" y="-3">Fim</text><text x="-14" y="13">13d</text></g>
+              <g className="network-node critical" transform="translate(58 105)"><polygon points="0,-25 25,0 0,25 -25,0" /><text y="4">A</text><text className="duration" y="40">4 {language === "en" ? "days" : "dias"}</text></g>
+              <g className="network-node" transform="translate(260 61)"><rect x="-23" y="-20" width="46" height="40" /><text y="4">B</text><text className="duration" y="36">2 {language === "en" ? "days" : "dias"}</text><text className="slack" y="51">{language === "en" ? "float +3d" : "folga +3d"}</text></g>
+              <g className="network-node critical" transform="translate(260 153)"><polygon points="0,-25 25,0 0,25 -25,0" /><text y="4">C</text><text className="duration" y="40">5 {language === "en" ? "days" : "dias"}</text></g>
+              <g className="network-node critical" transform="translate(420 105)"><polygon points="0,-25 25,0 0,25 -25,0" /><text y="4">D</text><text className="duration" y="40">3 {language === "en" ? "days" : "dias"}</text></g>
+              <g className="network-node critical" transform="translate(535 105)"><polygon points="0,-25 25,0 0,25 -25,0" /><text y="4">E</text><text className="duration" y="40">1 {language === "en" ? "day" : "dia"}</text></g>
+              <g className="network-finish" transform="translate(605 105)"><line x1="-24" y1="-30" x2="-24" y2="30" /><text x="-14" y="-3">{language === "en" ? "End" : "Fim"}</text><text x="-14" y="13">13d</text></g>
             </svg>
             <div className="critical-path-reading">
               <strong>{t("critical.explanation")}</strong>

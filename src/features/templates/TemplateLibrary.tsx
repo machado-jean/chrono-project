@@ -28,7 +28,7 @@ export function TemplateLibrary({
   onApply,
   onDelete,
 }: TemplateLibraryProps) {
-  const { t } = useLanguage();
+  const { language, t } = useLanguage();
   const [startDates, setStartDates] = useState<Readonly<Record<string, string>>>({});
 
   const apply = async (
@@ -49,7 +49,7 @@ export function TemplateLibrary({
         <div className="template-library-heading">
           <div>
             <h2>{t("template.applyStructure")}</h2>
-            <p>{t("template.destination")} <strong>{projectName}</strong>. Datas serão calculadas pelo scheduler.</p>
+            <p>{t("template.destination")} <strong>{projectName}</strong>. {language === "en" ? "Dates will be calculated by the scheduler." : "Datas serão calculadas pelo scheduler."}</p>
           </div>
         </div>
         {templates.length === 0 ? (
@@ -63,7 +63,7 @@ export function TemplateLibrary({
                   <div className="template-card-copy">
                     <strong>{template.name}</strong>
                     {template.description === null ? null : <span>{template.description}</span>}
-                    <small>{taskCount} {taskCount === 1 ? "tarefa" : "tarefas"}</small>
+                    <small>{taskCount} {language === "en" ? (taskCount === 1 ? "task" : "tasks") : (taskCount === 1 ? "tarefa" : "tarefas")}</small>
                   </div>
                   <form onSubmit={(event) => { void apply(event, template.id); }}>
                     <label>
@@ -87,7 +87,7 @@ export function TemplateLibrary({
                       type="button"
                       disabled={disabled}
                       onClick={() => {
-                        if (window.confirm(`Excluir o template “${template.name}”? As tarefas já aplicadas não serão alteradas.`)) {
+                        if (window.confirm(language === "en" ? `Delete template “${template.name}”? Tasks already applied will not be changed.` : `Excluir o template “${template.name}”? As tarefas já aplicadas não serão alteradas.`)) {
                           void onDelete(template.id);
                         }
                       }}

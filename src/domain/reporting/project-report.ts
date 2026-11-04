@@ -22,6 +22,7 @@ import {
 export type ProjectPdfFormat = "REPORT" | "TASKS" | "GANTT";
 export type ProjectPdfScope = "ALL" | "VISIBLE";
 export type ProjectPdfPageSize = "A4" | "A3";
+export type ProjectReportLanguage = "pt-BR" | "en";
 
 export interface ProjectPdfOptions {
   readonly format: ProjectPdfFormat;
@@ -29,6 +30,8 @@ export interface ProjectPdfOptions {
   readonly pageSize: ProjectPdfPageSize;
   readonly includeDetails: boolean;
   readonly includeBaseline?: boolean;
+  /** Defaults to Portuguese to preserve portable report compatibility. */
+  readonly language?: ProjectReportLanguage;
   readonly timelineStart: string | null;
   readonly timelineEnd: string | null;
 }
@@ -143,7 +146,7 @@ export function buildProjectReport({
       .filter((dependency) => dependency.successorId === task.id)
       .map((dependency) => {
         const predecessor = tasksById.get(dependency.predecessorId);
-        if (predecessor === undefined) return "Tarefa indisponível";
+        if (predecessor === undefined) return options.language === "en" ? "Unavailable task" : "Tarefa indisponível";
         const lag = dependency.lagDays === 0 ? "" : ` +${String(dependency.lagDays)}d`;
         return `${taskOutlineLabel(predecessor, outlineNumbers)}${lag}`;
       });
@@ -157,9 +160,13 @@ export function buildProjectReport({
       depth,
       isSummary: tasks.some((candidate) => candidate.parentId === task.id),
       status: task.status,
-      statusLabel: TASK_STATUS_LABELS[task.status],
+      statusLabel: options.language === "en"
+        ? ({ NOT_STARTED: "Not started", IN_PROGRESS: "In progress", BLOCKED: "Blocked", COMPLETED: "Completed", CANCELLED: "Cancelled" } as const)[task.status]
+        : TASK_STATUS_LABELS[task.status],
       priority: task.priority,
-      priorityLabel: TASK_PRIORITY_LABELS[task.priority],
+      priorityLabel: options.language === "en"
+        ? ({ LOW: "Low", NORMAL: "Normal", HIGH: "High", CRITICAL: "Critical" } as const)[task.priority]
+        : TASK_PRIORITY_LABELS[task.priority],
       progress: task.progress,
       startDate: task.startDate,
       endDate: task.endDate,

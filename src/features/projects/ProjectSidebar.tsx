@@ -35,7 +35,7 @@ export function ProjectSidebar({
   onExport,
   onDelete,
 }: ProjectSidebarProps) {
-  const { projectStatusLabel, t } = useLanguage();
+  const { language, projectStatusLabel, t } = useLanguage();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
   const [name, setName] = useState("");
@@ -89,7 +89,7 @@ export function ProjectSidebar({
     } catch (error) {
       setExportNotice({
         kind: "error",
-        text: error instanceof Error ? error.message : t("sidebar.exportError"),
+        text: language === "en" ? "Unable to export project." : error instanceof Error ? error.message : t("sidebar.exportError"),
       });
     } finally {
       setExportingProjectId(null);

@@ -196,6 +196,7 @@ Chrono-Project-Windows-x64-Offline-Setup.exe.sig
 latest.json
 SHA256SUMS.txt
 RELEASE_NOTES.md
+RELEASE_NOTES.en.md
 BUILD_RECORD.json
 VERIFY_SIGNATURES.mjs
 SIGN_AND_FINALIZE.ps1
@@ -332,8 +333,10 @@ trocar a fonte do download nem desativar a verificação. Copiar o resultado par
 
 ## 9. Finalização local
 
-1. Gerar ou atualizar `RELEASE_NOTES.md` a partir de
-   `docs/releases/vX.Y.Z.md`.
+1. Gerar ou atualizar `RELEASE_NOTES.md` e `RELEASE_NOTES.en.md` a partir das
+   notas versionadas. Ambos devem apresentar o mesmo conteúdo factual em
+   Português (Brasil) e English, respectivamente. O corpo usado no GitHub
+   Release deve ser bilíngue: seção PT-BR seguida da seção English.
 2. Gerar `latest.json` com:
    - versão;
    - notas curtas;
@@ -455,8 +458,10 @@ conjuntos de documentação:
 
 ### Conteúdo externo para a tela do GitHub
 
-- `.local/distribution/vX.Y.Z/RELEASE_NOTES.md` completo e pronto para ser
-  exibido como corpo do GitHub Release;
+- `.local/distribution/vX.Y.Z/RELEASE_NOTES.md` e
+  `.local/distribution/vX.Y.Z/RELEASE_NOTES.en.md` completos, equivalentes e
+  prontos para consulta local; o corpo do GitHub Release deve conter ambas as
+  versões, primeiro PT-BR e depois English;
 - título sugerido `Chrono Project vX.Y.Z`;
 - lista final dos assets públicos;
 - observações de instalação, atualização, compatibilidade e limitações;

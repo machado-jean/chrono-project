@@ -81,6 +81,14 @@ function ViewGlyph({ view }: { readonly view: ProjectView }): ReactNode {
   return <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 4v13h14M5.5 7h5M8 11h7M5.5 15h7" /><path d="M10.5 7l2.5 4M15 11l-2.5 4" /></svg>;
 }
 
+function criticalPathUnavailableReason(reason: string | null, english: boolean): string | null {
+  if (!english || reason === null) return reason;
+  if (reason.includes("Informe datas")) return "Enter dates on scheduled tasks to calculate the critical path.";
+  if (reason.includes("Adicione dependências")) return "Add dependencies between scheduled tasks to calculate the critical path.";
+  if (reason.includes("calendário")) return "A calendar used by the project is unavailable.";
+  return "Critical path analysis is unavailable.";
+}
+
 interface ProjectViewRailProps {
   readonly activeView: ProjectView;
   readonly disabled?: boolean;
@@ -164,6 +172,7 @@ export function ProjectViews({
   onDuplicateTask,
   onCreateTemplate,
 }: ProjectViewsProps) {
+  const { language } = useLanguage();
   const ganttTasks = useMemo(
     () => tasks.filter((task) => visibleTaskIds.has(task.id)),
     [tasks, visibleTaskIds],
@@ -194,9 +203,13 @@ export function ProjectViews({
         <div className={`critical-path-notice${criticalPath.available ? " available" : ""}`} role="status">
           {criticalPath.available
             ? filters.criticality === "CRITICAL"
-              ? "Caminho crítico: sequência de tarefas com folga zero que controla o término previsto."
-              : "Próximas do crítico: tarefas com apenas 1 ou 2 dias úteis de folga na rede."
-            : criticalPath.reason}
+              ? language === "en"
+                ? "Critical path: sequence of zero-float tasks that controls the predicted completion."
+                : "Caminho crítico: sequência de tarefas com folga zero que controla o término previsto."
+              : language === "en"
+                ? "Near critical: tasks with only one or two working days of float in the network."
+                : "Próximas do crítico: tarefas com apenas 1 ou 2 dias úteis de folga na rede."
+            : criticalPathUnavailableReason(criticalPath.reason, language === "en")}
         </div>
       )}
 
@@ -206,7 +219,7 @@ export function ProjectViews({
         aria-labelledby={`view-tab-${activeView.toLocaleLowerCase()}`}
       >
         {activeView === "TABLE" ? (
-          <ViewErrorBoundary viewName="a tabela de tarefas">
+          <ViewErrorBoundary language={language} viewName={language === "en" ? "the task table" : "a tabela de tarefas"}>
             <TaskTable
               tasks={tasks}
               {...(filtersActive ? { visibleTaskIds } : {})}
@@ -232,7 +245,7 @@ export function ProjectViews({
           </ViewErrorBoundary>
         ) : null}
         {activeView === "KANBAN" ? (
-          <ViewErrorBoundary viewName="o quadro Kanban">
+          <ViewErrorBoundary language={language} viewName={language === "en" ? "the Kanban board" : "o quadro Kanban"}>
             <TaskKanban
               tasks={matchingTasks}
               allProjectTasks={tasks}
@@ -245,8 +258,8 @@ export function ProjectViews({
           </ViewErrorBoundary>
         ) : null}
         {activeView === "GANTT" ? (
-          <ViewErrorBoundary viewName="o gráfico de Gantt">
-            <Suspense fallback={<div className="view-loading" role="status">Carregando o gráfico de Gantt…</div>}>
+          <ViewErrorBoundary language={language} viewName={language === "en" ? "the Gantt chart" : "o gráfico de Gantt"}>
+            <Suspense fallback={<div className="view-loading" role="status">{language === "en" ? "Loading Gantt chart…" : "Carregando o gráfico de Gantt…"}</div>}>
               <TaskGantt
                 key={project.id}
                 tasks={ganttTasks}

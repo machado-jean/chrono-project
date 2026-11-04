@@ -55,8 +55,8 @@ function localTodayDate(): string {
   return `${String(today.getFullYear())}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 }
 
-function displayReviewDate(value: string | null): string {
-  if (value === null) return "Não informada";
+function displayReviewDate(value: string | null, english: boolean): string {
+  if (value === null) return english ? "Not provided" : "Não informada";
   const [year, month, day] = value.split("-");
   return `${day ?? ""}/${month ?? ""}/${year ?? ""}`;
 }
@@ -68,7 +68,8 @@ function suggestedReopenProgress(task: Task): number {
 }
 
 function AppContent({ repository }: AppProps) {
-  const { t } = useLanguage();
+  const { language, priorityLabel, statusLabel, t } = useLanguage();
+  const english = language === "en";
   const activeRepository = useMemo(() => repository ?? new TauriWorkspaceRepository(), [repository]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeView, setActiveView] = useState<ProjectView>("TABLE");
@@ -109,7 +110,7 @@ function AppContent({ repository }: AppProps) {
     if (workspace.selectedProject?.criticalPathEnabled !== true) {
       return {
         available: false,
-        reason: "Ative o caminho crítico nas configurações do projeto.",
+        reason: english ? "Enable critical path in the project settings." : "Ative o caminho crítico nas configurações do projeto.",
         projectEndDate: null,
         targetEndDate: projectTargetEndDate,
         projectTargetSlackDays: null,
@@ -123,7 +124,7 @@ function AppContent({ repository }: AppProps) {
       projectCalendarId: workspace.selectedProject.calendarId,
       targetEndDate: projectTargetEndDate,
     });
-  }, [projectTargetEndDate, workspace.calendars, workspace.selectedProject, workspace.selectedProjectDependencies, workspace.selectedProjectTasks]);
+  }, [english, projectTargetEndDate, workspace.calendars, workspace.selectedProject, workspace.selectedProjectDependencies, workspace.selectedProjectTasks]);
   const criticalityByTaskId = useMemo(
     () => new Map(criticalPath.tasks.map((entry) => [entry.taskId, entry])),
     [criticalPath],
@@ -199,7 +200,7 @@ function AppContent({ repository }: AppProps) {
         completionDate > localTodayDate() ||
         (request.task.startDate !== null && completionDate < request.task.startDate)
       ) {
-        setCompletionError("Informe uma data de conclusão válida, entre a data de início e hoje.");
+        setCompletionError(english ? "Enter a valid completion date between the start date and today." : "Informe uma data de conclusão válida, entre a data de início e hoje.");
         return;
       }
     }
@@ -210,7 +211,7 @@ function AppContent({ repository }: AppProps) {
         parsedReopenProgress < 0 ||
         parsedReopenProgress > (request.task.status === "CANCELLED" ? 100 : 99))
     ) {
-      setCompletionError("Ao reabrir, informe um progresso inteiro entre 0% e 99%.");
+      setCompletionError(english ? "When reopening, enter a whole-number progress between 0% and 99%." : "Ao reabrir, informe um progresso inteiro entre 0% e 99%.");
       return;
     }
     setCompletionConfirming(true);
@@ -223,13 +224,13 @@ function AppContent({ repository }: AppProps) {
         request.dependencyUpdates,
       );
       if (!saved) {
-        setCompletionError("Não foi possível salvar a alteração. Revise a mensagem exibida no aplicativo e tente novamente.");
+        setCompletionError(english ? "The change could not be saved. Review the message shown in the app and try again." : "Não foi possível salvar a alteração. Revise a mensagem exibida no aplicativo e tente novamente.");
         return;
       }
       request.resolve(true);
       setCompletionRequest(null);
     } catch {
-      setCompletionError("Não foi possível salvar a alteração. Tente novamente.");
+      setCompletionError(english ? "The change could not be saved. Try again." : "Não foi possível salvar a alteração. Tente novamente.");
     } finally {
       setCompletionConfirming(false);
     }
@@ -348,7 +349,7 @@ function AppContent({ repository }: AppProps) {
       <main className="workspace-main" id="workspace-content" tabIndex={-1}>
         {workspace.error !== null ? (
           <div className="error-banner" role="alert">
-            <span>{workspace.error}</span>
+            <span>{english ? "A local operation could not be completed. Review the current data and try again." : workspace.error}</span>
             <button type="button" aria-label={t("app.closeError")} onClick={workspace.clearError}>{t("app.close")}</button>
           </div>
         ) : null}
@@ -465,33 +466,35 @@ function AppContent({ repository }: AppProps) {
           <div>
             <h2 id="completion-review-title">
               {completionRequest.kind === "COMPLETE"
-                ? "Confirmar conclusão"
+                ? (english ? "Confirm completion" : "Confirmar conclusão")
                 : completionRequest.task.status === "CANCELLED"
-                  ? "Alterar atividade concluída"
-                  : "Reabrir atividade"}
+                  ? (english ? "Change completed task" : "Alterar atividade concluída")
+                  : (english ? "Reopen task" : "Reabrir atividade")}
             </h2>
             <p id="completion-review-description">
               {completionRequest.kind === "COMPLETE"
-                ? "Revise as informações já preenchidas. A conclusão ficará registrada na data informada e o progresso será elevado para 100%."
-                : `Confirme a mudança para ${TASK_STATUS_LABELS[completionRequest.task.status]}. A data de conclusão será removida${completionRequest.task.status === "CANCELLED" ? "." : " e o progresso deve voltar para menos de 100%."}`}
+                ? (english ? "Review the information already entered. Completion will be recorded on the selected date and progress will become 100%." : "Revise as informações já preenchidas. A conclusão ficará registrada na data informada e o progresso será elevado para 100%.")
+                : english
+                  ? `Confirm the change to ${statusLabel(completionRequest.task.status)}. The completion date will be removed${completionRequest.task.status === "CANCELLED" ? "." : " and progress must return to less than 100%."}`
+                  : `Confirme a mudança para ${TASK_STATUS_LABELS[completionRequest.task.status]}. A data de conclusão será removida${completionRequest.task.status === "CANCELLED" ? "." : " e o progresso deve voltar para menos de 100%."}`}
             </p>
           </div>
           <dl className="completion-review-data">
-            <div className="completion-review-title-row"><dt>Atividade</dt><dd>{completionRequest.task.title}</dd></div>
-            <div><dt>Prioridade</dt><dd>{TASK_PRIORITY_LABELS[completionRequest.task.priority]}</dd></div>
-            <div><dt>Início</dt><dd>{displayReviewDate(completionRequest.task.startDate)}</dd></div>
-            <div><dt>Fim</dt><dd>{displayReviewDate(completionRequest.task.endDate)}</dd></div>
-            <div><dt>Duração</dt><dd>{completionRequest.task.durationDays === null ? "Não informada" : `${String(completionRequest.task.durationDays)} dia${completionRequest.task.durationDays === 1 ? "" : "s"} útil${completionRequest.task.durationDays === 1 ? "" : "eis"}`}</dd></div>
-            <div><dt>Prazo-limite</dt><dd>{displayReviewDate(completionRequest.task.deadlineDate)}</dd></div>
-            <div><dt>Progresso atual</dt><dd>{String(completionRequest.task.progress)}%</dd></div>
-            <div><dt>Responsável</dt><dd>{completionRequest.task.assignee ?? "Não informado"}</dd></div>
+            <div className="completion-review-title-row"><dt>{english ? "Task" : "Atividade"}</dt><dd>{completionRequest.task.title}</dd></div>
+            <div><dt>{english ? "Priority" : "Prioridade"}</dt><dd>{english ? priorityLabel(completionRequest.task.priority) : TASK_PRIORITY_LABELS[completionRequest.task.priority]}</dd></div>
+            <div><dt>{english ? "Start" : "Início"}</dt><dd>{displayReviewDate(completionRequest.task.startDate, english)}</dd></div>
+            <div><dt>{english ? "Finish" : "Fim"}</dt><dd>{displayReviewDate(completionRequest.task.endDate, english)}</dd></div>
+            <div><dt>{english ? "Duration" : "Duração"}</dt><dd>{completionRequest.task.durationDays === null ? (english ? "Not provided" : "Não informada") : `${String(completionRequest.task.durationDays)} ${english ? (completionRequest.task.durationDays === 1 ? "working day" : "working days") : `dia${completionRequest.task.durationDays === 1 ? "" : "s"} útil${completionRequest.task.durationDays === 1 ? "" : "eis"}`}`}</dd></div>
+            <div><dt>{english ? "Deadline" : "Prazo-limite"}</dt><dd>{displayReviewDate(completionRequest.task.deadlineDate, english)}</dd></div>
+            <div><dt>{english ? "Current progress" : "Progresso atual"}</dt><dd>{String(completionRequest.task.progress)}%</dd></div>
+            <div><dt>{english ? "Assignee" : "Responsável"}</dt><dd>{completionRequest.task.assignee ?? (english ? "Unassigned" : "Não informado")}</dd></div>
           </dl>
           {completionRequest.kind === "COMPLETE" ? (
             <label className="completion-review-field" htmlFor="completion-date">
-              <span>Data real da conclusão</span>
+              <span>{english ? "Actual completion date" : "Data real da conclusão"}</span>
               <input
                 id="completion-date"
-                aria-label="Data real da conclusão"
+                aria-label={english ? "Actual completion date" : "Data real da conclusão"}
                 type="date"
                 required
                 max={localTodayDate()}
@@ -502,11 +505,11 @@ function AppContent({ repository }: AppProps) {
             </label>
           ) : (
             <label className="completion-review-field" htmlFor="reopen-progress">
-              <span>Progresso ao reabrir</span>
+              <span>{english ? "Progress when reopening" : "Progresso ao reabrir"}</span>
               <span className="completion-progress-input">
                 <input
                   id="reopen-progress"
-                  aria-label="Progresso ao reabrir"
+                  aria-label={english ? "Progress when reopening" : "Progresso ao reabrir"}
                   type="number"
                   min={0}
                   max={completionRequest.task.status === "CANCELLED" ? 100 : 99}
@@ -522,7 +525,7 @@ function AppContent({ repository }: AppProps) {
           )}
           {openCompletionDescendants.length === 0 ? null : (
             <div className="completion-blocked-message" role="alert">
-              <strong>Conclua primeiro as subtarefas abertas.</strong>
+              <strong>{english ? "Complete open subtasks first." : "Conclua primeiro as subtarefas abertas."}</strong>
               <span>
                 {String(openCompletionDescendants.length)} subtarefa{openCompletionDescendants.length === 1 ? " permanece" : "s permanecem"} aberta{openCompletionDescendants.length === 1 ? "" : "s"}.
               </span>
@@ -533,7 +536,7 @@ function AppContent({ repository }: AppProps) {
           )}
           {completionError === null ? null : <p className="field-error" role="alert">{completionError}</p>}
           <div className="dialog-actions">
-            <button type="button" disabled={completionConfirming} onClick={cancelCompletion}>Cancelar</button>
+            <button type="button" disabled={completionConfirming} onClick={cancelCompletion}>{t("app.cancel")}</button>
             <button
               className="primary-button"
               type="button"
@@ -542,12 +545,12 @@ function AppContent({ repository }: AppProps) {
               onClick={() => { void confirmCompletion(); }}
             >
               {completionConfirming
-                ? "Salvando…"
+                ? (english ? "Saving…" : "Salvando…")
                 : completionRequest.kind === "COMPLETE"
-                  ? "Confirmar conclusão"
+                  ? (english ? "Confirm completion" : "Confirmar conclusão")
                   : completionRequest.task.status === "CANCELLED"
-                    ? "Confirmar alteração"
-                    : "Confirmar reabertura"}
+                    ? (english ? "Confirm change" : "Confirmar alteração")
+                    : (english ? "Confirm reopening" : "Confirmar reabertura")}
             </button>
           </div>
         </ModalDialog>

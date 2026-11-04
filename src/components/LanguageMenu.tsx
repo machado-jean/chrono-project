@@ -6,19 +6,24 @@ export function LanguageMenu() {
   return (
     <details className="workspace-menu language-menu" name="workspace-menu">
       <summary>{t("language.menu")}</summary>
-      <div className="workspace-menu-popover language-menu-popover" role="group" aria-label={t("language.select")}>
+      <div className="workspace-menu-popover language-menu-popover" role="radiogroup" aria-label={t("language.select")}>
         {SUPPORTED_LANGUAGES.map((candidate) => (
           <button
+            className={language === candidate ? "selected" : ""}
             key={candidate}
             type="button"
-            aria-current={language === candidate ? "true" : undefined}
+            role="radio"
+            aria-checked={language === candidate}
             onClick={(event) => {
               setLanguage(candidate);
               event.currentTarget.closest("details")?.removeAttribute("open");
             }}
           >
-            <span>{candidate === "pt-BR" ? t("language.ptBR") : t("language.en")}</span>
-            {language === candidate ? <span aria-hidden="true">✓</span> : null}
+            <span className="language-option-copy">
+              <strong>{candidate === "pt-BR" ? t("language.ptBR") : t("language.en")}</strong>
+              <small>{candidate === "pt-BR" ? "PT-BR" : "EN"}</small>
+            </span>
+            <span className="language-option-indicator" aria-hidden="true">{language === candidate ? "✓" : ""}</span>
           </button>
         ))}
       </div>

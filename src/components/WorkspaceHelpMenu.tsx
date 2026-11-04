@@ -23,7 +23,8 @@ interface WorkspaceHelpMenuProps {
 }
 
 export function WorkspaceHelpMenu({ automatic = true }: WorkspaceHelpMenuProps) {
-  const { t } = useLanguage();
+  const { language, t } = useLanguage();
+  const english = language === "en";
   const [appVersion, setAppVersion] = useState(packagedVersion);
   const [checking, setChecking] = useState(automatic);
   const [installing, setInstalling] = useState(false);
@@ -89,7 +90,7 @@ export function WorkspaceHelpMenu({ automatic = true }: WorkspaceHelpMenuProps) 
       setError(
         reason instanceof Error
           ? reason.message
-          : "Não foi possível verificar atualizações. Confira sua conexão.",
+          : english ? "Unable to check for updates. Check your connection." : "Não foi possível verificar atualizações. Confira sua conexão.",
       );
     } finally {
       setChecking(false);
@@ -105,24 +106,26 @@ export function WorkspaceHelpMenu({ automatic = true }: WorkspaceHelpMenuProps) 
     const onProgress = (event: DownloadEvent): void => {
       if (event.event === "Started") {
         total = event.data.contentLength;
-        setProgress("Baixando atualização…");
+        setProgress(english ? "Downloading update…" : "Baixando atualização…");
       } else if (event.event === "Progress") {
         downloaded += event.data.chunkLength;
         setProgress(total === undefined || total === 0
-          ? "Baixando atualização…"
-          : `Baixando atualização… ${String(Math.min(100, Math.round((downloaded / total) * 100)))}%`);
+          ? (english ? "Downloading update…" : "Baixando atualização…")
+          : `${english ? "Downloading update…" : "Baixando atualização…"} ${String(Math.min(100, Math.round((downloaded / total) * 100)))}%`);
       } else {
-        setProgress("Download concluído. Preparando instalação…");
+        setProgress(english ? "Download complete. Preparing installation…" : "Download concluído. Preparando instalação…");
       }
     };
     try {
       await availableUpdate.downloadAndInstall(onProgress);
-      setProgress("Atualização instalada. Reiniciando o Chrono Project…");
+      setProgress(english ? "Update installed. Restarting Chrono Project…" : "Atualização instalada. Reiniciando o Chrono Project…");
       await relaunch();
     } catch (reason) {
-      setError(reason instanceof Error
-        ? `Não foi possível instalar a atualização: ${reason.message}`
-        : "Não foi possível instalar a atualização.");
+      setError(english
+        ? "Unable to install update."
+        : reason instanceof Error
+          ? `Não foi possível instalar a atualização: ${reason.message}`
+          : "Não foi possível instalar a atualização.");
       setProgress(null);
       setInstalling(false);
     }
@@ -132,7 +135,7 @@ export function WorkspaceHelpMenu({ automatic = true }: WorkspaceHelpMenuProps) 
     try {
       await openUrl(url);
     } catch {
-      setError("Não foi possível abrir o navegador padrão para baixar a atualização.");
+      setError(english ? "Unable to open the default browser to download the update." : "Não foi possível abrir o navegador padrão para baixar a atualização.");
     }
   };
 
@@ -199,16 +202,16 @@ export function WorkspaceHelpMenu({ automatic = true }: WorkspaceHelpMenuProps) 
           <button type="button" aria-label={t("help.closeShortcuts")} onClick={() => { setShowShortcuts(false); }}>×</button>
         </header>
         <dl className="shortcut-list">
-          <div><dt><kbd>Ctrl + /</kbd></dt><dd>Abrir esta lista de atalhos</dd></div>
-          <div><dt><kbd>Ctrl + Z</kbd></dt><dd>Desfazer a última edição salva de tarefa</dd></div>
-          <div><dt><kbd>Ctrl + Shift + Z</kbd></dt><dd>Refazer a última edição desfeita</dd></div>
-          <div><dt><kbd>Ctrl + Shift + L</kbd></dt><dd>Travar ou destravar as tarefas selecionadas na Tabela</dd></div>
-          <div><dt><kbd>Esc</kbd></dt><dd>Fechar menu, diálogo ou detalhes da tarefa</dd></div>
-          <div><dt><kbd>Tab</kbd></dt><dd>Avançar entre os controles</dd></div>
-          <div><dt><kbd>Shift + Tab</kbd></dt><dd>Voltar ao controle anterior</dd></div>
-          <div><dt><kbd>Enter</kbd> / <kbd>Espaço</kbd></dt><dd>Ativar o botão ou controle em foco</dd></div>
-          <div><dt><kbd>←</kbd> <kbd>→</kbd></dt><dd>Alternar entre Tabela, Kanban e Gantt</dd></div>
-          <div><dt><kbd>Home</kbd> / <kbd>End</kbd></dt><dd>Ir para a primeira ou última visualização</dd></div>
+          <div><dt><kbd>Ctrl + /</kbd></dt><dd>{english ? "Open this shortcut list" : "Abrir esta lista de atalhos"}</dd></div>
+          <div><dt><kbd>Ctrl + Z</kbd></dt><dd>{english ? "Undo the last saved task edit" : "Desfazer a última edição salva de tarefa"}</dd></div>
+          <div><dt><kbd>Ctrl + Shift + Z</kbd></dt><dd>{english ? "Redo the last undone edit" : "Refazer a última edição desfeita"}</dd></div>
+          <div><dt><kbd>Ctrl + Shift + L</kbd></dt><dd>{english ? "Lock or unlock the selected Table tasks" : "Travar ou destravar as tarefas selecionadas na Tabela"}</dd></div>
+          <div><dt><kbd>Esc</kbd></dt><dd>{english ? "Close a menu, dialog, or task details" : "Fechar menu, diálogo ou detalhes da tarefa"}</dd></div>
+          <div><dt><kbd>Tab</kbd></dt><dd>{english ? "Move forward through controls" : "Avançar entre os controles"}</dd></div>
+          <div><dt><kbd>Shift + Tab</kbd></dt><dd>{english ? "Move back to the previous control" : "Voltar ao controle anterior"}</dd></div>
+          <div><dt><kbd>Enter</kbd> / <kbd>Space</kbd></dt><dd>{english ? "Activate the focused button or control" : "Ativar o botão ou controle em foco"}</dd></div>
+          <div><dt><kbd>←</kbd> <kbd>→</kbd></dt><dd>{english ? "Switch between Table, Kanban, and Gantt" : "Alternar entre Tabela, Kanban e Gantt"}</dd></div>
+          <div><dt><kbd>Home</kbd> / <kbd>End</kbd></dt><dd>{english ? "Go to the first or last view" : "Ir para a primeira ou última visualização"}</dd></div>
         </dl>
         <footer><button type="button" data-dialog-initial-focus onClick={() => { setShowShortcuts(false); }}>{t("app.close")}</button></footer>
       </ModalDialog>

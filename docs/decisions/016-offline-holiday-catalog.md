@@ -2,7 +2,7 @@
 
 ## Status
 
-Aceito em 29 de agosto de 2026.
+Substituído pelo ADR 033 em 4 de novembro de 2026.
 
 ## Contexto
 
@@ -31,3 +31,6 @@ uma atualização futura do catálogo.
   na interface e em `THIRD_PARTY_NOTICES.md`;
 - atualizações da biblioteca não alteram silenciosamente exceções já importadas;
 - municípios exigem manutenção manual pelo usuário nesta versão.
+
+> Histórico: esta decisão foi substituída pelo catálogo interno para remover uma
+> cadeia de dependências sem correção de segurança disponível.

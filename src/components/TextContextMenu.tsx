@@ -26,7 +26,7 @@ function isFormControl(target: EventTarget | null): target is FormContext["contr
 }
 
 export function TextContextMenu() {
-  const { t } = useLanguage();
+  const { language, t } = useLanguage();
   const [context, setContext] = useState<FormContext | null>(null);
   const [error, setError] = useState<string | null>(null);
   const originRef = useRef<HTMLElement | null>(null);
@@ -49,7 +49,7 @@ export function TextContextMenu() {
   }, []);
 
   const reportClipboardFailure = (reason: unknown): void => {
-    setError(clipboardErrorMessage(reason));
+    setError(clipboardErrorMessage(reason, language === "en"));
     originRef.current?.focus();
   };
   const runClipboardAction = (action: () => Promise<void>): void => {

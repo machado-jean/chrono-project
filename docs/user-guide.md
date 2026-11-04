@@ -165,3 +165,8 @@ Na barra de menus, abra **Idioma** e selecione **Português (Brasil)** ou
 **English**. A alteração é imediata e fica salva somente neste computador. Ela
 traduz controles, menus, janelas, mensagens e rótulos do aplicativo; os dados
 que você escreveu no projeto, como nomes de tarefas e tags, não são alterados.
+Na primeira abertura, sem uma escolha anterior, o Chrono Project usa Português
+(Brasil) ou English conforme o idioma do Windows/WebView2; outros idiomas usam
+Português (Brasil) até uma seleção manual.
+Os relatórios PDF acompanham o idioma selecionado no momento da geração, sem
+traduzir os dados inseridos no projeto.

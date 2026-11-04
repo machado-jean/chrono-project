@@ -32,7 +32,7 @@ histórico.
 | [013](013-svar-react-gantt.md) | Renderer Gantt | Aceito |
 | [014](014-workspace-task-templates.md) | Templates do workspace | Aceito |
 | [015](015-selective-portability.md) | Portabilidade seletiva | Aceito |
-| [016](016-offline-holiday-catalog.md) | Feriados offline | Aceito |
+| [016](016-offline-holiday-catalog.md) | Feriados offline | Substituído pelo ADR 033 |
 | [017](017-windows-distribution.md) | Distribuição Windows | Aceito |
 | [018](018-manual-update-check.md) | Consulta manual de atualização | Parcialmente substituído pelo ADR 020 |
 | [019](019-webview2-cdp-e2e.md) | E2E e diagnóstico WebView2 | Reavaliado; diagnóstico não bloqueante |
@@ -49,5 +49,6 @@ histórico.
 | [030](030-mit-license.md) | Licença MIT | Implementado |
 | [031](031-winget-distribution.md) | Distribuição WinGet | Implementado; submissão em revisão |
 | [032](032-interface-localization.md) | Localização da interface | Aceito |
+| [033](033-internal-brazilian-holiday-catalog.md) | Catálogo brasileiro interno de feriados | Aceito |
 
-O próximo número disponível é **033**.
+O próximo número disponível é **034**.

@@ -18,9 +18,18 @@ o atributo `lang` do documento. Nenhum dado do projeto é traduzido: títulos,
 descrições, responsáveis, tags e demais dados escritos pelo usuário permanecem
 inalterados.
 
+Na primeira abertura, sem preferência persistida, a aplicação usa o idioma do
+sistema exposto pelo WebView2 quando ele for português ou inglês; idiomas ainda
+não suportados usam `pt-BR` como fallback. Depois da primeira escolha manual,
+a preferência local sempre prevalece.
+
 Não há serviço remoto, telemetria nem download de tradução. Novos textos de UI
 devem entrar no catálogo tipado; status, prioridades, estados de projeto e
 nomes de visualização usam os mesmos mapeadores para todas as views.
+
+O PDF é uma extensão da interface exportada: ao ser gerado, recebe o idioma
+selecionado e traduz seus cabeçalhos, métricas, status, prioridades, legenda do
+Gantt, metadados e paginação. Os dados escritos pelo usuário continuam intactos.
 
 ## Consequências
 
@@ -36,4 +45,5 @@ nomes de visualização usam os mesmos mapeadores para todas as views.
 - selecionar English no menu **Idioma** atualiza menus e rótulos sem reiniciar;
 - fechar e abrir a aplicação mantém a escolha;
 - alternar de volta para Português (Brasil) restaura os textos em PT-BR;
+- gerar o PDF em English produz cabeçalhos, legenda e paginação em inglês;
 - `npm run typecheck` e os testes de componentes de idioma passam.

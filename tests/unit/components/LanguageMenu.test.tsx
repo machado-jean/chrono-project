@@ -1,14 +1,20 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { LanguageMenu } from "../../../src/components/LanguageMenu";
-import { LanguageProvider, useLanguage } from "../../../src/i18n/language";
+import { detectSystemLanguage, LanguageProvider, useLanguage } from "../../../src/i18n/language";
 
 function renderLanguageMenu() {
   return render(<LanguageProvider><LanguageMenu /></LanguageProvider>);
 }
 
 describe("LanguageMenu", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    Object.defineProperty(window.navigator, "languages", { configurable: true, value: ["pt-BR"] });
+    Object.defineProperty(window.navigator, "language", { configurable: true, value: "pt-BR" });
+  });
+
   afterEach(() => {
     window.localStorage.removeItem("chrono-project.language");
   });
@@ -30,6 +36,12 @@ describe("LanguageMenu", () => {
     renderLanguageMenu();
 
     expect(screen.getByText("Language")).toBeTruthy();
+  });
+
+  it("maps the supported system language on the first opening", () => {
+    expect(detectSystemLanguage(["en-US", "pt-BR"])).toBe("en");
+    expect(detectSystemLanguage(["pt-PT", "en-US"])).toBe("pt-BR");
+    expect(detectSystemLanguage(["de-DE"])).toBe("pt-BR");
   });
 
   it("changes translated content immediately", () => {

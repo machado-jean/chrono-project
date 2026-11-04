@@ -35,6 +35,12 @@ const FORMAT_FILE_SUFFIX: Readonly<Record<ProjectPdfFormat, string>> = {
   GANTT: "gantt",
 };
 
+const ENGLISH_FORMAT_FILE_SUFFIX: Readonly<Record<ProjectPdfFormat, string>> = {
+  REPORT: "report",
+  TASKS: "tasks",
+  GANTT: "gantt",
+};
+
 function safeFilename(name: string): string {
   const normalized = name
     .normalize("NFD")
@@ -65,7 +71,7 @@ export function ProjectPdfExport({
   disabled,
   onSave,
 }: ProjectPdfExportProps) {
-  const { t } = useLanguage();
+  const { language, t } = useLanguage();
   const formatDescriptions: Readonly<Record<ProjectPdfFormat, { readonly title: string; readonly description: string }>> = {
     REPORT: { title: t("pdf.format.report.title"), description: t("pdf.format.report.description") },
     TASKS: { title: t("pdf.format.tasks.title"), description: t("pdf.format.tasks.description") },
@@ -114,20 +120,21 @@ export function ProjectPdfExport({
           pageSize,
           includeDetails,
           includeBaseline,
+          language,
           timelineStart: timelineStart.length === 0 ? null : timelineStart,
           timelineEnd: timelineEnd.length === 0 ? null : timelineEnd,
         },
       });
       const bytes = await generateProjectPdf(report);
       const path = await onSave(
-        `${safeFilename(project.name)}-${FORMAT_FILE_SUFFIX[format]}`,
+        `${safeFilename(project.name)}-${(language === "en" ? ENGLISH_FORMAT_FILE_SUFFIX : FORMAT_FILE_SUFFIX)[format]}`,
         Array.from(bytes),
       );
       if (path === null) return;
       setOpen(false);
       setMessage({ filename: filenameFromPath(path), path });
     } catch (operationError) {
-      setError(operationError instanceof Error ? operationError.message : String(operationError));
+      setError(language === "en" ? "Unable to generate the PDF." : operationError instanceof Error ? operationError.message : String(operationError));
     } finally {
       setBusy(false);
     }
