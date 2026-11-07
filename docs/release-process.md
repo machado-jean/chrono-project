@@ -33,7 +33,9 @@ e no relatório final, sem novo commit.
 2. Confirmar versão consistente em `package.json`, `Cargo.toml`, `Cargo.lock` e
    `tauri.conf.json`.
 3. Ler integralmente [`docs/README.md`](README.md), revisar cada documento do
-   índice e executar `scripts/Test-DocumentationIndex.ps1`.
+   índice e executar `scripts/Test-DocumentationIndex.ps1 -RequireEnglishPairs`.
+   O release fica bloqueado até que todo documento aplicável tenha seu par
+   PT-BR/English, conforme `docs/documentation-language-policy.md`.
 4. Executar todos os gates locais descritos em `docs/releases/next.md`.
 5. Validar manualmente a versão de teste com o banco compartilhado de
    desenvolvimento.

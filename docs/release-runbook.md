@@ -416,6 +416,12 @@ Depois da leitura integral, executar:
 pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/Test-DocumentationIndex.ps1
 ```
 
+Para um release, executar também a cobertura bilíngue obrigatória:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/Test-DocumentationIndex.ps1 -RequireEnglishPairs
+```
+
 O handoff fica bloqueado se um documento versionado não estiver catalogado, se
 qualquer link interno estiver quebrado, se versões ou ADRs divergirem ou se
 alguma entrada não tiver sido revisada. O resultado da auditoria deve informar
@@ -432,6 +438,8 @@ Atualizar:
 - `docs/environment.md`: versões, comandos e evidências;
 - `docs/roadmap.md`: marco e pendências reais;
 - `README.md` e documentação funcional quando o comportamento público mudar.
+- versões PT-BR e English de toda documentação aplicável, conforme
+  `docs/documentation-language-policy.md`.
 
 Executar `git diff --check`. Commit e push somente quando autorizados. Depois do
 push, confirmar que a branch local coincide com sua branch remota e abrir o

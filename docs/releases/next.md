@@ -33,7 +33,10 @@ publicada.
   ignorado);
 - [x] Cargo fmt, check e Clippy aprovados;
 - [x] executável e instaladores padrão/offline gerados e assinados;
-- [x] índice documental validado após o preenchimento da nota de release.
+- [x] índice documental padrão validado após o preenchimento da nota de release.
+- [x] cobertura documental PT-BR/English completa, validada com
+  `Test-DocumentationIndex.ps1 -RequireEnglishPairs` (155 documentos
+  catalogados e 494 links internos válidos).
 
 ## Auditoria documental do candidato
 
@@ -42,6 +45,9 @@ publicada.
 - [x] ADRs 016, 032 e 033, guia do usuário, agendamento e índice documental
   revisados;
 - [x] notas de release completas em PT-BR e English com tamanhos e hashes.
+- [x] criar e revisar as versões English de todos os documentos aplicáveis,
+  incluindo guias, operação e ADRs; notas históricas de release permanecem
+  como registros PT-BR imutáveis.
 
 ## Validação pública
 
@@ -52,6 +58,6 @@ publicada.
 ## Pendências antes da publicação
 
 - criar o commit final, abrir o Pull Request para `main` e aguardar o Windows
-  quality gate;
+  quality gate, somente depois da cobertura PT-BR/English estar aprovada;
 - após o merge, reconstruir os artefatos a partir do commit exato de `main`,
   validar assinaturas e publicar a tag/release conforme o runbook.

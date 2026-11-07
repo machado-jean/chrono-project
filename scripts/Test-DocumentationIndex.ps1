@@ -1,5 +1,7 @@
 [CmdletBinding()]
-param()
+param(
+    [switch]$RequireEnglishPairs
+)
 
 $ErrorActionPreference = 'Stop'
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
@@ -70,6 +72,28 @@ foreach ($document in $cataloguedDocuments) {
     }
 }
 
+if ($RequireEnglishPairs) {
+    $portugueseDocuments = @(
+        $repositoryDocuments | Where-Object {
+            $_ -match '^(?:docs/|README\.md$|CHANGELOG\.md$|CONTRIBUTING\.md$|CODE_OF_CONDUCT\.md$|PRIVACY\.md$|SECURITY\.md$|SUPPORT\.md$|THIRD_PARTY_NOTICES\.md$|AGENTS\.md$)' -and
+            $_ -notmatch '\.en\.md$' -and
+            $_ -notmatch '^docs/releases/v\d+\.\d+\.\d+\.md$'
+        }
+    )
+
+    foreach ($document in $portugueseDocuments) {
+        $englishDocument = if ($document -eq 'README.md') {
+            'README.en.md'
+        } else {
+            $document -replace '\.md$', '.en.md'
+        }
+
+        if ($repositoryDocuments -notcontains $englishDocument) {
+            $failures.Add("Versão English ausente para: $document (esperado: $englishDocument)")
+        }
+    }
+}
+
 $internalLinkCount = 0
 foreach ($document in $repositoryDocuments) {
     $documentPath = Join-Path $repositoryRoot $document
@@ -93,7 +117,7 @@ if (-not (Test-Path -LiteralPath $adrIndexPath -PathType Leaf)) {
         }
     }
 
-    $adrDocuments = @($repositoryDocuments | Where-Object { $_ -match '^docs/decisions/\d{3}-.*\.md$' })
+    $adrDocuments = @($repositoryDocuments | Where-Object { $_ -match '^docs/decisions/\d{3}-.*(?<!\.en)\.md$' })
     foreach ($adr in $adrDocuments) {
         if (-not $indexedAdrs.Contains($adr.Replace('\', '/'))) {
             $failures.Add("ADR fora do catálogo: $adr")
@@ -132,6 +156,13 @@ if (-not (Test-Path -LiteralPath $currentReleaseNote -PathType Leaf)) {
     $failures.Add("Nota da versão atual ausente: docs/releases/v$packageVersion.md")
 }
 
+if ($RequireEnglishPairs) {
+    $currentEnglishReleaseNote = Join-Path $repositoryRoot "docs\releases\v$packageVersion.en.md"
+    if (-not (Test-Path -LiteralPath $currentEnglishReleaseNote -PathType Leaf)) {
+        $failures.Add("Nota English da versão atual ausente: docs/releases/v$packageVersion.en.md")
+    }
+}
+
 if ($failures.Count -gt 0) {
     Write-Host 'Validação documental reprovada:' -ForegroundColor Red
     foreach ($failure in $failures | Sort-Object -Unique) {
@@ -141,6 +172,7 @@ if ($failures.Count -gt 0) {
 }
 
 Write-Output (
-    'Documentação aprovada: {0} documentos catalogados, {1} links internos válidos, versão v{2} sincronizada e ADRs catalogados.' -f `
-        $cataloguedDocuments.Count, $internalLinkCount, $packageVersion
+    'Documentação aprovada: {0} documentos catalogados, {1} links internos válidos, versão v{2} sincronizada, ADRs catalogados{3}.' -f `
+        $cataloguedDocuments.Count, $internalLinkCount, $packageVersion,
+        $(if ($RequireEnglishPairs) { ' e pares English validados' } else { '' })
 )
