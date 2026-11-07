@@ -8,7 +8,8 @@ A seleção seguiu a ordem definida em `AGENTS.md`: compatibilidade, estabilidad
 
 - Tauri requer Microsoft C++ Build Tools, WebView2, Rust MSVC e Node LTS no Windows ([pré-requisitos oficiais](https://v2.tauri.app/start/prerequisites/)).
 - O scaffold foi criado com o utilitário oficial `create-tauri-app` ([guia oficial](https://v2.tauri.app/start/create-project/)).
-- Node 24 é a linha Active LTS escolhida; foi usado o patch x64 disponível no índice oficial em 26/08/2026 ([releases do Node](https://nodejs.org/en/about/previous-releases), [distribuição 24.x](https://nodejs.org/dist/latest-v24.x/)).
+- Node 26.13.0 é a linha LTS escolhida; foi validado no Windows x64 e é a
+  versão reproduzida pelo CI ([releases do Node](https://nodejs.org/en/about/previous-releases), [release 26.13.0](https://nodejs.org/en/blog/release/v26.13.0/)).
 - Rust 1.98.0 é stable e foi instalado pelo Rustup oficial com o host MSVC x64 ([anúncio 1.98.0](https://blog.rust-lang.org/2026/08/20/Rust-1.98.0/), [instalação](https://www.rust-lang.org/tools/install)).
 - Vite 8.3 é suportado e aceita Node `^20.19 || >=22.12` ([política de releases](https://vite.dev/releases)).
 - React 19.3 é a linha estável resolvida no candidato ([versões do React](https://react.dev/versions)).
@@ -20,8 +21,8 @@ A seleção seguiu a ordem definida em `AGENTS.md`: compatibilidade, estabilidad
 | --- | --- | --- | --- | --- |
 | Windows | 11 Pro x64 25H2, build 26200.9168 | sistema | existente | Registro `CurrentVersion` |
 | Git for Windows | 2.55.0.windows.3 | máquina | existente; não reinstalado | `git --version` |
-| Node.js | 24.20.0 LTS x64 | máquina | instalado pelo MSI oficial | `node --version` |
-| npm | 11.19.0 | máquina, fornecido pelo Node | instalado com Node; não atualizado separadamente | `npm --version` |
+| Node.js | 26.13.0 LTS x64 | máquina | instalado pelo MSI oficial | `node --version` |
+| npm | 11.20.0 | máquina, fornecido pelo Node | instalado com Node; não atualizado separadamente | `npm --version` |
 | Rustup | 1.29.0 | usuário | instalador oficial x64 | `rustup --version` |
 | Rust | 1.98.0 stable MSVC | usuário | alias `stable` e toolchain exato `1.98.0-x86_64-pc-windows-msvc`, selecionado por `rust-toolchain.toml` | `rustc --version` e `rustup toolchain list -v` |
 | Cargo | 1.98.0 | usuário | fornecido pelo toolchain Rust | `cargo --version` |
@@ -46,19 +47,19 @@ portanto o recurso não foi habilitado nem alterado.
 | React / React DOM | 19.3.1 | MIT | apresentação |
 | TypeScript | 6.0.3 | Apache-2.0 | linguagem e typecheck |
 | Vite | 8.3.5 | MIT | servidor e build frontend |
-| @vitejs/plugin-react | 6.1.2 | MIT | integração React/Vite |
-| ESLint / typescript-eslint | 10.13.0 / 8.72.0 | MIT | lint estrito e type-aware |
+| @vitejs/plugin-react | 6.2.1 | MIT | integração React/Vite |
+| ESLint / typescript-eslint | 10.14.0 / 8.72.1 | MIT | lint estrito e type-aware |
 | Vitest | 4.1.12 | MIT | testes TypeScript |
 | Tauri SQL plugin | 2.4.0 | MIT/Apache-2.0 | SQLite e migrations |
 | SQLx | 0.8.6 | MIT/Apache-2.0 | teste nativo da migration |
 | SQLite runtime | 3.46.0 | domínio público | persistência embarcada |
 | Tauri Log plugin | 2.9.0 | MIT/Apache-2.0 | logs locais |
-| SVAR React Gantt | 2.8.1 | MIT | renderer local do Gantt, carregado sob demanda |
-| date-holidays | 3.38.0 | ISC (código) / CC BY-SA 3.0 (dados) | catálogo offline de feriados brasileiros, carregado sob demanda |
+| SVAR React Gantt | 2.8.2 | MIT | renderer local do Gantt, carregado sob demanda |
+| Catálogo brasileiro interno | — | código autoral | feriados nacionais, estaduais e móveis, calculados localmente sob demanda |
 | Tauri Dialog plugin | 2.7.2 | MIT/Apache-2.0 | seletores nativos de exportação/importação |
 | Tauri Opener plugin | 2.5.4 | MIT/Apache-2.0 | abertura restrita dos instaladores publicados no navegador padrão |
 | Playwright Core | 1.64.1 | Apache-2.0 | diagnóstico CDP local da janela Tauri; sem navegador incorporado |
-| pdfmake / @types/pdfmake | 0.3.12 / 0.3.3 | MIT | relatórios PDF locais com tabelas e gráficos vetoriais, carregados sob demanda |
+| pdfmake / @types/pdfmake | 0.3.13 / 0.3.3 | MIT | relatórios PDF locais com tabelas e gráficos vetoriais, carregados sob demanda |
 | zip (crate) | 9.1.0 | MIT | leitura e escrita estrita de `.chronoproject` |
 | sha2 (crate) | 0.11.0 | MIT/Apache-2.0 | integridade SHA-256 dos pacotes |
 | uuid (crate) | 1.28.0 | MIT/Apache-2.0 | remapeamento na importação como cópia |
@@ -344,7 +345,7 @@ testes nativos cobrem especificamente portabilidade, integridade, rollback e
 restauração. O release de teste foi gerado por último e o log confirmou schema
 4 usando `.local/data/chronoproject.sqlite`.
 
-Depois da Fase 6, `date-holidays` (atual 3.38.0) foi adicionada somente ao projeto, sem
+O catálogo brasileiro interno é mantido somente no projeto, sem
 instalação global. O chunk do catálogo é carregado quando a prévia de feriados é
 solicitada; atribuição e licença estão em `THIRD_PARTY_NOTICES.md`. Foram
 aprovados 84 testes TypeScript/React, 29 testes Rust/SQLite, lint, typecheck,

@@ -1,20 +1,5 @@
 # Avisos de terceiros
 
-## date-holidays 3.38.0
-
-O Chrono Project usa a biblioteca `date-holidays` para oferecer uma prévia offline de
-feriados nacionais e estaduais do Brasil.
-
-- código da biblioteca: licença ISC;
-- dados de feriados: licença Creative Commons Attribution-ShareAlike 3.0
-  (CC BY-SA 3.0);
-- projeto e autores: <https://github.com/commenthol/date-holidays>;
-- texto da licença dos dados: <https://creativecommons.org/licenses/by-sa/3.0/>.
-
-O Chrono Project seleciona o país Brasil, opcionalmente uma unidade federativa, filtra
-os tipos exibidos e converte as datas escolhidas em exceções locais de calendário.
-Feriados municipais não são fornecidos automaticamente.
-
 ## Tauri Opener 2.5.4
 
 O Chrono Project usa `@tauri-apps/plugin-opener` e `tauri-plugin-opener` somente

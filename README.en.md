@@ -38,8 +38,9 @@ on the user's computer. Normal operation is fully offline after installation.
 It is designed to provide the density and productivity of desktop software
 without becoming a generic spreadsheet or SaaS dashboard.
 
-> The application interface is currently available in Brazilian Portuguese.
-> This English README documents the product for international readers.
+> The application interface is available in Brazilian Portuguese and English.
+> Use the **Language** menu in the app to switch immediately; project data is
+> never translated automatically.
 
 ## Highlights
 
@@ -49,6 +50,7 @@ without becoming a generic spreadsheet or SaaS dashboard.
 | Scheduling | Finish-to-Start dependencies, multiple predecessors, lag, working days, holidays, and automatic propagation |
 | Analysis | Baselines, variance, deadlines, health, critical path, slack, and project-target margin |
 | Views | Synchronized editable Table, status Kanban, and hierarchical Gantt over one source of truth |
+| Language | Brazilian Portuguese and English UI, with a persistent local selector that never translates project data |
 | Productivity | Inline editing, bulk actions, context menus, history, `Ctrl+Z`, and `Ctrl+Shift+Z` |
 | Reuse | Task/project duplication, tree templates, and preservation of internal relationships |
 | Portability | `.chronoproject` export, selective import, verified backup, and local PDF reports |
@@ -139,13 +141,13 @@ The detailed documentation is currently maintained in Brazilian Portuguese:
 - [Public GitHub organization](docs/github-governance.md)
 - [Release process](docs/release-process.md)
 - [WinGet publishing](docs/winget.md)
-- [v0.2.9 release notes](docs/releases/v0.2.9.md)
+- [v0.3.0 release notes](docs/releases/v0.3.0.en.md) · [Notas de release em PT-BR](docs/releases/v0.3.0.md)
 - [Architecture decisions](docs/decisions/)
 
 ## Project status
 
 The version currently being prepared is
-[v0.2.9](https://github.com/machado-jean/chrono-project/releases/tag/v0.2.9).
+[v0.3.0](https://github.com/machado-jean/chrono-project/releases/tag/v0.3.0).
 The first WinGet catalog submission passed the CLA and every technical stage;
 [PR #450697](https://github.com/microsoft/winget-pkgs/pull/450697) is awaiting a
 moderator review.

@@ -41,9 +41,7 @@ import {
 } from "../../domain/tasks/outline-number";
 import {
   TASK_PRIORITIES,
-  TASK_PRIORITY_LABELS,
   TASK_STATUSES,
-  TASK_STATUS_LABELS,
   type Task,
   type TaskPriority,
   type SchedulingMode,
@@ -52,6 +50,7 @@ import {
 } from "../../domain/tasks/task";
 import { taskSaveWasCancelled, type TaskSaveResult } from "../../domain/tasks/task-save";
 import { ModalDialog } from "../../components/ModalDialog";
+import { useLanguage } from "../../i18n/language";
 
 interface TaskTableProps {
   readonly tasks: readonly Task[];
@@ -95,6 +94,7 @@ interface TableColumnHeaderProps {
 }
 
 function TableColumnHeader({ label, help, className, alignTooltip = "center", resizeHandle }: TableColumnHeaderProps) {
+  const { language } = useLanguage();
   const helpId = useId();
   return (
     <th className={className}>
@@ -103,7 +103,7 @@ function TableColumnHeader({ label, help, className, alignTooltip = "center", re
         <span
           className="table-column-help"
           tabIndex={0}
-          aria-label={`Informação sobre ${label}`}
+          aria-label={`${language === "en" ? "Information about" : "Informação sobre"} ${label}`}
           aria-describedby={helpId}
         >
           i
@@ -179,22 +179,23 @@ function DependencyLagEditor({
   onChange,
   onDelete,
 }: DependencyLagEditorProps) {
+  const { language } = useLanguage();
   return (
     <li className={`dependency-item${dirty ? " dirty" : ""}`}>
       <span title={`${predecessorTitle} · Término para Início`}>{predecessorTitle}</span>
       <label>
-        <span className="sr-only">Intervalo em dias úteis</span>
+        <span className="sr-only">{language === "en" ? "Lag in working days" : "Intervalo em dias úteis"}</span>
         <input
           type="number"
           min={0}
           value={lagDays}
           disabled={disabled}
-          aria-label={`Intervalo após ${predecessorTitle}`}
+          aria-label={`${language === "en" ? "Lag after" : "Intervalo após"} ${predecessorTitle}`}
           onChange={(event) => { onChange(Number(event.target.value)); }}
         />
         d
       </label>
-      <button className="dependency-remove" type="button" title="Remover predecessora" aria-label={`Remover predecessora ${predecessorTitle}`} disabled={disabled} onClick={() => { void onDelete(dependency.id); }}>×</button>
+      <button className="dependency-remove" type="button" title={language === "en" ? "Remove predecessor" : "Remover predecessora"} aria-label={`${language === "en" ? "Remove predecessor" : "Remover predecessora"} ${predecessorTitle}`} disabled={disabled} onClick={() => { void onDelete(dependency.id); }}>×</button>
     </li>
   );
 }
@@ -232,6 +233,7 @@ function PredecessorCell({
   onDelete,
   onDeleteMany,
 }: PredecessorCellProps) {
+  const { language, t } = useLanguage();
   const [pickerOpen, setPickerOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(new Set());
@@ -247,7 +249,7 @@ function PredecessorCell({
     readonly dependency: TaskDependency;
     readonly preview: DependencyImpactPreview;
   } | null>(null);
-  if (isSummary) return <span className="summary-dependency-label">Datas derivadas</span>;
+  if (isSummary) return <span className="summary-dependency-label">{t("dependency.derivedDates")}</span>;
 
   const taskById = new Map(tasks.map((candidate) => [candidate.id, candidate]));
   const outlineNumbers = buildTaskOutlineNumbers(tasks);
@@ -325,7 +327,7 @@ function PredecessorCell({
         lagDays,
       })));
       if (created === null || created.length !== selectedTasks.length) {
-        setAddError("Não foi possível adicionar as predecessoras. Verifique as relações selecionadas.");
+        setAddError(language === "en" ? "Unable to add predecessors. Review the selected relationships." : "Não foi possível adicionar as predecessoras. Verifique as relações selecionadas.");
         return;
       }
       setSelectedIds(new Set());
@@ -335,7 +337,7 @@ function PredecessorCell({
     } catch (error) {
       setAddError(error instanceof Error
         ? error.message
-        : "Não foi possível adicionar esta predecessora.");
+        : language === "en" ? "Unable to add this predecessor." : "Não foi possível adicionar esta predecessora.");
     } finally {
       setIsAdding(false);
     }
@@ -375,13 +377,15 @@ function PredecessorCell({
           ...dependency,
           lagDays: managedLagDaysById[dependency.id] ?? dependency.lagDays,
         })),
-        `${String(managedDependencies.length)} intervalo${managedDependencies.length === 1 ? "" : "s"} de predecessoras atualizado${managedDependencies.length === 1 ? "" : "s"} em ${taskOutlineLabel(task, outlineNumbers)}`,
+        language === "en"
+          ? `${String(managedDependencies.length)} predecessor interval${managedDependencies.length === 1 ? "" : "s"} updated on ${taskOutlineLabel(task, outlineNumbers)}`
+          : `${String(managedDependencies.length)} intervalo${managedDependencies.length === 1 ? "" : "s"} de predecessoras atualizado${managedDependencies.length === 1 ? "" : "s"} em ${taskOutlineLabel(task, outlineNumbers)}`,
       );
-      if (!saved) throw new Error("Não foi possível atualizar as predecessoras selecionadas.");
+      if (!saved) throw new Error(language === "en" ? "Unable to update selected predecessors." : "Não foi possível atualizar as predecessoras selecionadas.");
       setManagedIds(new Set());
       setManagerOpen(false);
     } catch (error) {
-      setAddError(error instanceof Error ? error.message : "Não foi possível atualizar as predecessoras.");
+      setAddError(language === "en" ? "Unable to update predecessors." : error instanceof Error ? error.message : "Não foi possível atualizar as predecessoras.");
     } finally {
       setIsManaging(false);
     }
@@ -394,13 +398,15 @@ function PredecessorCell({
     try {
       const removed = await onDeleteMany(
         managedDependencies.map(({ id }) => id),
-        `${String(managedDependencies.length)} predecessora${managedDependencies.length === 1 ? "" : "s"} removida${managedDependencies.length === 1 ? "" : "s"} de ${taskOutlineLabel(task, outlineNumbers)}`,
+        language === "en"
+          ? `${String(managedDependencies.length)} predecessor${managedDependencies.length === 1 ? "" : "s"} removed from ${taskOutlineLabel(task, outlineNumbers)}`
+          : `${String(managedDependencies.length)} predecessora${managedDependencies.length === 1 ? "" : "s"} removida${managedDependencies.length === 1 ? "" : "s"} de ${taskOutlineLabel(task, outlineNumbers)}`,
       );
-      if (!removed) throw new Error("Não foi possível remover as predecessoras selecionadas.");
+      if (!removed) throw new Error(language === "en" ? "Unable to remove selected predecessors." : "Não foi possível remover as predecessoras selecionadas.");
       setManagedIds(new Set());
       setManagerOpen(false);
     } catch (error) {
-      setAddError(error instanceof Error ? error.message : "Não foi possível remover as predecessoras.");
+      setAddError(language === "en" ? "Unable to remove predecessors." : error instanceof Error ? error.message : "Não foi possível remover as predecessoras.");
     } finally {
       setIsManaging(false);
     }
@@ -408,7 +414,7 @@ function PredecessorCell({
 
   return (
     <div className="predecessor-cell">
-      {existing.length === 0 ? <span className="muted-text">Nenhuma</span> : (
+      {existing.length === 0 ? <span className="muted-text">{t("dependency.none")}</span> : (
         <ul>
           {existing.map((dependency) => (
             <DependencyLagEditor
@@ -417,7 +423,7 @@ function PredecessorCell({
               predecessorTitle={
                 taskById.has(dependency.predecessorId)
                   ? taskOutlineLabel(taskById.get(dependency.predecessorId) as Task, outlineNumbers)
-                  : "Tarefa removida"
+                  : t("dependency.removedTask")
               }
               lagDays={lagDrafts[dependency.id] ?? dependency.lagDays}
               dirty={(lagDrafts[dependency.id] ?? dependency.lagDays) !== dependency.lagDays}
@@ -429,14 +435,14 @@ function PredecessorCell({
         </ul>
       )}
       <div className="dependency-add">
-        <button ref={selectRef} className="dependency-picker-button" type="button" aria-label={`Adicionar predecessoras a ${task.title}`} disabled={disabled || isAdding} onClick={() => { setPickerOpen(true); setAddError(null); }}>Adicionar…</button>
-        <button className="dependency-add-button" type="button" aria-label={`Adicionar predecessoras a ${task.title}`} title="Adicionar predecessoras" disabled={disabled || isAdding} onClick={() => { setPickerOpen(true); setAddError(null); }}>+</button>
+        <button ref={selectRef} className="dependency-picker-button" type="button" aria-label={`${t("dependency.addTo")} ${task.title}`} disabled={disabled || isAdding} onClick={() => { setPickerOpen(true); setAddError(null); }}>{t("table.add")}…</button>
+        <button className="dependency-add-button" type="button" aria-label={`${t("dependency.addTo")} ${task.title}`} title={t("dependency.add")} disabled={disabled || isAdding} onClick={() => { setPickerOpen(true); setAddError(null); }}>+</button>
         {existing.length < 2 ? null : <button className="dependency-manage-button" type="button" disabled={disabled} onClick={() => {
           setManagedIds(new Set());
           setManagedLagDaysById(Object.fromEntries(existing.map((dependency) => [dependency.id, dependency.lagDays])));
           setManagerOpen(true);
           setAddError(null);
-        }}>Gerenciar</button>}
+        }}>{t("dependency.manage")}</button>}
       </div>
       {addError === null ? null : <p className="dependency-add-error" role="alert">{addError}</p>}
       {pickerOpen ? (
@@ -448,24 +454,24 @@ function PredecessorCell({
           onClose={() => { if (!isAdding) setPickerOpen(false); }}
         >
           <div>
-            <h2 id="dependency-picker-title">Adicionar predecessoras</h2>
-            <p id="dependency-picker-description">Pesquise e selecione uma ou várias tarefas para {taskOutlineLabel(task, outlineNumbers)}.</p>
+            <h2 id="dependency-picker-title">{t("dependency.add")}</h2>
+            <p id="dependency-picker-description">{language === "en" ? "Search for and select one or more tasks for" : "Pesquise e selecione uma ou várias tarefas para"} {taskOutlineLabel(task, outlineNumbers)}.</p>
           </div>
           <label className="dependency-picker-search">
-            <span>Buscar por número ou título</span>
-            <input autoFocus type="search" value={searchQuery} placeholder="Ex.: 1.2.1.3 ou Comando" onChange={(event) => { setSearchQuery(event.target.value); }} />
+            <span>{t("dependency.search")}</span>
+            <input autoFocus type="search" value={searchQuery} placeholder={language === "en" ? "E.g. 1.2.1.3 or Command" : "Ex.: 1.2.1.3 ou Comando"} onChange={(event) => { setSearchQuery(event.target.value); }} />
           </label>
           {existing.length === 0 ? null : (
             <div className="dependency-picker-existing">
-              <strong>Já adicionadas</strong>
+              <strong>{t("dependency.alreadyAdded")}</strong>
               {existing.map((dependency) => (
-                <span key={dependency.id}>✓ {taskById.has(dependency.predecessorId) ? taskOutlineLabel(taskById.get(dependency.predecessorId) as Task, outlineNumbers) : "Tarefa removida"}</span>
+                <span key={dependency.id}>✓ {taskById.has(dependency.predecessorId) ? taskOutlineLabel(taskById.get(dependency.predecessorId) as Task, outlineNumbers) : t("dependency.removedTask")}</span>
               ))}
             </div>
           )}
           <fieldset className="dependency-picker-options">
-            <legend>Tarefas disponíveis</legend>
-            {filteredAvailable.length === 0 ? <p>Nenhuma tarefa válida encontrada.</p> : filteredAvailable.map((candidate) => {
+            <legend>{t("dependency.available")}</legend>
+            {filteredAvailable.length === 0 ? <p>{t("dependency.noValidTask")}</p> : filteredAvailable.map((candidate) => {
               const summary = tasks.some(({ parentId }) => parentId === candidate.id);
               return (
                 <label key={candidate.id}>
@@ -477,27 +483,31 @@ function PredecessorCell({
                     });
                   }} />
                   <span>{taskOutlineLabel(candidate, outlineNumbers)}</span>
-                  {summary ? <small>Resumo</small> : null}
+                  {summary ? <small>{language === "en" ? "Summary" : "Resumo"}</small> : null}
                 </label>
               );
             })}
           </fieldset>
           <label className="dependency-picker-lag">
-            <span>Intervalo comum (dias úteis)</span>
+            <span>{t("dependency.commonLag")}</span>
             <input type="number" min={0} value={lagDays} disabled={selectedIds.size === 0} onChange={(event) => { setLagDays(Number(event.target.value)); }} />
           </label>
           <section className="dependency-picker-preview" aria-live="polite">
-            <strong>Prévia do impacto</strong>
-            {batchPreview === null ? <p>Selecione ao menos uma tarefa.</p> : batchPreview.changes.length === 0 ? <p>As datas atuais não serão alteradas.</p> : (
+            <strong>{t("dependency.preview")}</strong>
+            {batchPreview === null ? <p>{t("dependency.selectOne")}</p> : batchPreview.changes.length === 0 ? <p>{t("dependency.noDateChange")}</p> : (
               <ul className="dependency-impact-list">{batchPreview.changes.map((change) => (
-                <li key={change.taskId}><strong>{change.title}</strong><span>{change.beforeStartDate === null ? "Sem data" : displayDate(change.beforeStartDate)} – {change.beforeEndDate === null ? "Sem data" : displayDate(change.beforeEndDate)}</span><span aria-hidden="true">→</span><span>{change.afterStartDate === null ? "Sem data" : displayDate(change.afterStartDate)} – {change.afterEndDate === null ? "Sem data" : displayDate(change.afterEndDate)}</span></li>
+                <li key={change.taskId}><strong>{change.title}</strong><span>{change.beforeStartDate === null ? (language === "en" ? "No date" : "Sem data") : displayDate(change.beforeStartDate)} – {change.beforeEndDate === null ? (language === "en" ? "No date" : "Sem data") : displayDate(change.beforeEndDate)}</span><span aria-hidden="true">→</span><span>{change.afterStartDate === null ? (language === "en" ? "No date" : "Sem data") : displayDate(change.afterStartDate)} – {change.afterEndDate === null ? (language === "en" ? "No date" : "Sem data") : displayDate(change.afterEndDate)}</span></li>
               ))}</ul>
             )}
           </section>
           {addError === null ? null : <p className="dependency-add-error" role="alert">{addError}</p>}
           <div className="dialog-actions">
-            <button type="button" disabled={isAdding} onClick={() => { setPickerOpen(false); }}>Cancelar</button>
-            <button className="primary-button" type="button" disabled={isAdding || selectedIds.size === 0} onClick={() => { void commitAddDependencies(); }}>{isAdding ? "Adicionando…" : `Adicionar ${String(selectedIds.size)} predecessora${selectedIds.size === 1 ? "" : "s"}`}</button>
+            <button type="button" disabled={isAdding} onClick={() => { setPickerOpen(false); }}>{t("app.cancel")}</button>
+            <button className="primary-button" type="button" disabled={isAdding || selectedIds.size === 0} onClick={() => { void commitAddDependencies(); }}>
+              {isAdding ? t("dependency.adding") : language === "pt-BR"
+                ? `Adicionar ${String(selectedIds.size)} predecessora${selectedIds.size === 1 ? "" : "s"}`
+                : `Add ${String(selectedIds.size)} predecessor${selectedIds.size === 1 ? "" : "s"}`}
+            </button>
           </div>
         </ModalDialog>
       ) : null}
@@ -510,15 +520,15 @@ function PredecessorCell({
           onClose={() => { if (!isManaging) setManagerOpen(false); }}
         >
           <div>
-            <h2 id="dependency-manager-title">Gerenciar predecessoras</h2>
-            <p id="dependency-manager-description">Selecione relações para ajustar o intervalo ou remover em uma única operação.</p>
+            <h2 id="dependency-manager-title">{t("dependency.manager")}</h2>
+            <p id="dependency-manager-description">{t("dependency.managerDescription")}</p>
           </div>
           <fieldset className="dependency-picker-options">
-            <legend>Predecessoras atuais</legend>
+            <legend>{t("dependency.current")}</legend>
             {existing.map((dependency) => {
               const predecessorLabel = taskById.has(dependency.predecessorId)
                 ? taskOutlineLabel(taskById.get(dependency.predecessorId) as Task, outlineNumbers)
-                : "Tarefa removida";
+                : t("dependency.removedTask");
               return (
                 <div className="dependency-manager-row" key={dependency.id}>
                   <label className="dependency-manager-selection">
@@ -532,11 +542,11 @@ function PredecessorCell({
                     <span>{predecessorLabel}</span>
                   </label>
                   <label className="dependency-manager-lag">
-                    <span>Intervalo</span>
+                    <span>{language === "en" ? "Lag" : "Intervalo"}</span>
                     <input
                       type="number"
                       min={0}
-                      aria-label={`Intervalo de ${predecessorLabel}`}
+                      aria-label={`${language === "en" ? "Lag for" : "Intervalo de"} ${predecessorLabel}`}
                       value={managedLagDaysById[dependency.id] ?? dependency.lagDays}
                       disabled={isManaging}
                       onChange={(event) => {
@@ -545,21 +555,21 @@ function PredecessorCell({
                         setManagedIds((current) => new Set(current).add(dependency.id));
                       }}
                     />
-                    <small>dias úteis</small>
+                    <small>{language === "en" ? "working days" : "dias úteis"}</small>
                   </label>
                 </div>
               );
             })}
           </fieldset>
           <section className="dependency-picker-preview" aria-live="polite">
-            <strong>Impacto da remoção</strong>
-            {removalPreview === null ? <p>Selecione ao menos uma predecessora.</p> : removalPreview.changes.length === 0 ? <p>Remover a seleção não altera as datas atuais.</p> : <p>{String(removalPreview.changes.length)} tarefa(s) terá(ão) as datas recalculadas.</p>}
+            <strong>{language === "en" ? "Removal impact" : "Impacto da remoção"}</strong>
+            {removalPreview === null ? <p>{language === "en" ? "Select at least one predecessor." : "Selecione ao menos uma predecessora."}</p> : removalPreview.changes.length === 0 ? <p>{language === "en" ? "Removing the selection does not change current dates." : "Remover a seleção não altera as datas atuais."}</p> : <p>{String(removalPreview.changes.length)} {language === "en" ? "task(s) will have dates recalculated." : "tarefa(s) terá(ão) as datas recalculadas."}</p>}
           </section>
           {addError === null ? null : <p className="dependency-add-error" role="alert">{addError}</p>}
           <div className="dialog-actions dependency-manager-actions">
-            <button type="button" disabled={isManaging} onClick={() => { setManagerOpen(false); }}>Cancelar</button>
-            <button type="button" disabled={isManaging || managedIds.size === 0} onClick={() => { void removeManagedDependencies(); }}>Remover selecionadas</button>
-            <button className="primary-button" type="button" disabled={isManaging || managedIds.size === 0} onClick={() => { void applyManagedLag(); }}>Aplicar intervalos</button>
+            <button type="button" disabled={isManaging} onClick={() => { setManagerOpen(false); }}>{t("app.cancel")}</button>
+            <button type="button" disabled={isManaging || managedIds.size === 0} onClick={() => { void removeManagedDependencies(); }}>{t("dependency.removeSelected")}</button>
+            <button className="primary-button" type="button" disabled={isManaging || managedIds.size === 0} onClick={() => { void applyManagedLag(); }}>{t("dependency.applyLags")}</button>
           </div>
         </ModalDialog>
       ) : null}
@@ -571,12 +581,12 @@ function PredecessorCell({
           onClose={() => { setPendingImpact(null); }}
         >
           <div>
-            <h2 id="dependency-impact-title">Prévia do impacto no cronograma</h2>
+            <h2 id="dependency-impact-title">{language === "en" ? "Schedule impact preview" : "Prévia do impacto no cronograma"}</h2>
             <p id="dependency-impact-description">
-              Remover a tarefa-resumo como predecessora
+              {language === "en" ? "Removing the summary task as a predecessor" : "Remover a tarefa-resumo como predecessora"}
               {pendingImpact.preview.changes.length === 0
-                ? " não altera as datas atuais."
-                : ` altera ${String(pendingImpact.preview.changes.length)} tarefa${pendingImpact.preview.changes.length === 1 ? "" : "s"}.`}
+                ? (language === "en" ? " does not change current dates." : " não altera as datas atuais.")
+                : language === "en" ? ` changes ${String(pendingImpact.preview.changes.length)} task${pendingImpact.preview.changes.length === 1 ? "" : "s"}.` : ` altera ${String(pendingImpact.preview.changes.length)} tarefa${pendingImpact.preview.changes.length === 1 ? "" : "s"}.`}
             </p>
           </div>
           {pendingImpact.preview.changes.length === 0 ? null : (
@@ -592,9 +602,9 @@ function PredecessorCell({
             </ul>
           )}
           <div className="dialog-actions">
-            <button type="button" onClick={() => { setPendingImpact(null); }}>Cancelar</button>
+            <button type="button" onClick={() => { setPendingImpact(null); }}>{t("app.cancel")}</button>
             <button className="primary-button" type="button" onClick={() => { void confirmImpact(); }}>
-              Remover predecessora
+              {language === "en" ? "Remove predecessor" : "Remover predecessora"}
             </button>
           </div>
         </ModalDialog>
@@ -635,17 +645,12 @@ interface TaskRowProps {
   readonly onPrepareTemplate: () => void;
 }
 
-const HEALTH_LABELS: Readonly<Record<ScheduleHealth, string>> = {
-  NO_DEADLINE: "Sem prazo",
-  ON_TRACK: "No prazo",
-  AT_RISK: "Em risco",
-  OVERDUE: "Atrasada",
-  COMPLETED_LATE: "Concluída com atraso",
-  CANCELLED: "Cancelada",
-};
-
 function HealthBadge({ health }: { readonly health: ScheduleHealth }) {
-  return <span className={`health-badge health-${health.toLocaleLowerCase()}`}>{HEALTH_LABELS[health]}</span>;
+  const { language } = useLanguage();
+  const labels: Readonly<Record<ScheduleHealth, string>> = language === "en"
+    ? { NO_DEADLINE: "No deadline", ON_TRACK: "On track", AT_RISK: "At risk", OVERDUE: "Overdue", COMPLETED_LATE: "Completed late", CANCELLED: "Cancelled" }
+    : { NO_DEADLINE: "Sem prazo", ON_TRACK: "No prazo", AT_RISK: "Em risco", OVERDUE: "Atrasada", COMPLETED_LATE: "Concluída com atraso", CANCELLED: "Cancelada" };
+  return <span className={`health-badge health-${health.toLocaleLowerCase()}`}>{labels[health]}</span>;
 }
 
 function isCompleteDateInput(value: string): boolean {
@@ -788,6 +793,8 @@ function TaskRow({
   onDuplicate,
   onPrepareTemplate,
 }: TaskRowProps) {
+  const { language, priorityLabel, statusLabel } = useLanguage();
+  const english = language === "en";
   const [draft, setDraft] = useState(row.task);
   const [tagsText, setTagsText] = useState(row.task.tags.join(", "));
   const [dirty, setDirty] = useState(false);
@@ -849,8 +856,8 @@ function TaskRow({
       !existingPredecessorIds.has(candidate.id),
   );
   const subtaskTitle = canHaveSubtask
-    ? "Criar subtarefa"
-    : "A hierarquia já atingiu o limite de cinco níveis.";
+    ? (english ? "Create subtask" : "Criar subtarefa")
+    : (english ? "Hierarchy has already reached the five-level limit." : "A hierarquia já atingiu o limite de cinco níveis.");
   const dependencyUpdates = dependencies
     .filter((dependency) => dependency.successorId === row.task.id)
     .flatMap((dependency) => {
@@ -1081,25 +1088,25 @@ function TaskRow({
     ...(textEditContext === null ? [] : [
       {
         id: "cut-text",
-        label: "Recortar",
+        label: english ? "Cut" : "Recortar",
         disabled: !hasSelectedText || textEditContext.control.disabled || textEditContext.control.readOnly,
         onSelect: () => { runClipboardAction(() => copyTextSelection(textEditContext, true)); },
       },
       {
         id: "copy-text",
-        label: "Copiar",
+        label: english ? "Copy" : "Copiar",
         disabled: !hasSelectedText,
         onSelect: () => { runClipboardAction(() => copyTextSelection(textEditContext, false)); },
       },
       {
         id: "paste-text",
-        label: "Colar",
+        label: english ? "Paste" : "Colar",
         disabled: textEditContext.control.disabled || textEditContext.control.readOnly,
         onSelect: () => { runClipboardAction(() => pasteTextSelection(textEditContext)); },
       },
       {
         id: "select-all-text",
-        label: "Selecionar tudo",
+        label: english ? "Select all" : "Selecionar tudo",
         onSelect: () => {
           textEditContext.control.focus();
           textEditContext.control.select();
@@ -1108,50 +1115,50 @@ function TaskRow({
     ] satisfies readonly ContextMenuItem[]),
     {
       id: "details",
-      label: showDetails ? "Ocultar detalhes" : "Abrir detalhes",
+      label: showDetails ? (english ? "Hide details" : "Ocultar detalhes") : (english ? "Open details" : "Abrir detalhes"),
       separatorBefore: textEditContext !== null,
       onSelect: () => { setShowDetails((visible) => !visible); },
     },
     {
       id: "subtask",
-      label: "Adicionar subtarefa",
+      label: english ? "Add subtask" : "Adicionar subtarefa",
       disabled: disabled || !canHaveSubtask,
       onSelect: onPrepareSubtask,
     },
     {
       id: "predecessor",
-      label: "Adicionar predecessora",
+      label: english ? "Add predecessor" : "Adicionar predecessora",
       disabled: disabled || row.hasChildren || !canAddPredecessor,
       onSelect: () => { predecessorSelectRef.current?.focus(); },
     },
     {
       id: "date-lock",
-      label: datesLocked ? "Destravar datas" : "Travar datas",
+      label: datesLocked ? (english ? "Unlock dates" : "Destravar datas") : (english ? "Lock dates" : "Travar datas"),
       disabled: disabled || row.hasChildren,
       onSelect: toggleDateLock,
     },
     {
       id: "duplicate",
-      label: "Duplicar tarefa",
+      label: english ? "Duplicate task" : "Duplicar tarefa",
       separatorBefore: true,
       disabled,
       onSelect: () => { onDuplicate(false); },
     },
     ...(row.hasChildren ? [{
       id: "duplicate-tree",
-      label: "Duplicar tarefa e subtarefas",
+      label: english ? "Duplicate task and subtasks" : "Duplicar tarefa e subtarefas",
       disabled,
       onSelect: () => { onDuplicate(true); },
     } satisfies ContextMenuItem] : []),
     {
       id: "template",
-      label: "Salvar como template",
+      label: english ? "Save as template" : "Salvar como template",
       disabled,
       onSelect: onPrepareTemplate,
     },
     {
       id: "delete",
-      label: "Excluir tarefa…",
+      label: english ? "Delete task…" : "Excluir tarefa…",
       danger: true,
       separatorBefore: true,
       disabled,
@@ -1165,12 +1172,12 @@ function TaskRow({
       <td className="selection-cell"><input type="checkbox" checked={selected} aria-label={`Selecionar ${row.task.title}`} onChange={(event) => { onSelect(event.target.checked); }} /></td>
       <td className="task-title-cell">
         <div className="task-title-line" style={{ paddingLeft: `${String(row.depth * 1.25)}rem` }}>
-          {row.hasChildren ? <button className="tree-toggle" type="button" aria-label={expanded ? "Recolher subtarefas" : "Expandir subtarefas"} aria-expanded={expanded} onClick={onToggleExpanded}>{expanded ? "▾" : "▸"}</button> : <span className="tree-spacer" />}
-          <span className="task-outline-number" aria-label={`Estrutura ${outlineNumber}`}>{outlineNumber}.</span>
-          <input className="cell-input title-input" aria-label="Título da tarefa" value={titleWithoutMatchingOutline(visibleDraft.title, outlineNumber)} disabled={disabled} onChange={(event) => { update({ title: event.target.value }); }} />
-          {row.hasChildren ? <span className="summary-badge">Resumo</span> : null}
+          {row.hasChildren ? <button className="tree-toggle" type="button" aria-label={expanded ? (english ? "Collapse subtasks" : "Recolher subtarefas") : (english ? "Expand subtasks" : "Expandir subtarefas")} aria-expanded={expanded} onClick={onToggleExpanded}>{expanded ? "▾" : "▸"}</button> : <span className="tree-spacer" />}
+          <span className="task-outline-number" aria-label={`${english ? "Outline" : "Estrutura"} ${outlineNumber}`}>{outlineNumber}.</span>
+          <input className="cell-input title-input" aria-label={english ? "Task title" : "Título da tarefa"} value={titleWithoutMatchingOutline(visibleDraft.title, outlineNumber)} disabled={disabled} onChange={(event) => { update({ title: event.target.value }); }} />
+          {row.hasChildren ? <span className="summary-badge">{english ? "Summary" : "Resumo"}</span> : null}
           {criticality === null ? null : criticality.isCritical ? (
-            <span className="criticality-badge critical" title="Folga zero na rede: esta tarefa pertence ao caminho que controla o término previsto">◆ Crítica</span>
+            <span className="criticality-badge critical" title={english ? "Zero float in the network: this task belongs to the path that controls predicted completion" : "Folga zero na rede: esta tarefa pertence ao caminho que controla o término previsto"}>◆ {english ? "Critical" : "Crítica"}</span>
           ) : criticality.isNearCritical ? (
             <span className="criticality-badge near" title={`${String(criticality.totalSlackDays)} dia(s) útil(eis) de folga total`}>◇ +{String(criticality.totalSlackDays)}d</span>
           ) : null}
@@ -1178,27 +1185,27 @@ function TaskRow({
             className={`schedule-lock-button${datesLocked ? " locked" : ""}`}
             type="button"
             disabled={disabled || row.hasChildren}
-            aria-label={datesLocked ? `Destravar datas de ${visibleDraft.title}` : `Travar datas de ${visibleDraft.title}`}
+            aria-label={datesLocked ? `${english ? "Unlock dates for" : "Destravar datas de"} ${visibleDraft.title}` : `${english ? "Lock dates for" : "Travar datas de"} ${visibleDraft.title}`}
             aria-pressed={datesLocked}
-            title={row.hasChildren ? "Datas calculadas pelas subtarefas" : datesLocked ? "Datas travadas: o scheduler e o arrasto não deslocam esta tarefa" : "Datas automáticas: clique para travar"}
+            title={row.hasChildren ? (english ? "Dates calculated from subtasks" : "Datas calculadas pelas subtarefas") : datesLocked ? (english ? "Locked dates: scheduler and dragging will not move this task" : "Datas travadas: o scheduler e o arrasto não deslocam esta tarefa") : (english ? "Automatic dates: click to lock" : "Datas automáticas: clique para travar")}
             onClick={toggleDateLock}
           >
             <span aria-hidden="true">{datesLocked ? "🔒" : "🔓"}</span>
           </button>
         </div>
         <div className="task-row-links" style={{ paddingLeft: `${String(row.depth * 1.25 + 1.6)}rem` }}>
-          <button className="inline-link" type="button" disabled={disabled || !canHaveSubtask} title={subtaskTitle} onClick={onPrepareSubtask}>+ Subtarefa</button>
-          <button ref={detailsButtonRef} className="inline-link" type="button" aria-expanded={showDetails} aria-controls={detailsId} onKeyDown={closeDetailsOnEscape} onClick={() => { setShowDetails((visible) => !visible); }}>{showDetails ? "Ocultar detalhes" : "Detalhes"}</button>
+          <button className="inline-link" type="button" disabled={disabled || !canHaveSubtask} title={subtaskTitle} onClick={onPrepareSubtask}>+ {english ? "Subtask" : "Subtarefa"}</button>
+          <button ref={detailsButtonRef} className="inline-link" type="button" aria-expanded={showDetails} aria-controls={detailsId} onKeyDown={closeDetailsOnEscape} onClick={() => { setShowDetails((visible) => !visible); }}>{showDetails ? (english ? "Hide details" : "Ocultar detalhes") : (english ? "Details" : "Detalhes")}</button>
         </div>
         {taskConflicts.map((conflict) => <p className="conflict-message" key={`${conflict.kind}-${conflict.requiredStartDate}`}>{conflict.message}</p>)}
       </td>
       <td><PredecessorCell task={row.task} tasks={tasks} dependencies={dependencies} calendars={calendars} projectCalendarId={projectCalendarId} lagDrafts={lagDrafts} isSummary={row.hasChildren} disabled={disabled} selectRef={predecessorSelectRef} onCreateMany={onCreateDependencies} onSaveMany={onSaveDependencies} onLagChange={updateLag} onDelete={onDeleteDependency} onDeleteMany={onDeleteDependencies} /></td>
-      <td><select className="cell-select" aria-label="Status da tarefa" value={visibleDraft.status} disabled={disabled} onChange={(event) => { update({ status: event.target.value as TaskStatus }, true); }}>{TASK_STATUSES.map((status) => <option value={status} key={status}>{TASK_STATUS_LABELS[status]}</option>)}</select></td>
-      <td><select className="cell-select" aria-label="Prioridade da tarefa" value={visibleDraft.priority} disabled={disabled} onChange={(event) => { update({ priority: event.target.value as TaskPriority }, true); }}>{TASK_PRIORITIES.map((priority) => <option value={priority} key={priority}>{TASK_PRIORITY_LABELS[priority]}</option>)}</select></td>
-      <td><div className="progress-editor"><input className="cell-input number-input" type="number" min={0} max={100} aria-label="Progresso da tarefa" title={visibleDraft.status === "COMPLETED" ? "Reabra a atividade para alterar o progresso" : ""} value={visibleDraft.progress} disabled={disabled || visibleDraft.status === "COMPLETED"} onChange={(event) => { update({ progress: Number(event.target.value) }); }} /><span>%</span></div></td>
-      <td><SafeDateInput className="cell-input date-input" ariaLabel="Início da tarefa" value={visibleDraft.startDate} disabled={disabled || row.hasChildren} title={row.hasChildren ? "Data calculada pelas subtarefas" : ""} onCommit={(value) => { updateSchedule({ field: "startDate", value }); }} /></td>
-      <td><SafeDateInput className="cell-input date-input" ariaLabel="Fim da tarefa" value={visibleDraft.endDate} disabled={disabled || row.hasChildren} title={row.hasChildren ? "Data calculada pelas subtarefas" : ""} onCommit={(value) => { updateSchedule({ field: "endDate", value }); }} /></td>
-      <td><input className="cell-input duration-input" type="number" min={1} aria-label="Duração da tarefa" value={visibleDraft.durationDays ?? ""} disabled={disabled || row.hasChildren} title={row.hasChildren ? "Duração calculada pelas subtarefas" : ""} onChange={(event) => { updateSchedule({ field: "durationDays", value: event.target.value === "" ? null : Number(event.target.value) }); }} /></td>
+      <td><select className="cell-select" aria-label={english ? "Task status" : "Status da tarefa"} value={visibleDraft.status} disabled={disabled} onChange={(event) => { update({ status: event.target.value as TaskStatus }, true); }}>{TASK_STATUSES.map((status) => <option value={status} key={status}>{statusLabel(status)}</option>)}</select></td>
+      <td><select className="cell-select" aria-label={english ? "Task priority" : "Prioridade da tarefa"} value={visibleDraft.priority} disabled={disabled} onChange={(event) => { update({ priority: event.target.value as TaskPriority }, true); }}>{TASK_PRIORITIES.map((priority) => <option value={priority} key={priority}>{priorityLabel(priority)}</option>)}</select></td>
+      <td><div className="progress-editor"><input className="cell-input number-input" type="number" min={0} max={100} aria-label={english ? "Task progress" : "Progresso da tarefa"} title={visibleDraft.status === "COMPLETED" ? (english ? "Reopen the task to change progress" : "Reabra a atividade para alterar o progresso") : ""} value={visibleDraft.progress} disabled={disabled || visibleDraft.status === "COMPLETED"} onChange={(event) => { update({ progress: Number(event.target.value) }); }} /><span>%</span></div></td>
+      <td><SafeDateInput className="cell-input date-input" ariaLabel={english ? "Task start" : "Início da tarefa"} value={visibleDraft.startDate} disabled={disabled || row.hasChildren} title={row.hasChildren ? (english ? "Date calculated from subtasks" : "Data calculada pelas subtarefas") : ""} onCommit={(value) => { updateSchedule({ field: "startDate", value }); }} /></td>
+      <td><SafeDateInput className="cell-input date-input" ariaLabel={english ? "Task finish" : "Fim da tarefa"} value={visibleDraft.endDate} disabled={disabled || row.hasChildren} title={row.hasChildren ? (english ? "Date calculated from subtasks" : "Data calculada pelas subtarefas") : ""} onCommit={(value) => { updateSchedule({ field: "endDate", value }); }} /></td>
+      <td><input className="cell-input duration-input" type="number" min={1} aria-label={english ? "Task duration" : "Duração da tarefa"} value={visibleDraft.durationDays ?? ""} disabled={disabled || row.hasChildren} title={row.hasChildren ? (english ? "Duration calculated from subtasks" : "Duração calculada pelas subtarefas") : ""} onChange={(event) => { updateSchedule({ field: "durationDays", value: event.target.value === "" ? null : Number(event.target.value) }); }} /></td>
       {showBaselineColumns ? (
         <>
           <td className="baseline-date-cell">{baselineTask?.startDate ?? "—"}</td>
@@ -1210,24 +1217,24 @@ function TaskRow({
           </td>
         </>
       ) : null}
-      <td><SafeDateInput className="cell-input date-input" ariaLabel="Prazo-limite da tarefa" value={visibleDraft.deadlineDate} disabled={disabled} onCommit={(value) => { update({ deadlineDate: value }, true); }} /></td>
+      <td><SafeDateInput className="cell-input date-input" ariaLabel={english ? "Task deadline" : "Prazo-limite da tarefa"} value={visibleDraft.deadlineDate} disabled={disabled} onCommit={(value) => { update({ deadlineDate: value }, true); }} /></td>
       <td><HealthBadge health={comparison?.health ?? "NO_DEADLINE"} /></td>
-      <td><input className="cell-input" aria-label="Responsável pela tarefa" value={visibleDraft.assignee ?? ""} disabled={disabled} onChange={(event) => { update({ assignee: event.target.value || null }); }} /></td>
-      <td><input className="cell-input tags-input" aria-label="Tags da tarefa" placeholder="tag, tag" value={visibleTagsText} disabled={disabled} onChange={(event) => { tagsTextRef.current = event.target.value; setTagsText(event.target.value); markDirty(); }} /></td>
+      <td><input className="cell-input" aria-label={english ? "Task assignee" : "Responsável pela tarefa"} value={visibleDraft.assignee ?? ""} disabled={disabled} onChange={(event) => { update({ assignee: event.target.value || null }); }} /></td>
+      <td><input className="cell-input tags-input" aria-label={english ? "Task tags" : "Tags da tarefa"} placeholder="tag, tag" value={visibleTagsText} disabled={disabled} onChange={(event) => { tagsTextRef.current = event.target.value; setTagsText(event.target.value); markDirty(); }} /></td>
       <td className="row-actions">
         <div className="row-actions-toolbar">
           <div className="order-buttons row-order-buttons" aria-label={`Ordenação de ${row.task.title}`}><button type="button" disabled={disabled || !canMoveUp} aria-label={`Mover ${row.task.title} para cima`} title="Mover para cima" onClick={() => { onMove("up"); }}>↑</button><button type="button" disabled={disabled || !canMoveDown} aria-label={`Mover ${row.task.title} para baixo`} title="Mover para baixo" onClick={() => { onMove("down"); }}>↓</button></div>
-          <button ref={contextMenuButtonRef} className="task-more-button" type="button" aria-label={`Mais ações para ${row.task.title}`} aria-haspopup="menu" aria-expanded={contextMenu !== null} disabled={disabled} onClick={(event) => { const bounds = event.currentTarget.getBoundingClientRect(); contextMenuOriginRef.current = event.currentTarget; setTextEditContext(null); setClipboardError(null); setContextMenu({ x: bounds.right, y: bounds.bottom }); }}>⋯</button>
+          <button ref={contextMenuButtonRef} className="task-more-button" type="button" aria-label={`${english ? "More actions for" : "Mais ações para"} ${row.task.title}`} aria-haspopup="menu" aria-expanded={contextMenu !== null} disabled={disabled} onClick={(event) => { const bounds = event.currentTarget.getBoundingClientRect(); contextMenuOriginRef.current = event.currentTarget; setTextEditContext(null); setClipboardError(null); setContextMenu({ x: bounds.right, y: bounds.bottom }); }}>⋯</button>
           <span
             className={`save-state-indicator ${saveState.toLocaleLowerCase()}`}
             role="status"
-            aria-label={saveState === "SAVING" ? "Salvando alteração" : saveState === "ERROR" ? "Erro ao salvar" : saveState === "DIRTY" ? "Alteração pendente" : undefined}
-            title={saveState === "SAVING" ? "Salvando alteração" : saveState === "ERROR" ? "Erro ao salvar" : saveState === "DIRTY" ? "Alteração pendente" : undefined}
+            aria-label={saveState === "SAVING" ? (english ? "Saving change" : "Salvando alteração") : saveState === "ERROR" ? (english ? "Save error" : "Erro ao salvar") : saveState === "DIRTY" ? (english ? "Pending change" : "Alteração pendente") : undefined}
+            title={saveState === "SAVING" ? (english ? "Saving change" : "Salvando alteração") : saveState === "ERROR" ? (english ? "Save error" : "Erro ao salvar") : saveState === "DIRTY" ? (english ? "Pending change" : "Alteração pendente") : undefined}
           >{saveState === "SAVING" ? "↻" : saveState === "ERROR" ? "!" : saveState === "DIRTY" ? "•" : ""}</span>
         </div>
         {hasUnsavedChanges
-          ? <button className="save-row-button row-terminal-action" type="button" disabled={disabled} onClick={() => { void save(); }}>Salvar</button>
-          : <button className="delete-row-button row-terminal-action" type="button" disabled={disabled} onClick={onDelete}>Excluir</button>}
+          ? <button className="save-row-button row-terminal-action" type="button" disabled={disabled} onClick={() => { void save(); }}>{english ? "Save" : "Salvar"}</button>
+          : <button className="delete-row-button row-terminal-action" type="button" disabled={disabled} onClick={onDelete}>{english ? "Delete" : "Excluir"}</button>}
       </td>
     </tr>
     {showDetails ? (
@@ -1237,52 +1244,52 @@ function TaskRow({
           <div className="task-details" id={detailsId} style={{ marginLeft: `${String(row.depth * 1.25)}rem` }} onKeyDown={closeDetailsOnEscape}>
             <header className="task-details-header wide-detail">
               <div>
-                <h3>Detalhes da tarefa</h3>
+                <h3>{english ? "Task details" : "Detalhes da tarefa"}</h3>
                 <span>{outlineNumber}. {visibleDraft.title}</span>
               </div>
-              <span className="task-details-close-hint">Esc para fechar</span>
-              <button type="button" aria-label={`Fechar detalhes de ${visibleDraft.title}`} onClick={() => { setShowDetails(false); detailsButtonRef.current?.focus(); }}>×</button>
+              <span className="task-details-close-hint">{english ? "Esc to close" : "Esc para fechar"}</span>
+              <button type="button" aria-label={`${english ? "Close details for" : "Fechar detalhes de"} ${visibleDraft.title}`} onClick={() => { setShowDetails(false); detailsButtonRef.current?.focus(); }}>×</button>
             </header>
             <section className="task-detail-group wide-detail" aria-labelledby={`${detailsId}-structure`}>
-              <h3 id={`${detailsId}-structure`}>Estrutura e agenda</h3>
+              <h3 id={`${detailsId}-structure`}>{english ? "Structure and schedule" : "Estrutura e agenda"}</h3>
               <div className="task-detail-fields">
                 <label>
                   <span className="detail-label">
-                    Código
-                    <span className="field-help" tabIndex={0} aria-label="Ajuda sobre o código visual" aria-describedby={codeHelpId} title="Identificador visual opcional, como DEV-01 ou 1.2. Ele não altera o UUID interno da tarefa.">
+                    {english ? "Code" : "Código"}
+                    <span className="field-help" tabIndex={0} aria-label={english ? "Help about visual code" : "Ajuda sobre o código visual"} aria-describedby={codeHelpId} title={english ? "Optional visual identifier, such as DEV-01 or 1.2. It does not change the task's internal UUID." : "Identificador visual opcional, como DEV-01 ou 1.2. Ele não altera o UUID interno da tarefa."}>
                       i
-                      <span className="field-help-text" id={codeHelpId} role="tooltip">Identificador visual opcional, como DEV-01 ou 1.2. Ele não altera o UUID interno da tarefa.</span>
+                      <span className="field-help-text" id={codeHelpId} role="tooltip">{english ? "Optional visual identifier, such as DEV-01 or 1.2. It does not change the task's internal UUID." : "Identificador visual opcional, como DEV-01 ou 1.2. Ele não altera o UUID interno da tarefa."}</span>
                     </span>
                   </span>
-                  <input aria-label="Código visual da tarefa" disabled={disabled} value={visibleDraft.code ?? ""} onChange={(event) => { update({ code: event.target.value || null }); }} />
+                  <input aria-label={english ? "Task visual code" : "Código visual da tarefa"} disabled={disabled} value={visibleDraft.code ?? ""} onChange={(event) => { update({ code: event.target.value || null }); }} />
                 </label>
-                <label>Tarefa-pai<select disabled={disabled} value={visibleDraft.parentId ?? ""} onChange={(event) => { update({ parentId: event.target.value || null }, true); }}><option value="">Sem tarefa-pai</option>{parentOptions.map((task) => <option value={task.id} key={task.id}>{taskOutlineLabel(task, outlineNumbers)}</option>)}</select></label>
+                <label>{english ? "Parent task" : "Tarefa-pai"}<select disabled={disabled} value={visibleDraft.parentId ?? ""} onChange={(event) => { update({ parentId: event.target.value || null }, true); }}><option value="">{english ? "No parent task" : "Sem tarefa-pai"}</option>{parentOptions.map((task) => <option value={task.id} key={task.id}>{taskOutlineLabel(task, outlineNumbers)}</option>)}</select></label>
                 <label>
-                  Política das datas
+                  {english ? "Date policy" : "Política das datas"}
                   <button className={`detail-lock-button${datesLocked ? " locked" : ""}`} type="button" disabled={disabled || row.hasChildren} aria-pressed={datesLocked} onClick={toggleDateLock}>
                     <span aria-hidden="true">{datesLocked ? "🔒" : "🔓"}</span>
-                    {datesLocked ? "Travadas" : "Automáticas"}
+                    {datesLocked ? (english ? "Locked" : "Travadas") : (english ? "Automatic" : "Automáticas")}
                   </button>
                 </label>
-                <label>Calendário<select disabled={disabled || row.hasChildren} value={visibleDraft.calendarId ?? ""} onChange={(event) => { updateCalendar(event.target.value || null); }}><option value="">Calendário do projeto</option>{calendars.filter((calendar) => calendar.id !== projectCalendarId).map((calendar) => <option value={calendar.id} key={calendar.id}>{calendar.name}</option>)}</select></label>
+                <label>{english ? "Calendar" : "Calendário"}<select disabled={disabled || row.hasChildren} value={visibleDraft.calendarId ?? ""} onChange={(event) => { updateCalendar(event.target.value || null); }}><option value="">{english ? "Project calendar" : "Calendário do projeto"}</option>{calendars.filter((calendar) => calendar.id !== projectCalendarId).map((calendar) => <option value={calendar.id} key={calendar.id}>{calendar.name}</option>)}</select></label>
               </div>
             </section>
             <section className="task-detail-group wide-detail" aria-labelledby={`${detailsId}-content`}>
-              <h3 id={`${detailsId}-content`}>Conteúdo</h3>
+              <h3 id={`${detailsId}-content`}>{english ? "Content" : "Conteúdo"}</h3>
               <div className="task-detail-text-fields">
-                <label>Descrição<textarea disabled={disabled} rows={3} value={visibleDraft.description ?? ""} onChange={(event) => { update({ description: event.target.value || null }); }} /></label>
-                <label>Observações<textarea disabled={disabled} rows={3} value={visibleDraft.notes ?? ""} onChange={(event) => { update({ notes: event.target.value || null }); }} /></label>
+                <label>{english ? "Description" : "Descrição"}<textarea disabled={disabled} rows={3} value={visibleDraft.description ?? ""} onChange={(event) => { update({ description: event.target.value || null }); }} /></label>
+                <label>{english ? "Notes" : "Observações"}<textarea disabled={disabled} rows={3} value={visibleDraft.notes ?? ""} onChange={(event) => { update({ notes: event.target.value || null }); }} /></label>
               </div>
             </section>
-            {manualNonWorkingDate ? <p className="calendar-warning wide-detail">A tarefa manual usa uma data não útil. A data será preservada; escolha “Todos os dias” se ela deve participar automaticamente de fins de semana.</p> : null}
+            {manualNonWorkingDate ? <p className="calendar-warning wide-detail">{english ? "The manual task uses a non-working date. The date will be preserved; choose “Every day” if it should automatically include weekends." : "A tarefa manual usa uma data não útil. A data será preservada; escolha “Todos os dias” se ela deve participar automaticamente de fins de semana."}</p> : null}
             <div className="task-reuse-actions wide-detail">
               <div>
-                <strong>Reutilização</strong>
-                <span>As cópias recebem novas identidades; relações externas não são copiadas.</span>
+                <strong>{english ? "Reuse" : "Reutilização"}</strong>
+                <span>{english ? "Copies receive new identities; external relationships are not copied." : "As cópias recebem novas identidades; relações externas não são copiadas."}</span>
               </div>
-              <button type="button" disabled={disabled} onClick={() => { onDuplicate(false); }}>Duplicar tarefa</button>
-              {row.hasChildren ? <button type="button" disabled={disabled} onClick={() => { onDuplicate(true); }}>Duplicar árvore</button> : null}
-              <button type="button" disabled={disabled} onClick={onPrepareTemplate}>Salvar árvore como template</button>
+              <button type="button" disabled={disabled} onClick={() => { onDuplicate(false); }}>{english ? "Duplicate task" : "Duplicar tarefa"}</button>
+              {row.hasChildren ? <button type="button" disabled={disabled} onClick={() => { onDuplicate(true); }}>{english ? "Duplicate tree" : "Duplicar árvore"}</button> : null}
+              <button type="button" disabled={disabled} onClick={onPrepareTemplate}>{english ? "Save tree as template" : "Salvar árvore como template"}</button>
             </div>
           </div>
         </td>
@@ -1290,7 +1297,7 @@ function TaskRow({
     ) : null}
     {contextMenu === null ? null : (
       <ContextMenu
-        ariaLabel={`Ações de ${row.task.title}`}
+        ariaLabel={`${english ? "Actions for" : "Ações de"} ${row.task.title}`}
         heading={row.task.title}
         items={contextMenuItems}
         returnFocusRef={contextMenuOriginRef}
@@ -1326,6 +1333,7 @@ export function TaskTable({
   onDuplicate,
   onCreateTemplate,
 }: TaskTableProps) {
+  const { language, t } = useLanguage();
   const showBaselineColumns = baselineTasks.length > 0;
   const [newTitle, setNewTitle] = useState("");
   const [newParentId, setNewParentId] = useState<string | null>(null);
@@ -1616,22 +1624,22 @@ export function TaskTable({
   return (
     <section className="task-section" aria-labelledby="task-table-title">
       <div className="task-toolbar">
-        <div><h2 id="task-table-title">Tabela de tarefas</h2><p>{selectedTaskIds.size > 0 ? `${String(selectedTaskIds.size)} selecionada${selectedTaskIds.size === 1 ? "" : "s"}` : "Preencha duas informações de prazo; a terceira será calculada."}</p></div>
+        <div><h2 id="task-table-title">{t("table.title")}</h2><p>{selectedTaskIds.size > 0 ? `${String(selectedTaskIds.size)} ${selectedTaskIds.size === 1 ? t("filters.selected") : t("filters.selectedPlural")}` : t("table.scheduleHint")}</p></div>
         {selectedTaskIds.size === 0 ? null : (
-          <div className="bulk-task-actions" role="group" aria-label="Ações nas tarefas selecionadas">
-            <span>{selectedEditableTasks.length === selectedTaskIds.size ? `${String(selectedEditableTasks.length)} editável${selectedEditableTasks.length === 1 ? "" : "is"}` : `${String(selectedEditableTasks.length)} de ${String(selectedTaskIds.size)} editáveis`}</span>
-            <button type="button" disabled={disabled || selectedEditableTasks.length === 0} aria-keyshortcuts="Control+Shift+L" onClick={() => { void setSelectedSchedulingMode("MANUAL"); }}>🔒 Travar datas</button>
-            <button type="button" disabled={disabled || selectedEditableTasks.length === 0} onClick={() => { void setSelectedSchedulingMode("AUTO"); }}>🔓 Destravar datas</button>
-            <button type="button" onClick={() => { setSelectedTaskIds(new Set()); }}>Limpar seleção</button>
+          <div className="bulk-task-actions" role="group" aria-label={language === "en" ? "Selected task actions" : "Ações nas tarefas selecionadas"}>
+            <span>{selectedEditableTasks.length === selectedTaskIds.size ? `${String(selectedEditableTasks.length)} ${language === "en" ? "editable" : `editável${selectedEditableTasks.length === 1 ? "" : "is"}`}` : language === "en" ? `${String(selectedEditableTasks.length)} of ${String(selectedTaskIds.size)} editable` : `${String(selectedEditableTasks.length)} de ${String(selectedTaskIds.size)} editáveis`}</span>
+            <button type="button" disabled={disabled || selectedEditableTasks.length === 0} aria-keyshortcuts="Control+Shift+L" onClick={() => { void setSelectedSchedulingMode("MANUAL"); }}>🔒 {language === "en" ? "Lock dates" : "Travar datas"}</button>
+            <button type="button" disabled={disabled || selectedEditableTasks.length === 0} onClick={() => { void setSelectedSchedulingMode("AUTO"); }}>🔓 {language === "en" ? "Unlock dates" : "Destravar datas"}</button>
+            <button type="button" onClick={() => { setSelectedTaskIds(new Set()); }}>{language === "en" ? "Clear selection" : "Limpar seleção"}</button>
           </div>
         )}
         <form className="quick-task-form" onSubmit={(event) => { void handleCreate(event); }}>
-          <label className="sr-only" htmlFor="quick-task-title">Título da nova tarefa</label><input id="quick-task-title" ref={titleInput} required placeholder={newParentId === null ? "Nova tarefa" : "Nova subtarefa"} value={newTitle} disabled={disabled} onChange={(event) => { setNewTitle(event.target.value); }} />
-          <label className="sr-only" htmlFor="quick-task-parent">Tarefa-pai</label><select id="quick-task-parent" value={newParentId ?? ""} disabled={disabled} onChange={(event) => { setNewParentId(event.target.value || null); }}><option value="">Sem tarefa-pai</option>{tasks.filter((task) => canTaskHaveChild(tasks, task.id)).map((task) => <option value={task.id} key={task.id}>{taskOutlineLabel(task, outlineNumbers)}{dependencyTaskIds.has(task.id) ? " — dependências serão revisadas" : ""}</option>)}</select>
-          <button className="primary-button" type="submit" disabled={disabled}>Adicionar</button>
+          <label className="sr-only" htmlFor="quick-task-title">{t("table.newTaskLabel")}</label><input id="quick-task-title" ref={titleInput} required placeholder={newParentId === null ? t("table.newTask") : t("table.newSubtask")} value={newTitle} disabled={disabled} onChange={(event) => { setNewTitle(event.target.value); }} />
+          <label className="sr-only" htmlFor="quick-task-parent">{t("table.parentTask")}</label><select id="quick-task-parent" value={newParentId ?? ""} disabled={disabled} onChange={(event) => { setNewParentId(event.target.value || null); }}><option value="">{t("table.noParentTask")}</option>{tasks.filter((task) => canTaskHaveChild(tasks, task.id)).map((task) => <option value={task.id} key={task.id}>{taskOutlineLabel(task, outlineNumbers)}{dependencyTaskIds.has(task.id) ? " — dependências serão revisadas" : ""}</option>)}</select>
+          <button className="primary-button" type="submit" disabled={disabled}>{t("table.add")}</button>
         </form>
       </div>
-      {conflicts.length > 0 ? <div className="schedule-conflict-summary" role="status"><strong>{conflicts.length} {conflicts.length === 1 ? "conflito de agendamento" : "conflitos de agendamento"}</strong><span>Tarefas manuais foram preservadas. Abra a linha correspondente para revisar a data mínima indicada.</span></div> : null}
+      {conflicts.length > 0 ? <div className="schedule-conflict-summary" role="status"><strong>{conflicts.length} {language === "en" ? `scheduling conflict${conflicts.length === 1 ? "" : "s"}` : conflicts.length === 1 ? "conflito de agendamento" : "conflitos de agendamento"}</strong><span>{language === "en" ? "Manual tasks were preserved. Open the corresponding row to review the indicated minimum date." : "Tarefas manuais foram preservadas. Abra a linha correspondente para revisar a data mínima indicada."}</span></div> : null}
       <div ref={tableShellRef} className="table-scroll-shell" style={{ "--table-viewport-height": `${String(tableViewportHeight)}px` } as CSSProperties}>
       <div ref={tableScrollRef} className="table-scroll" onScroll={(event) => { if (horizontalScrollRef.current !== null) horizontalScrollRef.current.scrollLeft = event.currentTarget.scrollLeft; }} onWheel={handleTableWheel}>
         <table
@@ -1642,26 +1650,26 @@ export function TaskTable({
             "--task-table-min-width": `${String((showBaselineColumns ? 2240 : 1900) + taskColumnWidth - DEFAULT_TASK_COLUMN_WIDTH + predecessorsColumnWidth - DEFAULT_PREDECESSORS_COLUMN_WIDTH)}px`,
           } as CSSProperties}
         >
-          <caption className="sr-only">Tarefas do projeto com cronograma, predecessoras e ações de edição</caption>
+          <caption className="sr-only">{language === "en" ? "Project tasks with schedule, predecessors, and editing actions" : "Tarefas do projeto com cronograma, predecessoras e ações de edição"}</caption>
           <thead>
             <tr>
-              <th className="selection-cell"><span className="sr-only">Selecionar</span></th>
+              <th className="selection-cell"><span className="sr-only">{language === "en" ? "Select" : "Selecionar"}</span></th>
               <TableColumnHeader
                 className="task-column"
-                label="Tarefa"
-                help="Nome da atividade. A numeração mostra sua posição na hierarquia do projeto. Arraste a borda direita para ajustar a largura."
+                label={language === "en" ? "Task" : "Tarefa"}
+                help={language === "en" ? "Task name. Numbering shows its position in the project hierarchy. Drag the right edge to adjust width." : "Nome da atividade. A numeração mostra sua posição na hierarquia do projeto. Arraste a borda direita para ajustar a largura."}
                 alignTooltip="left"
                 resizeHandle={(
                   <span
                     className="table-column-resize-handle"
                     role="separator"
-                    aria-label="Ajustar largura da coluna Tarefa"
+                    aria-label={language === "en" ? "Resize Task column" : "Ajustar largura da coluna Tarefa"}
                     aria-orientation="vertical"
                     aria-valuemin={MIN_TASK_COLUMN_WIDTH}
                     aria-valuemax={MAX_TASK_COLUMN_WIDTH}
                     aria-valuenow={taskColumnWidth}
                     tabIndex={0}
-                    title="Arraste para ajustar; duplo clique restaura a largura padrão"
+                    title={language === "en" ? "Drag to resize; double click restores the default width" : "Arraste para ajustar; duplo clique restaura a largura padrão"}
                     onDoubleClick={() => { setTaskColumnWidth(DEFAULT_TASK_COLUMN_WIDTH); }}
                     onKeyDown={handleTaskColumnResizeKeyDown}
                     onPointerDown={handleTaskColumnResizeStart}
@@ -1673,19 +1681,19 @@ export function TaskTable({
               />
               <TableColumnHeader
                 className="predecessors-column"
-                label="Predecessoras"
-                help="Tarefas que precisam terminar antes desta começar. O intervalo define a espera em dias úteis. Arraste a borda direita para ajustar a largura."
+                label={t("table.predecessors")}
+                help={language === "en" ? "Tasks that need to finish before this one starts. Lag defines waiting time in working days. Drag the right edge to adjust width." : "Tarefas que precisam terminar antes desta começar. O intervalo define a espera em dias úteis. Arraste a borda direita para ajustar a largura."}
                 resizeHandle={(
                   <span
                     className="table-column-resize-handle"
                     role="separator"
-                    aria-label="Ajustar largura da coluna Predecessoras"
+                    aria-label={language === "en" ? "Resize Predecessors column" : "Ajustar largura da coluna Predecessoras"}
                     aria-orientation="vertical"
                     aria-valuemin={MIN_PREDECESSORS_COLUMN_WIDTH}
                     aria-valuemax={MAX_PREDECESSORS_COLUMN_WIDTH}
                     aria-valuenow={predecessorsColumnWidth}
                     tabIndex={0}
-                    title="Arraste para ajustar; duplo clique restaura a largura padrão"
+                    title={language === "en" ? "Drag to resize; double click restores the default width" : "Arraste para ajustar; duplo clique restaura a largura padrão"}
                     onDoubleClick={() => { setPredecessorsColumnWidth(DEFAULT_PREDECESSORS_COLUMN_WIDTH); }}
                     onKeyDown={handlePredecessorsColumnResizeKeyDown}
                     onPointerDown={handlePredecessorsColumnResizeStart}
@@ -1695,36 +1703,36 @@ export function TaskTable({
                   />
                 )}
               />
-              <TableColumnHeader className="status-column" label="Status" help="Situação atual da tarefa, como não iniciada, em andamento, bloqueada ou concluída." />
-              <TableColumnHeader className="priority-column" label="Prioridade" help="Importância relativa da tarefa. Não altera automaticamente suas datas." />
-              <TableColumnHeader className="progress-column" label="Progresso" help="Percentual concluído da tarefa, de 0% a 100%." />
-              <TableColumnHeader className="date-column" label="Início" help="Data atual prevista para começar a tarefa." />
-              <TableColumnHeader className="date-column" label="Fim" help="Data atual prevista para terminar a tarefa." />
-              <TableColumnHeader className="duration-column" label="Duração" help="Quantidade de dias úteis entre o início e o fim, incluindo o primeiro dia." />
+              <TableColumnHeader className="status-column" label={t("filters.status")} help={language === "en" ? "Current task status, such as not started, in progress, blocked, or completed." : "Situação atual da tarefa, como não iniciada, em andamento, bloqueada ou concluída."} />
+              <TableColumnHeader className="priority-column" label={t("filters.priority")} help={language === "en" ? "Relative importance of the task. It does not automatically change dates." : "Importância relativa da tarefa. Não altera automaticamente suas datas."} />
+              <TableColumnHeader className="progress-column" label={t("table.progress")} help={language === "en" ? "Task completion percentage, from 0% to 100%." : "Percentual concluído da tarefa, de 0% a 100%."} />
+              <TableColumnHeader className="date-column" label={t("table.start")} help={language === "en" ? "Current planned task start date." : "Data atual prevista para começar a tarefa."} />
+              <TableColumnHeader className="date-column" label={t("table.end")} help={language === "en" ? "Current planned task finish date." : "Data atual prevista para terminar a tarefa."} />
+              <TableColumnHeader className="duration-column" label={t("table.duration")} help={language === "en" ? "Working days between start and finish, including the first day." : "Quantidade de dias úteis entre o início e o fim, incluindo o primeiro dia."} />
               {showBaselineColumns ? (
                 <>
-                  <TableColumnHeader className="baseline-column" label="Início planejado" help="Data de início guardada no plano de referência ativo." />
-                  <TableColumnHeader className="baseline-column" label="Fim planejado" help="Data de término guardada no plano de referência ativo." />
-                  <TableColumnHeader className="variance-column" label="Desvio" help="Diferença, em dias úteis, entre o fim planejado e o fim atual. Valor positivo indica atraso." />
+                  <TableColumnHeader className="baseline-column" label={language === "en" ? "Planned start" : "Início planejado"} help={language === "en" ? "Start date recorded in the active baseline." : "Data de início guardada no plano de referência ativo."} />
+                  <TableColumnHeader className="baseline-column" label={language === "en" ? "Planned finish" : "Fim planejado"} help={language === "en" ? "Finish date recorded in the active baseline." : "Data de término guardada no plano de referência ativo."} />
+                  <TableColumnHeader className="variance-column" label={language === "en" ? "Variance" : "Desvio"} help={language === "en" ? "Difference in working days between planned and current finish. A positive value indicates delay." : "Diferença, em dias úteis, entre o fim planejado e o fim atual. Valor positivo indica atraso."} />
                 </>
               ) : null}
-              <TableColumnHeader className="deadline-column" label="Prazo-limite" help="Data máxima desejada para conclusão. Ela informa risco, mas não movimenta a tarefa." />
-              <TableColumnHeader className="health-column" label="Saúde" help="Compara o prazo-limite com hoje e com o fim previsto. Uma tarefa aberta fica atrasada após o prazo, mesmo sem datas; fica em risco no dia do prazo, sem fim previsto ou com fim posterior ao limite." />
-              <TableColumnHeader className="assignee-column" label="Responsável" help="Pessoa ou referência responsável por acompanhar a tarefa." />
-              <TableColumnHeader className="tags-column" label="Tags" help="Palavras-chave separadas por vírgulas, usadas para organizar e filtrar tarefas." />
-              <TableColumnHeader className="actions-column" label="Ações" help="Reordene a tarefa ou abra o menu para detalhes, duplicação e exclusão. Alterações são salvas automaticamente." alignTooltip="right" />
+              <TableColumnHeader className="deadline-column" label={t("table.deadline")} help={language === "en" ? "Desired maximum completion date. It signals risk but does not move the task." : "Data máxima desejada para conclusão. Ela informa risco, mas não movimenta a tarefa."} />
+              <TableColumnHeader className="health-column" label={t("table.health")} help={language === "en" ? "Compares deadline with today and predicted finish. An open task becomes overdue after its deadline, even without dates; it is at risk on deadline day, without a predicted finish, or when finish is later than deadline." : "Compara o prazo-limite com hoje e com o fim previsto. Uma tarefa aberta fica atrasada após o prazo, mesmo sem datas; fica em risco no dia do prazo, sem fim previsto ou com fim posterior ao limite."} />
+              <TableColumnHeader className="assignee-column" label={t("table.assignee")} help={language === "en" ? "Person or reference responsible for tracking the task." : "Pessoa ou referência responsável por acompanhar a tarefa."} />
+              <TableColumnHeader className="tags-column" label="Tags" help={language === "en" ? "Comma-separated keywords used to organize and filter tasks." : "Palavras-chave separadas por vírgulas, usadas para organizar e filtrar tarefas."} />
+              <TableColumnHeader className="actions-column" label={t("table.actions")} help={language === "en" ? "Reorder the task or open the menu for details, duplication, and deletion. Changes save automatically." : "Reordene a tarefa ou abra o menu para detalhes, duplicação e exclusão. Alterações são salvas automaticamente."} alignTooltip="right" />
             </tr>
           </thead>
           <tbody>
-            {visibleTasks.length === 0 ? <tr><td className="empty-table" colSpan={showBaselineColumns ? 17 : 14}><strong>{tasks.length === 0 ? "Nenhuma tarefa ainda." : "Nenhuma tarefa corresponde aos filtros."}</strong><span>{tasks.length === 0 ? "Use o campo “Nova tarefa” para começar." : "Limpe ou ajuste os filtros para recuperar as linhas."}</span></td></tr> : visibleTasks.map((row) => {
+            {visibleTasks.length === 0 ? <tr><td className="empty-table" colSpan={showBaselineColumns ? 17 : 14}><strong>{tasks.length === 0 ? t("table.noTasks") : t("table.noMatchingTasks")}</strong><span>{tasks.length === 0 ? t("table.startHint") : t("table.adjustFilters")}</span></td></tr> : visibleTasks.map((row) => {
               const siblings = tasks.filter((task) => task.projectId === row.task.projectId && task.parentId === row.task.parentId).sort((left, right) => left.position - right.position || left.createdAt.localeCompare(right.createdAt));
               const siblingIndex = siblings.findIndex((task) => task.id === row.task.id);
-              return <TaskRow key={row.task.id} row={row} outlineNumber={outlineNumbers.get(row.task.id) ?? ""} outlineNumbers={outlineNumbers} tasks={tasks} calendars={calendars} projectCalendarId={projectCalendarId} dependencies={dependencies} conflicts={conflicts} baselineTask={baselineTasks.find((task) => task.taskId === row.task.id) ?? null} criticality={criticalityByTaskId.get(row.task.id) ?? null} showBaselineColumns={showBaselineColumns} todayDate={todayDate} disabled={disabled} selected={selectedTaskIds.has(row.task.id)} expanded={effectiveExpandedIds.has(row.task.id)} canMoveUp={siblingIndex > 0} canMoveDown={siblingIndex >= 0 && siblingIndex < siblings.length - 1} onSelect={(selected) => { setSelectedTaskIds((current) => { const next = new Set(current); if (selected) next.add(row.task.id); else next.delete(row.task.id); return next; }); }} onToggleExpanded={() => { setExpandedTaskIds((current) => { const next = new Set(current); if (next.has(row.task.id)) next.delete(row.task.id); else next.add(row.task.id); return next; }); }} onPrepareSubtask={() => { prepareSubtask(row.task.id); }} onSave={onSave} onMove={(direction) => { void onMove(row.task.id, direction); }} onCreateDependencies={onCreateDependencies} onSaveDependencies={onSaveDependencies} onDeleteDependency={onDeleteDependency} onDeleteDependencies={onDeleteDependencies} onDuplicate={(includeDescendants) => { void onDuplicate(row.task.id, includeDescendants).then((copy) => { if (copy !== null && includeDescendants) setExpandedTaskIds((current) => new Set([...current, copy.id])); }); }} onPrepareTemplate={() => { prepareTemplate(row.task); }} onDelete={() => { if (window.confirm(`Excluir “${row.task.title}” e todas as suas subtarefas? Você poderá desfazer esta operação enquanto o aplicativo permanecer aberto.`)) void onDelete(row.task.id); }} />;
+              return <TaskRow key={row.task.id} row={row} outlineNumber={outlineNumbers.get(row.task.id) ?? ""} outlineNumbers={outlineNumbers} tasks={tasks} calendars={calendars} projectCalendarId={projectCalendarId} dependencies={dependencies} conflicts={conflicts} baselineTask={baselineTasks.find((task) => task.taskId === row.task.id) ?? null} criticality={criticalityByTaskId.get(row.task.id) ?? null} showBaselineColumns={showBaselineColumns} todayDate={todayDate} disabled={disabled} selected={selectedTaskIds.has(row.task.id)} expanded={effectiveExpandedIds.has(row.task.id)} canMoveUp={siblingIndex > 0} canMoveDown={siblingIndex >= 0 && siblingIndex < siblings.length - 1} onSelect={(selected) => { setSelectedTaskIds((current) => { const next = new Set(current); if (selected) next.add(row.task.id); else next.delete(row.task.id); return next; }); }} onToggleExpanded={() => { setExpandedTaskIds((current) => { const next = new Set(current); if (next.has(row.task.id)) next.delete(row.task.id); else next.add(row.task.id); return next; }); }} onPrepareSubtask={() => { prepareSubtask(row.task.id); }} onSave={onSave} onMove={(direction) => { void onMove(row.task.id, direction); }} onCreateDependencies={onCreateDependencies} onSaveDependencies={onSaveDependencies} onDeleteDependency={onDeleteDependency} onDeleteDependencies={onDeleteDependencies} onDuplicate={(includeDescendants) => { void onDuplicate(row.task.id, includeDescendants).then((copy) => { if (copy !== null && includeDescendants) setExpandedTaskIds((current) => new Set([...current, copy.id])); }); }} onPrepareTemplate={() => { prepareTemplate(row.task); }} onDelete={() => { if (window.confirm(language === "en" ? `Delete “${row.task.title}” and all its subtasks? You can undo this while the app remains open.` : `Excluir “${row.task.title}” e todas as suas subtarefas? Você poderá desfazer esta operação enquanto o aplicativo permanecer aberto.`)) void onDelete(row.task.id); }} />;
             })}
           </tbody>
         </table>
       </div>
-      <div ref={horizontalScrollRef} className="table-horizontal-scrollbar" role="region" aria-label="Rolagem horizontal da tabela" tabIndex={0} title="Role horizontalmente para visualizar todas as colunas" onScroll={(event) => { if (tableScrollRef.current !== null) tableScrollRef.current.scrollLeft = event.currentTarget.scrollLeft; }}>
+      <div ref={horizontalScrollRef} className="table-horizontal-scrollbar" role="region" aria-label={language === "en" ? "Table horizontal scrolling" : "Rolagem horizontal da tabela"} tabIndex={0} title={language === "en" ? "Scroll horizontally to view every column" : "Role horizontalmente para visualizar todas as colunas"} onScroll={(event) => { if (tableScrollRef.current !== null) tableScrollRef.current.scrollLeft = event.currentTarget.scrollLeft; }}>
         <div style={{ width: `${String(tableScrollWidth)}px` }} />
       </div>
       </div>
@@ -1738,29 +1746,29 @@ export function TaskTable({
           onClose={() => { setTemplateSource(null); }}
         >
             <div>
-              <h2 id="template-dialog-title">Salvar árvore como template</h2>
+              <h2 id="template-dialog-title">{language === "en" ? "Save tree as template" : "Salvar árvore como template"}</h2>
               <p id="template-dialog-description">“{templateSource.title}” e suas subtarefas ficarão disponíveis em todo o workspace.</p>
             </div>
             <form onSubmit={(event) => { void saveTemplate(event); }}>
-              <label>Nome<input required autoFocus value={templateName} disabled={disabled} onChange={(event) => { setTemplateName(event.target.value); }} /></label>
-              <label>Descrição<textarea rows={3} value={templateDescription} disabled={disabled} onChange={(event) => { setTemplateDescription(event.target.value); }} /></label>
+              <label>{language === "en" ? "Name" : "Nome"}<input required autoFocus value={templateName} disabled={disabled} onChange={(event) => { setTemplateName(event.target.value); }} /></label>
+              <label>{language === "en" ? "Description" : "Descrição"}<textarea rows={3} value={templateDescription} disabled={disabled} onChange={(event) => { setTemplateDescription(event.target.value); }} /></label>
               <div className="dialog-actions">
-                <button type="button" disabled={disabled} onClick={() => { setTemplateSource(null); }}>Cancelar</button>
-                <button className="primary-button" type="submit" disabled={disabled}>Salvar template</button>
+                <button type="button" disabled={disabled} onClick={() => { setTemplateSource(null); }}>{t("app.cancel")}</button>
+                <button className="primary-button" type="submit" disabled={disabled}>{language === "en" ? "Save template" : "Salvar template"}</button>
               </div>
             </form>
         </ModalDialog>
       )}
       {dependencyParentId === null ? null : (
         <ModalDialog className="template-dialog" labelledBy="dependency-parent-title" describedBy="dependency-parent-description" onClose={() => { setDependencyParentId(null); }}>
-          <h2 id="dependency-parent-title">Transformar em tarefa-resumo?</h2>
-          <p id="dependency-parent-description">Esta tarefa participa de dependências. Ao criar a subtarefa, escolha como tratar essas relações.</p>
+          <h2 id="dependency-parent-title">{language === "en" ? "Turn into a summary task?" : "Transformar em tarefa-resumo?"}</h2>
+          <p id="dependency-parent-description">{language === "en" ? "This task participates in dependencies. When creating the subtask, choose how to handle these relationships." : "Esta tarefa participa de dependências. Ao criar a subtarefa, escolha como tratar essas relações."}</p>
           <div className="dialog-actions">
-            <button type="button" onClick={() => { setDependencyParentId(null); }}>Cancelar</button>
-            <button type="button" onClick={() => { void createWithDependencyPolicy("REMOVE"); }}>Remover dependências</button>
-            <button className="primary-button" type="button" onClick={() => { void createWithDependencyPolicy("TRANSFER"); }}>Transferir para a nova subtarefa</button>
+            <button type="button" onClick={() => { setDependencyParentId(null); }}>{t("app.cancel")}</button>
+            <button type="button" onClick={() => { void createWithDependencyPolicy("REMOVE"); }}>{language === "en" ? "Remove dependencies" : "Remover dependências"}</button>
+            <button className="primary-button" type="button" onClick={() => { void createWithDependencyPolicy("TRANSFER"); }}>{language === "en" ? "Transfer to new subtask" : "Transferir para a nova subtarefa"}</button>
             {dependencies.some((dependency) => dependency.successorId === dependencyParentId) ? null : (
-              <button type="button" onClick={() => { void createWithDependencyPolicy("KEEP"); }}>Manter no novo resumo</button>
+              <button type="button" onClick={() => { void createWithDependencyPolicy("KEEP"); }}>{language === "en" ? "Keep on new summary" : "Manter no novo resumo"}</button>
             )}
           </div>
         </ModalDialog>

@@ -4,6 +4,7 @@ import chronoMark from "../assets/chrono-mark.png";
 import { isTauri } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { WindowControls } from "./WindowControls";
+import { useLanguage } from "../i18n/language";
 
 function toggleMaximized(): void {
   if (isTauri()) {
@@ -30,6 +31,7 @@ export function WorkspaceMenuBar({
   onGoBack,
   onGoForward,
 }: WorkspaceMenuBarProps) {
+  const { t } = useLanguage();
   const menuBarRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -58,19 +60,19 @@ export function WorkspaceMenuBar({
   };
 
   return (
-    <nav ref={menuBarRef} className="workspace-menu-bar" aria-label="Menu principal" onKeyDown={closeOpenMenu}>
-      <div className="window-navigation" aria-label="Navegação do aplicativo">
+    <nav ref={menuBarRef} className="workspace-menu-bar" aria-label={t("nav.main")} onKeyDown={closeOpenMenu}>
+      <div className="window-navigation" aria-label={t("nav.application")}>
         <button
           type="button"
-          aria-label={sidebarCollapsed ? "Mostrar projetos" : "Recolher projetos"}
-          title={sidebarCollapsed ? "Mostrar projetos" : "Recolher projetos"}
+          aria-label={sidebarCollapsed ? t("nav.showProjects") : t("nav.hideProjects")}
+          title={sidebarCollapsed ? t("nav.showProjects") : t("nav.hideProjects")}
           onClick={onToggleSidebar}
         >
           <img className="sidebar-toggle-logo" src={chronoMark} alt="" />
         </button>
         <span className="window-navigation-divider" aria-hidden="true" />
-        <button type="button" aria-label="Projeto anterior" title="Projeto anterior" disabled={!canGoBack} onClick={onGoBack}>←</button>
-        <button type="button" aria-label="Próximo projeto" title="Próximo projeto" disabled={!canGoForward} onClick={onGoForward}>→</button>
+        <button type="button" aria-label={t("nav.previousProject")} title={t("nav.previousProject")} disabled={!canGoBack} onClick={onGoBack}>←</button>
+        <button type="button" aria-label={t("nav.nextProject")} title={t("nav.nextProject")} disabled={!canGoForward} onClick={onGoForward}>→</button>
       </div>
       {children}
       <div

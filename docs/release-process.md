@@ -17,9 +17,13 @@ branch temática, abertura/merge do Pull Request e publicação por
 `PUBLISH_RELEASE.ps1` depois de atualizar a `main` local.
 
 As release notes versionadas precisam estar completas antes desse commit, sem
-campos `PENDENTE` ou valores destinados a preenchimento pós-publicação. URLs e
-identificadores que só existirem depois da publicação devem permanecer no
-GitHub Release, no registro de build e no relatório final, sem novo commit.
+campos `PENDENTE` ou valores destinados a preenchimento pós-publicação. Cada
+release público deve conter as notas em **Português (Brasil)** e **English**,
+com escopo, compatibilidade, instalação, limitações e links equivalentes. O
+corpo do GitHub Release deve apresentar as duas seções no mesmo Markdown, com
+PT-BR primeiro e English em seguida. URLs e identificadores que só existirem
+depois da publicação devem permanecer no GitHub Release, no registro de build
+e no relatório final, sem novo commit.
 
 ## Antes da tag
 
@@ -29,7 +33,9 @@ GitHub Release, no registro de build e no relatório final, sem novo commit.
 2. Confirmar versão consistente em `package.json`, `Cargo.toml`, `Cargo.lock` e
    `tauri.conf.json`.
 3. Ler integralmente [`docs/README.md`](README.md), revisar cada documento do
-   índice e executar `scripts/Test-DocumentationIndex.ps1`.
+   índice e executar `scripts/Test-DocumentationIndex.ps1 -RequireEnglishPairs`.
+   O release fica bloqueado até que todo documento aplicável tenha seu par
+   PT-BR/English, conforme `docs/documentation-language-policy.md`.
 4. Executar todos os gates locais descritos em `docs/releases/next.md`.
 5. Validar manualmente a versão de teste com o banco compartilhado de
    desenvolvimento.

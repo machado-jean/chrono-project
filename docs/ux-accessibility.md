@@ -7,7 +7,7 @@ clique fora da barra fecha qualquer menu aberto sem executar ações.
 ## Escopo
 
 Esta auditoria fecha o incremento local de UX e acessibilidade da Fase 7. Ela
-abrange a interface desktop em português, navegação por teclado, semântica
+abrange a interface desktop em português e inglês, navegação por teclado, semântica
 exposta pelo WebView2, foco, legibilidade e comportamento na largura mínima da
 janela. Não altera regras de negócio, schema SQLite nem dados do usuário.
 

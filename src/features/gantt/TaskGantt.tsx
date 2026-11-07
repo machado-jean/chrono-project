@@ -28,10 +28,10 @@ import type { TaskDependency } from "../../domain/scheduling/dependency";
 import type { TaskCriticality } from "../../domain/scheduling/critical-path";
 import {
   TASK_STATUSES,
-  TASK_STATUS_LABELS,
   type Task,
   type TaskStatus,
 } from "../../domain/tasks/task";
+import { useLanguage } from "../../i18n/language";
 import { taskSaveSucceeded, type TaskSaveResult } from "../../domain/tasks/task-save";
 import {
   buildTaskOutlineNumbers,
@@ -114,10 +114,11 @@ function calculateVerticalMaximum(
   return Math.max(0, scaleHeight + taskCount * cellHeight - viewportHeight);
 }
 
-const GANTT_COLUMNS: IColumnConfig[] = [
+function ganttColumns(english: boolean): IColumnConfig[] {
+  return [
   {
     id: "text",
-    header: "Tarefa",
+    header: english ? "Task" : "Tarefa",
     width: 270,
     flexgrow: 1,
     resize: false,
@@ -126,16 +127,17 @@ const GANTT_COLUMNS: IColumnConfig[] = [
       return <span className="gantt-task-title" title={title}>{title}</span>;
     },
   },
-  { id: "start", header: "Início", width: 105, resize: false },
-  { id: "workDuration", header: "Duração", width: 102, align: "right", resize: false },
-];
+  { id: "start", header: english ? "Start" : "Início", width: 105, resize: false },
+  { id: "workDuration", header: english ? "Duration" : "Duração", width: 102, align: "right", resize: false },
+  ];
+}
 
 const MONTH_NAMES = [
   "jan", "fev", "mar", "abr", "mai", "jun",
   "jul", "ago", "set", "out", "nov", "dez",
 ] as const;
 
-function scalesFor(scale: GanttScale): { readonly scales: IScaleConfig[]; readonly cellWidth: number } {
+function scalesFor(scale: GanttScale, english: boolean): { readonly scales: IScaleConfig[]; readonly cellWidth: number } {
   if (scale === "MONTH") {
     return {
       cellWidth: 110,
@@ -150,7 +152,7 @@ function scalesFor(scale: GanttScale): { readonly scales: IScaleConfig[]; readon
       cellWidth: 82,
       scales: [
         { unit: "month", step: 1, format: (date) => `${MONTH_NAMES[date.getMonth()] ?? ""} ${String(date.getFullYear())}` },
-        { unit: "week", step: 1, format: (date) => `Sem. ${String(date.getDate()).padStart(2, "0")}` },
+        { unit: "week", step: 1, format: (date) => `${english ? "Wk" : "Sem."} ${String(date.getDate()).padStart(2, "0")}` },
       ],
     };
   }
@@ -168,15 +170,15 @@ function displayDate(date: string): string {
   return `${day ?? ""}/${month ?? ""}/${year ?? ""}`;
 }
 
-function describeTaskCriticality(criticality: TaskCriticality): string {
+function describeTaskCriticality(criticality: TaskCriticality, english: boolean): string {
   const days = criticality.totalSlackDays;
   const absoluteDays = Math.abs(days);
-  const unit = absoluteDays === 1 ? "dia útil" : "dias úteis";
+  const unit = english ? (absoluteDays === 1 ? "working day" : "working days") : (absoluteDays === 1 ? "dia útil" : "dias úteis");
   const slack = days < 0
-    ? `${String(absoluteDays)} ${unit} além da meta`
-    : `${String(days)} ${unit} de folga`;
-  if (criticality.isCritical) return `Crítica · ${slack}`;
-  if (criticality.isNearCritical) return `Quase crítica · ${slack}`;
+    ? english ? `${String(absoluteDays)} ${unit} beyond target` : `${String(absoluteDays)} ${unit} além da meta`
+    : english ? `${String(days)} ${unit} of float` : `${String(days)} ${unit} de folga`;
+  if (criticality.isCritical) return `${english ? "Critical" : "Crítica"} · ${slack}`;
+  if (criticality.isNearCritical) return `${english ? "Near critical" : "Quase crítica"} · ${slack}`;
   return slack;
 }
 
@@ -197,6 +199,8 @@ export function TaskGantt({
   onCreateDependency,
   onDeleteDependency,
 }: TaskGanttProps) {
+  const { language, statusLabel, t } = useLanguage();
+  const english = language === "en";
   const [scale, setScale] = useState<GanttScale>("DAY");
   const [ganttApi, setGanttApi] = useState<IApi | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
@@ -223,7 +227,7 @@ export function TaskGantt({
     () => buildGanttProjection(tasks, allProjectTasks, dependencies, baselineTasks),
     [allProjectTasks, baselineTasks, dependencies, tasks],
   );
-  const scaleConfig = useMemo(() => scalesFor(scale), [scale]);
+  const scaleConfig = useMemo(() => scalesFor(scale, english), [english, scale]);
   const dateRange = useMemo(
     () => calculateGanttDateRange(allProjectTasks),
     [allProjectTasks],
@@ -412,14 +416,14 @@ export function TaskGantt({
     const predecessor = tasksById.get(dependency.predecessorId);
     const successor = tasksById.get(dependency.successorId);
     const predecessorLabel = predecessor === undefined
-      ? "Tarefa removida"
+      ? (english ? "Deleted task" : "Tarefa removida")
       : taskOutlineLabel(predecessor, outlineNumbers);
     const successorLabel = successor === undefined
-      ? "Tarefa removida"
+      ? (english ? "Deleted task" : "Tarefa removida")
       : taskOutlineLabel(successor, outlineNumbers);
     const lag = dependency.lagDays === 0 ? "lag 0" : `lag +${String(dependency.lagDays)}`;
     return `${predecessorLabel} → ${successorLabel} · FS, ${lag}`;
-  }, [outlineNumbers, tasksById]);
+  }, [english, outlineNumbers, tasksById]);
 
   const focusDependencyFromChart = (event: MouseEvent<HTMLDivElement>): void => {
     if (!(event.target instanceof Element)) return;
@@ -523,12 +527,12 @@ export function TaskGantt({
     try {
       if (await onDeleteDependency(dependencyId)) {
         setFocusedDependencyId(null);
-        setAnnouncement("Dependência FS excluída.");
+        setAnnouncement(english ? "FS dependency deleted." : "Dependência FS excluída.");
       } else {
-        setLocalError("Não foi possível excluir a dependência.");
+        setLocalError(english ? "Unable to delete dependency." : "Não foi possível excluir a dependência.");
       }
     } catch (error) {
-      setLocalError(error instanceof Error ? error.message : "Não foi possível excluir a dependência.");
+      setLocalError(english ? "Unable to delete dependency." : error instanceof Error ? error.message : "Não foi possível excluir a dependência.");
     } finally {
       setSavingVisualEdit(false);
     }
@@ -544,10 +548,10 @@ export function TaskGantt({
       if (taskSaveSucceeded(await onSave({ ...contextTask, schedulingMode: locked ? "AUTO" : "MANUAL" }))) {
         setAnnouncement(`${contextTask.title}: datas ${locked ? "destravadas para agendamento automático" : "travadas contra arrasto e reagendamento automático"}.`);
       } else {
-        setLocalError("Não foi possível alterar a trava de datas.");
+        setLocalError(english ? "Unable to change date lock." : "Não foi possível alterar a trava de datas.");
       }
     } catch (error) {
-      setLocalError(error instanceof Error ? error.message : "Não foi possível alterar a trava de datas.");
+      setLocalError(english ? "Unable to change date lock." : error instanceof Error ? error.message : "Não foi possível alterar a trava de datas.");
     } finally {
       setSavingVisualEdit(false);
       resetGanttProjection();
@@ -589,7 +593,7 @@ export function TaskGantt({
       }
       const progress = input.task.progress;
       if (typeof progress !== "number" || !Number.isFinite(progress)) {
-        setLocalError("O percentual de conclusão informado pelo Gantt é inválido.");
+        setLocalError(english ? "The completion percentage entered in Gantt is invalid." : "O percentual de conclusão informado pelo Gantt é inválido.");
         resetGanttProjection();
         return;
       }
@@ -599,7 +603,7 @@ export function TaskGantt({
         const normalizedProgress = Math.round(Math.min(100, Math.max(0, progress)));
         const saved = await onSave({ ...task, progress: normalizedProgress });
         if (!taskSaveSucceeded(saved)) {
-          setLocalError("Não foi possível salvar a conclusão. Nenhuma alteração foi aplicada.");
+          setLocalError(english ? "Unable to save completion. No change was applied." : "Não foi possível salvar a conclusão. Nenhuma alteração foi aplicada.");
           resetGanttProjection();
         } else {
           setAnnouncement(`${task.title}: conclusão atualizada para ${String(normalizedProgress)}%.`);
@@ -607,7 +611,7 @@ export function TaskGantt({
           resetGanttProjection();
         }
       } catch (error) {
-        setLocalError(error instanceof Error ? error.message : "Não foi possível salvar a conclusão.");
+        setLocalError(english ? "Unable to save completion." : error instanceof Error ? error.message : "Não foi possível salvar a conclusão.");
         resetGanttProjection();
       } finally {
         setSavingVisualEdit(false);
@@ -634,13 +638,13 @@ export function TaskGantt({
       (candidate) => candidate.id === (task.calendarId ?? projectCalendarId),
     );
     if (calendar === undefined) {
-      setLocalError("O calendário efetivo da tarefa não foi encontrado.");
+      setLocalError(english ? "The task's effective calendar was not found." : "O calendário efetivo da tarefa não foi encontrado.");
       resetGanttProjection();
       return;
     }
     try {
       const hasPredecessors = dependencies.some((dependency) => dependency.successorId === task.id);
-      if (summaryIds.has(task.id)) throw new Error("As datas desta tarefa-resumo são calculadas pelas subtarefas.");
+      if (summaryIds.has(task.id)) throw new Error(english ? "Summary task dates are calculated from subtasks." : "As datas desta tarefa-resumo são calculadas pelas subtarefas.");
       const fsMove = mode === "MOVE" && hasPredecessors
         ? planGanttFsMove(task, input.diff, calendar, dependencies, allProjectTasks)
         : null;
@@ -668,7 +672,7 @@ export function TaskGantt({
       setLocalError(null);
       const saved = await onSave(edited, fsMove?.dependencyUpdates ?? []);
       if (!taskSaveSucceeded(saved)) {
-        setLocalError("Não foi possível salvar o cronograma. Nenhuma alteração foi aplicada.");
+        setLocalError(english ? "Unable to save schedule. No change was applied." : "Não foi possível salvar o cronograma. Nenhuma alteração foi aplicada.");
         resetGanttProjection();
       } else {
         const lagChanges = fsMove?.dependencyUpdates.length ?? 0;
@@ -680,46 +684,46 @@ export function TaskGantt({
         resetGanttProjection();
       }
     } catch (error) {
-      setLocalError(error instanceof Error ? error.message : "Não foi possível alterar o cronograma.");
+      setLocalError(english ? "Unable to change schedule." : error instanceof Error ? error.message : "Não foi possível alterar o cronograma.");
       resetGanttProjection();
     } finally {
       setSavingVisualEdit(false);
     }
-  }, [allProjectTasks, calendars, dependencies, disabled, onSave, projectCalendarId, resetGanttProjection, savingVisualEdit, summaryIds, tasksById]);
+  }, [allProjectTasks, calendars, dependencies, disabled, english, onSave, projectCalendarId, resetGanttProjection, savingVisualEdit, summaryIds, tasksById]);
 
   const restoreHistory = useCallback(async (direction: "UNDO" | "REDO"): Promise<void> => {
     if (savingVisualEdit || disabled) return;
     setSavingVisualEdit(true);
     try {
       if (await (direction === "UNDO" ? onUndo() : onRedo())) {
-        setAnnouncement(`Última alteração ${direction === "UNDO" ? "desfeita" : "refeita"}.`);
+        setAnnouncement(english ? `Last change ${direction === "UNDO" ? "undone" : "redone"}.` : `Última alteração ${direction === "UNDO" ? "desfeita" : "refeita"}.`);
       } else {
-        setLocalError(`Não há alteração para ${direction === "UNDO" ? "desfazer" : "refazer"}.`);
+        setLocalError(english ? `There is no change to ${direction === "UNDO" ? "undo" : "redo"}.` : `Não há alteração para ${direction === "UNDO" ? "desfazer" : "refazer"}.`);
       }
     } catch (error) {
-      setLocalError(error instanceof Error ? error.message : "Não foi possível restaurar a alteração.");
+      setLocalError(english ? "Unable to restore change." : error instanceof Error ? error.message : "Não foi possível restaurar a alteração.");
     } finally {
       setSavingVisualEdit(false);
       resetGanttProjection();
     }
-  }, [disabled, onRedo, onUndo, resetGanttProjection, savingVisualEdit]);
+  }, [disabled, english, onRedo, onUndo, resetGanttProjection, savingVisualEdit]);
 
   const saveVisualDependency = useCallback(async (link: Partial<ILink>): Promise<void> => {
     if (savingVisualEdit || disabled) return;
     const predecessorId = String(link.source ?? "");
     const successorId = String(link.target ?? "");
     if (link.type !== "e2s") {
-      setLocalError("Nesta versão, crie somente dependências Término para Início (FS).");
+      setLocalError(english ? "This version supports Finish-to-Start (FS) dependencies only." : "Nesta versão, crie somente dependências Término para Início (FS).");
       resetGanttProjection();
       return;
     }
     if (predecessorId === successorId) {
-      setLocalError("Uma tarefa não pode depender dela mesma.");
+      setLocalError(english ? "A task cannot depend on itself." : "Uma tarefa não pode depender dela mesma.");
       resetGanttProjection();
       return;
     }
     if (summaryIds.has(successorId)) {
-      setLocalError("Uma tarefa-resumo não pode ser sucessora porque suas datas são derivadas.");
+      setLocalError(english ? "A summary task cannot be a successor because its dates are derived." : "Uma tarefa-resumo não pode ser sucessora porque suas datas são derivadas.");
       resetGanttProjection();
       return;
     }
@@ -728,20 +732,20 @@ export function TaskGantt({
     try {
       const created = await onCreateDependency({ predecessorId, successorId, lagDays: 0 });
       if (created === null) {
-        setLocalError("Não foi possível criar a dependência. Verifique se ela produziria um ciclo.");
+        setLocalError(english ? "Unable to create dependency. Check whether it would create a cycle." : "Não foi possível criar a dependência. Verifique se ela produziria um ciclo.");
         resetGanttProjection();
       } else {
         setFocusedDependencyId(created.id);
-        setAnnouncement("Dependência FS criada com intervalo zero.");
+        setAnnouncement(english ? "FS dependency created with zero lag." : "Dependência FS criada com intervalo zero.");
         resetGanttProjection();
       }
     } catch (error) {
-      setLocalError(error instanceof Error ? error.message : "Não foi possível salvar a dependência. Nenhuma alteração foi aplicada.");
+      setLocalError(english ? "Unable to save dependency. No change was applied." : error instanceof Error ? error.message : "Não foi possível salvar a dependência. Nenhuma alteração foi aplicada.");
       resetGanttProjection();
     } finally {
       setSavingVisualEdit(false);
     }
-  }, [disabled, onCreateDependency, resetGanttProjection, savingVisualEdit, summaryIds]);
+  }, [disabled, english, onCreateDependency, resetGanttProjection, savingVisualEdit, summaryIds]);
 
   useEffect(() => {
     if (ganttApi === null) return;
@@ -763,13 +767,13 @@ export function TaskGantt({
     event.preventDefault();
     if (selectedTask === null || isSummary) return;
     if (startDate.length === 0 || !Number.isInteger(durationDays) || durationDays < 1) {
-      setLocalError("Informe uma data de início e uma duração inteira maior que zero.");
+      setLocalError(english ? "Enter a start date and a whole duration greater than zero." : "Informe uma data de início e uma duração inteira maior que zero.");
       return;
     }
     const calendarId = selectedTask.calendarId ?? projectCalendarId;
     const calendar = calendars.find((candidate) => candidate.id === calendarId);
     if (calendar === undefined) {
-      setLocalError("O calendário efetivo da tarefa não foi encontrado.");
+      setLocalError(english ? "The task's effective calendar was not found." : "O calendário efetivo da tarefa não foi encontrado.");
       return;
     }
     try {
@@ -787,7 +791,7 @@ export function TaskGantt({
       if (!taskSaveSucceeded(saved)) return;
       setLocalError(null);
     } catch (error) {
-      setLocalError(error instanceof Error ? error.message : "Não foi possível alterar o cronograma.");
+      setLocalError(english ? "Unable to change schedule." : error instanceof Error ? error.message : "Não foi possível alterar o cronograma.");
     }
   };
 
@@ -798,12 +802,12 @@ export function TaskGantt({
     try {
       const saved = await onSave({ ...selectedTask, status });
       if (taskSaveSucceeded(saved)) {
-        setAnnouncement(`${selectedTask.title}: status alterado para ${TASK_STATUS_LABELS[status]}.`);
+        setAnnouncement(`${selectedTask.title}: ${t("kanban.movedTo")} ${statusLabel(status)}.`);
         setSelectedTaskId(selectedTask.id);
         resetGanttProjection();
       }
     } catch (error) {
-      setLocalError(error instanceof Error ? error.message : "Não foi possível alterar o status.");
+      setLocalError(english ? "Unable to change status." : error instanceof Error ? error.message : "Não foi possível alterar o status.");
     } finally {
       setSavingVisualEdit(false);
     }
@@ -813,55 +817,55 @@ export function TaskGantt({
     <section className="gantt-section" aria-labelledby="gantt-title">
       <header className="view-heading gantt-heading">
         <div>
-          <h2 id="gantt-title">Gráfico de Gantt</h2>
-          <p className="gantt-heading-note">Arraste uma barra para ajustar datas e use Opções para legenda, dependências e ajuda.</p>
+          <h2 id="gantt-title">{t("gantt.title")}</h2>
+          <p className="gantt-heading-note">{t("gantt.description")}</p>
         </div>
-        <div className="gantt-header-controls" aria-label="Controles do Gantt">
-          <button type="button" disabled={disabled || savingVisualEdit || !canUndo} onClick={() => { void restoreHistory("UNDO"); }}>Desfazer</button>
-          <button type="button" disabled={disabled || savingVisualEdit || !canRedo} onClick={() => { void restoreHistory("REDO"); }}>Refazer</button>
+        <div className="gantt-header-controls" aria-label={t("gantt.controls")}>
+          <button type="button" disabled={disabled || savingVisualEdit || !canUndo} onClick={() => { void restoreHistory("UNDO"); }}>{t("gantt.undo")}</button>
+          <button type="button" disabled={disabled || savingVisualEdit || !canRedo} onClick={() => { void restoreHistory("REDO"); }}>{t("gantt.redo")}</button>
           <label className="gantt-scale-control">
-            <span>Escala</span>
+            <span>{t("gantt.scale")}</span>
             <select value={scale} onChange={(event) => { setScale(event.target.value as GanttScale); }}>
-              <option value="DAY">Dias</option>
-              <option value="WEEK">Semanas</option>
-              <option value="MONTH">Meses</option>
+              <option value="DAY">{t("gantt.days")}</option>
+              <option value="WEEK">{t("gantt.weeks")}</option>
+              <option value="MONTH">{t("gantt.months")}</option>
             </select>
           </label>
-          <div className="gantt-legend gantt-compact-legend" aria-label="Legenda do Gantt">
-            <span><i className="legend-task" /> Tarefa</span>
-            <span><i className="legend-summary" /> Resumo</span>
+          <div className="gantt-legend gantt-compact-legend" aria-label={t("gantt.legend")}>
+            <span><i className="legend-task" /> {t("gantt.task")}</span>
+            <span><i className="legend-summary" /> {t("gantt.summary")}</span>
             {criticalityByTaskId.size === 0 ? null : (
               <>
-                <span><i className="legend-critical" aria-hidden="true" /> Crítica</span>
-                <span><i className="legend-near-critical" aria-hidden="true" /> Quase crítica</span>
+                <span><i className="legend-critical" aria-hidden="true" /> {t("gantt.critical")}</span>
+                <span><i className="legend-near-critical" aria-hidden="true" /> {t("gantt.nearCritical")}</span>
               </>
             )}
-            <span><i className="legend-weekend" /> Fim de semana</span>
-            <span><i className="legend-holiday" /> Feriado</span>
-            <span><i className="legend-link" /> Dependência</span>
+            <span><i className="legend-weekend" /> {t("gantt.weekend")}</span>
+            <span><i className="legend-holiday" /> {t("gantt.holiday")}</span>
+            <span><i className="legend-link" /> {t("gantt.dependency")}</span>
           </div>
-          <button type="button" className="gantt-toolbar-button" aria-expanded={optionsOpen} onClick={() => { setOptionsOpen((current) => !current); }}>Opções</button>
+          <button type="button" className="gantt-toolbar-button" aria-expanded={optionsOpen} onClick={() => { setOptionsOpen((current) => !current); }}>{t("gantt.options")}</button>
         </div>
       </header>
-      {savingVisualEdit ? <p className="gantt-saving" role="status">Salvando alteração do Gantt…</p> : null}
+      {savingVisualEdit ? <p className="gantt-saving" role="status">{english ? "Saving Gantt change…" : "Salvando alteração do Gantt…"}</p> : null}
       {announcement.length > 0 ? <p className="gantt-toolbar-status" key={announcement} role="status">{announcement}</p> : null}
       {localError === null ? null : <p className="field-error gantt-error" role="alert">{localError}</p>}
 
       {optionsOpen ? <div className="gantt-options-panel">
         <p className="gantt-scroll-hint">
-          Use a roda do mouse para percorrer atividades, a barra inferior para navegar pelas datas e o botão direito para criar ou excluir dependências FS.
+          {english ? "Use the mouse wheel to move through tasks, the bottom bar to navigate schedule dates, and the right button to create or delete FS dependencies." : "Use a roda do mouse para percorrer atividades, a barra inferior para navegar pelas datas e o botão direito para criar ou excluir dependências FS."}
         </p>
 
         {projection.links.length === 0 ? null : (
           <div className="gantt-dependency-focus">
           <label>
-            <span>Dependência em foco</span>
+            <span>{english ? "Focused dependency" : "Dependência em foco"}</span>
             <select
-              aria-label="Dependência em foco"
+              aria-label={english ? "Focused dependency" : "Dependência em foco"}
               value={focusedDependencyId ?? ""}
               onChange={(event) => { setFocusedDependencyId(event.target.value || null); }}
             >
-              <option value="">Todas as dependências</option>
+              <option value="">{english ? "All dependencies" : "Todas as dependências"}</option>
               {projection.links.map((link) => {
                 const dependency = dependenciesById.get(String(link.id));
                 return dependency === undefined ? null : (
@@ -874,8 +878,8 @@ export function TaskGantt({
           </label>
           <p>
             {focusedDependency === null
-              ? "Clique em uma linha ou escolha a relação para isolar seu caminho."
-              : `Em foco: ${dependencyLabel(focusedDependency)}`}
+              ? (english ? "Click a line or choose a relationship to isolate its path." : "Clique em uma linha ou escolha a relação para isolar seu caminho.")
+              : `${english ? "Focused" : "Em foco"}: ${dependencyLabel(focusedDependency)}`}
           </p>
           </div>
         )}
@@ -883,8 +887,8 @@ export function TaskGantt({
 
       {projection.tasks.length === 0 ? (
         <div className="view-empty" role="status">
-          <strong>Nenhuma tarefa agendada corresponde aos filtros.</strong>
-          <span>Defina início e duração na Tabela ou ajuste os filtros.</span>
+          <strong>{english ? "No scheduled task matches the filters." : "Nenhuma tarefa agendada corresponde aos filtros."}</strong>
+          <span>{english ? "Set start and duration in Table or adjust the filters." : "Defina início e duração na Tabela ou ajuste os filtros."}</span>
         </div>
       ) : (
         <div
@@ -905,7 +909,7 @@ export function TaskGantt({
                 key={ganttRevision}
                 tasks={[...projection.tasks]}
                 links={[...projection.links]}
-                columns={GANTT_COLUMNS}
+                columns={ganttColumns(english)}
                 scales={scaleConfig.scales}
                 {...(dateRange === null ? {} : { start: dateRange.start, end: dateRange.end })}
                 cellWidth={scaleConfig.cellWidth}
@@ -930,7 +934,7 @@ export function TaskGantt({
             <input
               className="gantt-vertical-scroll-input"
               type="range"
-              aria-label="Percorrer atividades do Gantt"
+              aria-label={english ? "Browse Gantt tasks" : "Percorrer atividades do Gantt"}
               min={0}
               max={Math.max(1, Math.round(verticalMaximum))}
               step={1}
@@ -951,9 +955,9 @@ export function TaskGantt({
             ref={horizontalScrollRef}
             className="gantt-horizontal-scrollbar"
             role="region"
-            aria-label="Rolagem horizontal do Gantt"
+            aria-label={english ? "Gantt horizontal scrolling" : "Rolagem horizontal do Gantt"}
             tabIndex={0}
-            title="Role horizontalmente para navegar pelas datas do cronograma"
+            title={english ? "Scroll horizontally to browse schedule dates" : "Role horizontalmente para navegar pelas datas do cronograma"}
             onScroll={scrollTimeline}
           >
             <div style={{ width: `${String(timelineScrollWidth)}px` }} />
@@ -964,42 +968,42 @@ export function TaskGantt({
               className="gantt-context-menu"
               ref={contextMenuRef}
               role="dialog"
-              aria-label="Ações do Gantt"
+              aria-label={english ? "Gantt actions" : "Ações do Gantt"}
               style={{ left: contextMenu.x, top: contextMenu.y }}
               onPointerDown={(event) => { event.stopPropagation(); }}
             >
               {contextMenu.dependencyId === null ? null : (
                 <button type="button" onClick={() => { void deleteContextDependency(); }}>
-                  Excluir dependência
+                  {english ? "Delete dependency" : "Excluir dependência"}
                 </button>
               )}
               {contextTask === null || summaryIds.has(contextTask.id) ? null : (
                 <>
                   <button type="button" onClick={() => { void toggleContextTaskLock(); }}>
-                    {contextTask.schedulingMode === "MANUAL" ? "Destravar datas" : "Travar datas"}
+                    {contextTask.schedulingMode === "MANUAL" ? (english ? "Unlock dates" : "Destravar datas") : (english ? "Lock dates" : "Travar datas")}
                   </button>
                   <button
                     type="button"
                     onClick={() => { setContextMenu((current) => current === null ? null : { ...current, addPredecessor: true }); }}
                   >
-                    Adicionar predecessora…
+                    {english ? "Add predecessor…" : "Adicionar predecessora…"}
                   </button>
                   {contextMenu.addPredecessor ? (
                     <div className="gantt-context-predecessor">
                       <label>
-                        <span>Predecessora FS</span>
+                        <span>{english ? "FS predecessor" : "Predecessora FS"}</span>
                         <select value={contextPredecessorId} autoFocus onChange={(event) => { setContextPredecessorId(event.target.value); }}>
-                          <option value="">Selecione uma tarefa</option>
+                          <option value="">{english ? "Select a task" : "Selecione uma tarefa"}</option>
                           {predecessorOptions.map((task) => (
                             <option value={task.id} key={task.id}>{taskOutlineLabel(task, outlineNumbers)}</option>
                           ))}
                         </select>
                       </label>
                       <button type="button" disabled={contextPredecessorId.length === 0} onClick={() => { void addContextPredecessor(); }}>
-                        Criar FS
+                        {english ? "Create FS" : "Criar FS"}
                       </button>
                       {predecessorOptions.length === 0 ? (
-                        <p>Nenhuma tarefa anterior elegível.</p>
+                        <p>{english ? "No eligible previous task." : "Nenhuma tarefa anterior elegível."}</p>
                       ) : null}
                     </div>
                   ) : null}
@@ -1009,50 +1013,50 @@ export function TaskGantt({
           )}
 
           <aside className="gantt-inspector" aria-labelledby="gantt-inspector-title">
-            <h3 id="gantt-inspector-title">Inspecionar tarefa</h3>
+            <h3 id="gantt-inspector-title">{t("gantt.inspector")}</h3>
             <label>
-              <span>Tarefa</span>
+              <span>{t("gantt.task")}</span>
               <select
-                aria-label="Tarefa selecionada no Gantt"
+                aria-label={english ? "Selected Gantt task" : "Tarefa selecionada no Gantt"}
                 value={selectedTask?.id ?? ""}
                 onChange={(event) => { selectTask(event.target.value || null); }}
               >
-                <option value="">Selecione no gráfico</option>
+                <option value="">{t("gantt.selectOnChart")}</option>
                 {tasks.map((task) => <option value={task.id} key={task.id}>{taskOutlineLabel(task, outlineNumbers)}</option>)}
               </select>
             </label>
             {selectedTask === null ? (
-              <p className="gantt-inspector-empty">Selecione uma barra ou uma tarefa para revisar seus dados.</p>
+              <p className="gantt-inspector-empty">{t("gantt.selectHint")}</p>
             ) : (
               <>
                 <dl>
                   <div className="gantt-status-row">
-                    <dt>Status</dt>
+                    <dt>{t("filters.status")}</dt>
                     <dd>
                       <select
-                        aria-label={`Status de ${selectedTask.title}`}
+                        aria-label={`${english ? "Status of" : "Status de"} ${selectedTask.title}`}
                         value={selectedTask.status}
                         disabled={disabled || savingVisualEdit}
                         onChange={(event) => { void saveStatus(event.target.value as TaskStatus); }}
                       >
                         {TASK_STATUSES.map((status) => (
-                          <option value={status} key={status}>{TASK_STATUS_LABELS[status]}</option>
+                          <option value={status} key={status}>{statusLabel(status)}</option>
                         ))}
                       </select>
                     </dd>
                   </div>
-                  <div><dt>Datas</dt><dd>{selectedTask.schedulingMode === "MANUAL" ? "🔒 Travadas" : "🔓 Automáticas"}</dd></div>
-                  <div><dt>Progresso</dt><dd>{String(selectedTask.progress)}%</dd></div>
+                  <div><dt>{t("gantt.dates")}</dt><dd>{selectedTask.schedulingMode === "MANUAL" ? (english ? "🔒 Locked" : "🔒 Travadas") : (english ? "🔓 Automatic" : "🔓 Automáticas")}</dd></div>
+                  <div><dt>{t("gantt.progress")}</dt><dd>{String(selectedTask.progress)}%</dd></div>
                   {selectedTaskCriticality === null ? null : (
                     <div>
-                      <dt>Folga CPM</dt>
-                      <dd>{describeTaskCriticality(selectedTaskCriticality)}</dd>
+                      <dt>{english ? "CPM float" : "Folga CPM"}</dt>
+                      <dd>{describeTaskCriticality(selectedTaskCriticality, english)}</dd>
                     </div>
                   )}
                 </dl>
                 <form className="gantt-schedule-form" onSubmit={(event) => { void saveSchedule(event); }}>
                   <label>
-                    <span>Início</span>
+                    <span>{t("gantt.start")}</span>
                     <input
                       type="date"
                       required
@@ -1062,7 +1066,7 @@ export function TaskGantt({
                     />
                   </label>
                   <label>
-                    <span>Duração útil</span>
+                    <span>{t("gantt.duration")}</span>
                     <input
                       type="number"
                       min={1}
@@ -1073,18 +1077,18 @@ export function TaskGantt({
                     />
                   </label>
                   {isSummary ? (
-                    <p className="gantt-summary-note">Datas de tarefas-resumo são derivadas das subtarefas.</p>
+                    <p className="gantt-summary-note">{english ? "Summary task dates are derived from subtasks." : "Datas de tarefas-resumo são derivadas das subtarefas."}</p>
                   ) : selectedTask.schedulingMode === "MANUAL" ? (
-                    <p className="gantt-summary-note">🔒 Datas travadas: o arrasto está bloqueado. Use valores exatos aqui ou destrave pelo menu de contexto.</p>
+                    <p className="gantt-summary-note">{english ? "🔒 Locked dates: dragging is disabled. Use exact values here or unlock using the context menu." : "🔒 Datas travadas: o arrasto está bloqueado. Use valores exatos aqui ou destrave pelo menu de contexto."}</p>
                   ) : selectedHasPredecessors ? (
-                    <p className="gantt-summary-note">A data inicial segue as predecessoras. Mover a barra ajusta automaticamente o lag FS; a duração continua editável.</p>
+                    <p className="gantt-summary-note">{english ? "Start date follows predecessors. Moving the bar automatically adjusts FS lag; duration remains editable." : "A data inicial segue as predecessoras. Mover a barra ajusta automaticamente o lag FS; a duração continua editável."}</p>
                   ) : (
                     <button className="primary-button" type="submit" disabled={disabled}>
-                      Salvar cronograma
+                      {t("gantt.saveSchedule")}
                     </button>
                   )}
                   {!isSummary && selectedHasPredecessors ? (
-                    <button className="primary-button" type="submit" disabled={disabled}>Salvar duração</button>
+                    <button className="primary-button" type="submit" disabled={disabled}>{english ? "Save duration" : "Salvar duração"}</button>
                   ) : null}
                 </form>
               </>
@@ -1094,7 +1098,9 @@ export function TaskGantt({
       )}
       {projection.unscheduledCount > 0 ? (
         <p className="gantt-unscheduled-note">
-          {String(projection.unscheduledCount)} tarefa{projection.unscheduledCount === 1 ? "" : "s"} sem cronograma não {projection.unscheduledCount === 1 ? "é exibida" : "são exibidas"} como barra.
+          {english
+            ? `${String(projection.unscheduledCount)} unscheduled task${projection.unscheduledCount === 1 ? " is" : "s are"} not shown as a bar.`
+            : `${String(projection.unscheduledCount)} tarefa${projection.unscheduledCount === 1 ? "" : "s"} sem cronograma não ${projection.unscheduledCount === 1 ? "é exibida" : "são exibidas"} como barra.`}
         </p>
       ) : null}
     </section>

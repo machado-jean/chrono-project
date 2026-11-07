@@ -7,6 +7,7 @@ import type {
   WorkspaceRepository,
 } from "../../repositories/workspace-repository";
 import { safeFilename } from "./safe-filename";
+import { useLanguage } from "../../i18n/language";
 
 interface PortabilityPanelProps {
   readonly repository: WorkspaceRepository;
@@ -17,9 +18,9 @@ interface PortabilityPanelProps {
 
 type ProjectChoice = ProjectImportMode | "IGNORE";
 
-function packageSummary(preview: ImportPackagePreview): string {
-  const projects = `${String(preview.projects.length)} ${preview.projects.length === 1 ? "projeto" : "projetos"}`;
-  const templates = `${String(preview.templates.length)} ${preview.templates.length === 1 ? "template" : "templates"}`;
+function packageSummary(preview: ImportPackagePreview, english: boolean): string {
+  const projects = `${String(preview.projects.length)} ${english ? (preview.projects.length === 1 ? "project" : "projects") : (preview.projects.length === 1 ? "projeto" : "projetos")}`;
+  const templates = `${String(preview.templates.length)} ${english ? (preview.templates.length === 1 ? "template" : "templates") : "template(s)"}`;
   return `${projects} e ${templates}`;
 }
 
@@ -29,6 +30,8 @@ export function PortabilityPanel({
   disabled,
   onWorkspaceChanged,
 }: PortabilityPanelProps) {
+  const { language, t } = useLanguage();
+  const english = language === "en";
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -51,7 +54,7 @@ export function PortabilityPanel({
     try {
       await operation();
     } catch (operationError) {
-      setError(operationError instanceof Error ? operationError.message : String(operationError));
+      setError(english ? "The operation could not be completed." : operationError instanceof Error ? operationError.message : String(operationError));
     } finally {
       setBusy(false);
     }
@@ -81,7 +84,9 @@ export function PortabilityPanel({
       });
       setImportPreview(null);
       setMessage(
-        `Importação concluída: ${String(result.importedProjectCount)} atualizado(s), ${String(result.copiedProjectCount)} cópia(s) e ${String(result.importedTemplateCount)} template(s). Backup: ${result.backupPath}`,
+        english
+          ? `Import complete: ${String(result.importedProjectCount)} updated, ${String(result.copiedProjectCount)} copied, and ${String(result.importedTemplateCount)} template(s). Backup: ${result.backupPath}`
+          : `Importação concluída: ${String(result.importedProjectCount)} atualizado(s), ${String(result.copiedProjectCount)} cópia(s) e ${String(result.importedTemplateCount)} template(s). Backup: ${result.backupPath}`,
       );
       onWorkspaceChanged();
     });
@@ -100,7 +105,9 @@ export function PortabilityPanel({
       const result = await repository.restoreBackup(restorePreview.packagePath);
       setRestorePreview(null);
       setMessage(
-        `Workspace restaurado com ${String(result.projectCount)} projeto(s) e ${String(result.templateCount)} template(s). Backup de segurança: ${result.safetyBackupPath}`,
+        english
+          ? `Workspace restored with ${String(result.projectCount)} project(s) and ${String(result.templateCount)} template(s). Safety backup: ${result.safetyBackupPath}`
+          : `Workspace restaurado com ${String(result.projectCount)} projeto(s) e ${String(result.templateCount)} template(s). Backup de segurança: ${result.safetyBackupPath}`,
       );
       onWorkspaceChanged();
     });
@@ -109,9 +116,9 @@ export function PortabilityPanel({
   return (
     <>
       <details className="workspace-menu portability-menu" name="workspace-menu">
-        <summary>Arquivo</summary>
+        <summary>{t("menu.file")}</summary>
         <div className="workspace-menu-popover portability-menu-popover">
-          <div className="portability-actions" aria-label="Portabilidade e backup">
+          <div className="portability-actions" aria-label={t("file.portability")}>
         {selectedProject !== null ? (
           <button
             type="button"
@@ -122,11 +129,11 @@ export function PortabilityPanel({
                   selectedProject.id,
                   safeFilename(selectedProject.name),
                 );
-                if (result !== null) setMessage(`Projeto exportado para ${result.path}`);
+                if (result !== null) setMessage(english ? `Project exported to ${result.path}` : `Projeto exportado para ${result.path}`);
               });
             }}
           >
-            Exportar projeto
+            {t("file.exportProject")}
           </button>
         ) : null}
         <button
@@ -135,14 +142,14 @@ export function PortabilityPanel({
           onClick={() => {
             void run(async () => {
               const result = await repository.exportWorkspace();
-              if (result !== null) setMessage(`Workspace exportado para ${result.path}`);
+              if (result !== null) setMessage(english ? `Workspace exported to ${result.path}` : `Workspace exportado para ${result.path}`);
             });
           }}
         >
-          Exportar workspace
+          {t("file.exportWorkspace")}
         </button>
         <button type="button" disabled={disabled || busy} onClick={chooseImport}>
-          Importar pacote
+          {t("file.importPackage")}
         </button>
         <button
           type="button"
@@ -150,17 +157,17 @@ export function PortabilityPanel({
           onClick={() => {
             void run(async () => {
               const result = await repository.createBackup();
-              if (result !== null) setMessage(`Backup verificado criado em ${result.path}`);
+              if (result !== null) setMessage(english ? `Verified backup created at ${result.path}` : `Backup verificado criado em ${result.path}`);
             });
           }}
         >
-          Criar backup
+          {t("file.createBackup")}
         </button>
         <button type="button" disabled={disabled || busy} onClick={chooseRestore}>
-          Restaurar backup
+          {t("file.restoreBackup")}
         </button>
         <details className="portability-more">
-          <summary>Mais opções</summary>
+          <summary>{t("file.moreOptions")}</summary>
           <button
             type="button"
             disabled={disabled || busy}
@@ -170,13 +177,13 @@ export function PortabilityPanel({
               });
             }}
           >
-            Abrir pasta de backups automáticos
+            {t("file.openBackups")}
           </button>
         </details>
           </div>
         </div>
       </details>
-      {busy ? <span className="portability-status" role="status">Processando dados locais…</span> : null}
+      {busy ? <span className="portability-status" role="status">{t("file.processing")}</span> : null}
       {message !== null ? <p className="portability-message" role="status">{message}</p> : null}
       {error !== null ? <p className="portability-error" role="alert">{error}</p> : null}
 
@@ -190,22 +197,22 @@ export function PortabilityPanel({
         >
             <header>
               <div>
-                <h2 id="import-title">Escolher conteúdo para importar</h2>
-                <p id="import-description">{packageSummary(importPreview)} · schema {importPreview.schemaVersion}</p>
+                <h2 id="import-title">{english ? "Choose content to import" : "Escolher conteúdo para importar"}</h2>
+                <p id="import-description">{packageSummary(importPreview, english)} · schema {importPreview.schemaVersion}</p>
               </div>
-              <button type="button" data-dialog-initial-focus aria-label="Fechar importação" disabled={busy} onClick={() => { setImportPreview(null); }}>×</button>
+              <button type="button" data-dialog-initial-focus aria-label={english ? "Close import" : "Fechar importação"} disabled={busy} onClick={() => { setImportPreview(null); }}>×</button>
             </header>
             <div className="import-list">
-              <h3>Projetos</h3>
-              {importPreview.projects.length === 0 ? <p>Nenhum projeto no pacote.</p> : null}
+              <h3>{english ? "Projects" : "Projetos"}</h3>
+              {importPreview.projects.length === 0 ? <p>{english ? "No projects in this package." : "Nenhum projeto no pacote."}</p> : null}
               {importPreview.projects.map((project) => (
                 <label className="import-row" key={project.id}>
                   <span>
                     <strong>{project.name}</strong>
-                    <small>{project.taskCount} tarefa(s){project.existsLocally ? " · já existe neste workspace" : " · novo"}</small>
+                    <small>{project.taskCount} {english ? "task(s)" : "tarefa(s)"}{project.existsLocally ? (english ? " · already exists in this workspace" : " · já existe neste workspace") : (english ? " · new" : " · novo")}</small>
                   </span>
                   <select
-                    aria-label={`Ação para ${project.name}`}
+                    aria-label={english ? `Action for ${project.name}` : `Ação para ${project.name}`}
                     value={projectChoices[project.id] ?? "IGNORE"}
                     onChange={(event) => {
                       const choice = event.currentTarget.value as ProjectChoice;
@@ -215,19 +222,19 @@ export function PortabilityPanel({
                       }));
                     }}
                   >
-                    <option value="REPLACE">{project.existsLocally ? "Atualizar projeto" : "Importar"}</option>
-                    <option value="COPY">Importar como cópia</option>
-                    <option value="IGNORE">Não importar</option>
+                    <option value="REPLACE">{project.existsLocally ? (english ? "Update project" : "Atualizar projeto") : (english ? "Import" : "Importar")}</option>
+                    <option value="COPY">{english ? "Import as copy" : "Importar como cópia"}</option>
+                    <option value="IGNORE">{english ? "Do not import" : "Não importar"}</option>
                   </select>
                 </label>
               ))}
-              <h3>Templates</h3>
-              {importPreview.templates.length === 0 ? <p>Nenhum template no pacote.</p> : null}
+              <h3>{t("menu.templates")}</h3>
+              {importPreview.templates.length === 0 ? <p>{english ? "No templates in this package." : "Nenhum template no pacote."}</p> : null}
               {importPreview.templates.map((template) => (
                 <label className="import-row import-checkbox" key={template.id}>
                   <span>
                     <strong>{template.name}</strong>
-                    <small>{template.itemCount} item(ns){template.existsLocally ? " · será substituído" : " · novo"}</small>
+                    <small>{template.itemCount} {english ? "item(s)" : "item(ns)"}{template.existsLocally ? (english ? " · will be replaced" : " · será substituído") : (english ? " · new" : " · novo")}</small>
                   </span>
                   <input
                     type="checkbox"
@@ -244,10 +251,10 @@ export function PortabilityPanel({
                 </label>
               ))}
             </div>
-            <p className="import-warning">Projetos atualizados são substituídos pelo conteúdo do pacote. Um backup automático é criado antes da transação.</p>
+            <p className="import-warning">{english ? "Updated projects are replaced by the package contents. An automatic backup is created before the transaction." : "Projetos atualizados são substituídos pelo conteúdo do pacote. Um backup automático é criado antes da transação."}</p>
             <footer>
-              <button type="button" className="secondary-button" onClick={() => { setImportPreview(null); }}>Cancelar</button>
-              <button type="button" className="primary-button" disabled={!hasImportSelection || busy} onClick={applyImport}>Importar seleção</button>
+              <button type="button" className="secondary-button" onClick={() => { setImportPreview(null); }}>{t("app.cancel")}</button>
+              <button type="button" className="primary-button" disabled={!hasImportSelection || busy} onClick={applyImport}>{english ? "Import selection" : "Importar seleção"}</button>
             </footer>
         </ModalDialog>
       ) : null}
@@ -263,14 +270,14 @@ export function PortabilityPanel({
         >
             <header>
               <div>
-                <h2 id="restore-title">Restaurar workspace completo?</h2>
-                <p id="restore-description">O backup contém {packageSummary(restorePreview)}.</p>
+                <h2 id="restore-title">{english ? "Restore the entire workspace?" : "Restaurar workspace completo?"}</h2>
+                <p id="restore-description">{english ? "The backup contains" : "O backup contém"} {packageSummary(restorePreview, english)}.</p>
               </div>
             </header>
-            <p className="import-warning">A restauração substitui todo o workspace atual. Antes disso, o Chrono Project cria outro backup de segurança.</p>
+            <p className="import-warning">{english ? "Restoring replaces the entire current workspace. Before that, Chrono Project creates another safety backup." : "A restauração substitui todo o workspace atual. Antes disso, o Chrono Project cria outro backup de segurança."}</p>
             <footer>
-              <button type="button" className="secondary-button" data-dialog-initial-focus disabled={busy} onClick={() => { setRestorePreview(null); }}>Cancelar</button>
-              <button type="button" className="danger-button" disabled={busy} onClick={applyRestore}>Restaurar tudo</button>
+              <button type="button" className="secondary-button" data-dialog-initial-focus disabled={busy} onClick={() => { setRestorePreview(null); }}>{t("app.cancel")}</button>
+              <button type="button" className="danger-button" disabled={busy} onClick={applyRestore}>{english ? "Restore everything" : "Restaurar tudo"}</button>
             </footer>
         </ModalDialog>
       ) : null}

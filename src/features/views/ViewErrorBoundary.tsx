@@ -3,6 +3,7 @@ import { Component, type ErrorInfo, type ReactNode } from "react";
 interface ViewErrorBoundaryProps {
   readonly children: ReactNode;
   readonly viewName: string;
+  readonly language?: "pt-BR" | "en";
 }
 
 interface ViewErrorBoundaryState {
@@ -27,10 +28,10 @@ export class ViewErrorBoundary extends Component<
     if (this.state.hasError) {
       return (
         <div className="view-error" role="alert">
-          <strong>Não foi possível exibir {this.props.viewName}.</strong>
-          <span>As tarefas continuam preservadas. Tente carregar a visualização novamente.</span>
+          <strong>{this.props.language === "en" ? `Unable to show ${this.props.viewName}.` : `Não foi possível exibir ${this.props.viewName}.`}</strong>
+          <span>{this.props.language === "en" ? "Tasks are still preserved. Try loading the view again." : "As tarefas continuam preservadas. Tente carregar a visualização novamente."}</span>
           <button type="button" onClick={() => { this.setState({ hasError: false }); }}>
-            Tentar novamente
+            {this.props.language === "en" ? "Try again" : "Tentar novamente"}
           </button>
         </div>
       );

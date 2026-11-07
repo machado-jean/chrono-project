@@ -167,6 +167,27 @@ describe("relatório PDF de projeto", () => {
     expect(bytes.length).toBeGreaterThan(10_000);
   });
 
+  it("gera o conteúdo do PDF em inglês quando o relatório usa EN", () => {
+    const report = buildProjectReport({
+      project,
+      tasks,
+      dependencies,
+      options: { ...options, language: "en" },
+      generatedAt: NOW,
+      criticalPath,
+    });
+    const definition = JSON.stringify(buildProjectPdfDefinition(report));
+
+    expect(report.rows[0]?.statusLabel).toBe("In progress");
+    expect(report.rows[0]?.priorityLabel).toBe("High");
+    expect(definition).toContain("Planning report");
+    expect(definition).toContain("Schedule indicators");
+    expect(definition).toContain("Gantt schedule");
+    expect(definition).toContain(">TUE</text>");
+    expect(definition).toContain(">Task</text>");
+    expect(definition).not.toContain("Relatório de planejamento");
+  });
+
   it("repete o cabeçalho do Gantt em todas as páginas", () => {
     const paginatedTasks = Array.from({ length: 19 }, (_, index) => task({
       id: `20000000-0000-4000-8000-${String(index + 10).padStart(12, "0")}`,

@@ -47,6 +47,7 @@ virar uma planilha genérica ou um painel SaaS.
 | Cronograma | Dependências Término–Início, múltiplas predecessoras, lag, dias úteis, feriados e propagação automática |
 | Análise | Plano de referência, desvios, prazo-limite, saúde, caminho crítico, folga e margem da meta |
 | Visualizações | Tabela editável, Kanban por status e Gantt hierárquico sincronizados sobre os mesmos dados |
+| Idioma | Interface em Português (Brasil) e inglês, com seleção local persistente e sem traduzir os dados do projeto |
 | Produtividade | Edição inline, ações em massa, menus de contexto, histórico, `Ctrl+Z` e `Ctrl+Shift+Z` |
 | Reutilização | Duplicação de tarefas e projetos, templates de árvores e preservação de relações internas |
 | Portabilidade | Exportação `.chronoproject`, importação seletiva, backup verificado e relatórios PDF locais |
@@ -136,13 +137,13 @@ o perfil normal do Windows. Veja o
 - [Organização pública do GitHub](docs/github-governance.md)
 - [Processo de release](docs/release-process.md)
 - [Publicação no WinGet](docs/winget.md)
-- [Notas da v0.2.9](docs/releases/v0.2.9.md)
+- [Notas da v0.3.0](docs/releases/v0.3.0.md) · [English release notes](docs/releases/v0.3.0.en.md)
 - [Decisões arquiteturais](docs/decisions/)
 
 ## Estado do projeto
 
 A versão em preparação é a
-[v0.2.9](https://github.com/machado-jean/chrono-project/releases/tag/v0.2.9).
+[v0.3.0](https://github.com/machado-jean/chrono-project/releases/tag/v0.3.0).
 O primeiro pacote para o catálogo WinGet passou pelo CLA e por todas as etapas
 técnicas; o [PR #450697](https://github.com/microsoft/winget-pkgs/pull/450697)
 aguarda revisão de um moderador.

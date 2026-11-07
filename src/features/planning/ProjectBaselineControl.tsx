@@ -3,6 +3,7 @@ import { useMemo, useState, type SyntheticEvent } from "react";
 import { ModalDialog } from "../../components/ModalDialog";
 import type { BaselineTask, ProjectBaseline } from "../../domain/planning/baseline";
 import type { Task } from "../../domain/tasks/task";
+import { useLanguage } from "../../i18n/language";
 
 interface ProjectBaselineControlProps {
   readonly tasks: readonly Task[];
@@ -14,8 +15,8 @@ interface ProjectBaselineControlProps {
   readonly onDelete: () => Promise<boolean>;
 }
 
-function displayTimestamp(value: string): string {
-  return new Intl.DateTimeFormat("pt-BR", {
+function displayTimestamp(value: string, language: string): string {
+  return new Intl.DateTimeFormat(language, {
     dateStyle: "short",
     timeStyle: "short",
   }).format(new Date(value));
@@ -30,8 +31,9 @@ export function ProjectBaselineControl({
   onCreate,
   onDelete,
 }: ProjectBaselineControlProps) {
+  const { language, t } = useLanguage();
   const [open, setOpen] = useState(false);
-  const [name, setName] = useState("Plano aprovado");
+  const [name, setName] = useState(() => t("baseline.defaultName"));
   const [busy, setBusy] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const scheduledCount = useMemo(
@@ -53,7 +55,7 @@ export function ProjectBaselineControl({
   return (
     <div className="baseline-control">
       {activeBaseline === null ? (
-        <span className="baseline-status">Sem plano de referência</span>
+        <span className="baseline-status">{t("baseline.none")}</span>
       ) : (
         <button
           className="baseline-status active"
@@ -61,7 +63,7 @@ export function ProjectBaselineControl({
           aria-expanded={showHistory}
           onClick={() => { setShowHistory((current) => !current); }}
         >
-          Plano de referência: {activeBaseline.name}
+          {t("baseline.history")} {activeBaseline.name}
         </button>
       )}
       <button
@@ -69,31 +71,31 @@ export function ProjectBaselineControl({
         type="button"
         disabled={disabled || tasks.length === 0}
         onClick={() => {
-          setName(activeBaseline === null ? "Plano aprovado" : `Revisão ${String(baselines.length + 1)}`);
+          setName(activeBaseline === null ? t("baseline.defaultName") : `${t("baseline.revision")} ${String(baselines.length + 1)}`);
           setOpen(true);
         }}
       >
-        {activeBaseline === null ? "Criar plano de referência" : "Atualizar plano de referência"}
+        {activeBaseline === null ? t("baseline.create") : t("baseline.update")}
       </button>
       {showHistory && activeBaseline !== null ? (
         <div className="baseline-history" role="status">
-          <p>É uma fotografia do planejamento aprovada para comparar mudanças futuras. Ela não altera as tarefas atuais.</p>
+          <p>{t("baseline.about")}</p>
           <strong>{activeBaseline.name}</strong>
-          <span>{displayTimestamp(activeBaseline.createdAt)} · {activeBaselineTasks.length} tarefas</span>
+          <span>{displayTimestamp(activeBaseline.createdAt, language)} · {activeBaselineTasks.length} {t("project.tasks")}</span>
           {baselines.filter((baseline) => !baseline.isActive).map((baseline) => (
-            <span key={baseline.id}>Anterior: {baseline.name} · {displayTimestamp(baseline.createdAt)}</span>
+            <span key={baseline.id}>{t("baseline.previous")} {baseline.name} · {displayTimestamp(baseline.createdAt, language)}</span>
           ))}
           <button
             className="baseline-delete-button"
             type="button"
             disabled={disabled}
             onClick={() => {
-              if (window.confirm("Excluir o plano de referência e todo o histórico de revisões? As tarefas atuais não serão alteradas.")) {
+              if (window.confirm(t("baseline.deleteConfirm"))) {
                 void onDelete().then((deleted) => { if (deleted) setShowHistory(false); });
               }
             }}
           >
-            Excluir plano e histórico
+            {t("baseline.delete")}
           </button>
         </div>
       ) : null}
@@ -108,21 +110,21 @@ export function ProjectBaselineControl({
         >
           <header>
             <div>
-              <h2 id="baseline-dialog-title">{activeBaseline === null ? "Criar plano de referência" : "Atualizar plano de referência"}</h2>
+              <h2 id="baseline-dialog-title">{activeBaseline === null ? t("baseline.create") : t("baseline.update")}</h2>
               <p id="baseline-dialog-description">
-                Essa fotografia guardará as datas planejadas, a duração e o progresso de {tasks.length} tarefas ({scheduledCount} com cronograma).
+                {t("baseline.dialogDescription")} {tasks.length} {t("baseline.dialogContinuation")} ({scheduledCount} {t("baseline.scheduledCount")}).
               </p>
             </div>
-            <button className="baseline-dialog-close" type="button" aria-label="Fechar plano de referência" disabled={busy} onClick={() => { setOpen(false); }}>×</button>
+            <button className="baseline-dialog-close" type="button" aria-label={t("baseline.close")} disabled={busy} onClick={() => { setOpen(false); }}>×</button>
           </header>
           {activeBaseline === null ? null : (
-            <p className="baseline-warning">O plano de referência atual continuará no histórico, e esta nova fotografia passará a ser usada nas comparações.</p>
+            <p className="baseline-warning">{t("baseline.warning")}</p>
           )}
           <form onSubmit={(event) => { void submit(event); }}>
-            <label>Nome do plano de referência<input required autoFocus value={name} disabled={busy} onChange={(event) => { setName(event.target.value); }} /></label>
+            <label>{t("baseline.nameLabel")}<input required autoFocus value={name} disabled={busy} onChange={(event) => { setName(event.target.value); }} /></label>
             <footer>
-              <button type="button" className="secondary-button" disabled={busy} onClick={() => { setOpen(false); }}>Cancelar</button>
-              <button type="submit" className="primary-button" disabled={busy}>{busy ? "Registrando…" : "Registrar plano"}</button>
+              <button type="button" className="secondary-button" disabled={busy} onClick={() => { setOpen(false); }}>{t("app.cancel")}</button>
+              <button type="submit" className="primary-button" disabled={busy}>{busy ? t("baseline.registering") : t("baseline.register")}</button>
             </footer>
           </form>
         </ModalDialog>

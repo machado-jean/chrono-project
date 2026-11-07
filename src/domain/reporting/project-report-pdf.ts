@@ -1,5 +1,5 @@
 import type { TDocumentDefinitions } from "pdfmake/interfaces";
-import { TASK_PRIORITIES, TASK_PRIORITY_LABELS, TASK_STATUSES, TASK_STATUS_LABELS } from "../tasks/task";
+import { TASK_PRIORITIES, TASK_STATUSES, type TaskPriority, type TaskStatus } from "../tasks/task";
 import type { ProjectReport } from "./project-report";
 import { buildGanttSvgPages } from "./project-report-gantt-svg";
 
@@ -24,28 +24,75 @@ const COLORS = {
 const STATUS_COLORS = ["#94A3B8", "#2563EB", "#DC8A00", "#0F9F83", "#64748B"] as const;
 const PRIORITY_COLORS = ["#94A3B8", "#2563EB", "#DC8A00", "#C2413B"] as const;
 
-function formatDate(value: string | null): string {
+const PORTUGUESE_COPY = {
+  generatedAt: "Gerado em", noDates: "Sem datas", dateRangeSeparator: "a", activities: "Atividades", scheduled: "agendadas",
+  averageCompletion: "Conclusão média", allActivities: "Todas as atividades", completed: "Concluídas", blocked: "bloqueadas",
+  period: "Período", scheduleConsidered: "Cronograma considerado", statusDistribution: "Distribuição por status",
+  priorityDistribution: "Distribuição por prioridade", noGlobalDeadline: "Sem prazo-limite global", scheduleIndicators: "Indicadores do cronograma",
+  criticalZeroSlack: "Crítica · folga zero", nearCriticalSlack: "Quase crítica · 1–2 dias de folga",
+  target: "Meta", critical: "Crítica", nearCritical: "Quase crítica", noDeadline: "Sem prazo", onTrack: "No prazo",
+  atRisk: "Em risco", overdue: "Atrasada", completedLate: "Concluída com atraso", cancelled: "Cancelada",
+  task: "Atividade", status: "Status", start: "Início", end: "Fim", plannedStart: "Início planejado", plannedEnd: "Fim planejado",
+  variance: "Desvio", deadline: "Prazo", health: "Saúde", predecessors: "Predecessoras", taskDetails: "Detalhes das atividades",
+  assignee: "Responsável", notes: "Observações", noScheduledActivities: "Nenhuma atividade agendada para exibir no cronograma.",
+  summary: "Resumo", weekend: "Fim de semana", dependency: "Dependência", baseline: "Plano de referência", planningReport: "Relatório de planejamento",
+  ganttSchedule: "Cronograma Gantt", localPlanningReport: "Relatório local de planejamento", page: "Página", of: "de",
+} as const;
+
+const ENGLISH_COPY: { readonly [Key in keyof typeof PORTUGUESE_COPY]: string } = {
+    generatedAt: "Generated on", noDates: "No dates", dateRangeSeparator: "to", activities: "Activities", scheduled: "scheduled",
+    averageCompletion: "Average completion", allActivities: "All activities", completed: "Completed", blocked: "blocked",
+    period: "Period", scheduleConsidered: "Schedule considered", statusDistribution: "Status distribution",
+    priorityDistribution: "Priority distribution", noGlobalDeadline: "No global deadline", scheduleIndicators: "Schedule indicators",
+    criticalZeroSlack: "Critical · zero slack", nearCriticalSlack: "Near critical · 1–2 days of slack",
+    target: "Target", critical: "Critical", nearCritical: "Near critical", noDeadline: "No deadline", onTrack: "On track",
+    atRisk: "At risk", overdue: "Overdue", completedLate: "Completed late", cancelled: "Cancelled",
+    task: "Task", status: "Status", start: "Start", end: "End", plannedStart: "Planned start", plannedEnd: "Planned end",
+    variance: "Variance", deadline: "Deadline", health: "Health", predecessors: "Predecessors", taskDetails: "Task details",
+    assignee: "Assignee", notes: "Notes", noScheduledActivities: "No scheduled activities to display in the schedule.",
+    summary: "Summary", weekend: "Weekend", dependency: "Dependency", baseline: "Baseline", planningReport: "Planning report",
+    ganttSchedule: "Gantt schedule", localPlanningReport: "Local planning report", page: "Page", of: "of",
+};
+
+function copy(report: ProjectReport): typeof ENGLISH_COPY {
+  return report.options.language === "en" ? ENGLISH_COPY : PORTUGUESE_COPY;
+}
+
+function formatDate(value: string | null, language: ProjectReport["options"]["language"]): string {
   if (value === null) return "-";
   const [year, month, day] = value.split("-");
   return year === undefined || month === undefined || day === undefined
     ? value
-    : `${day}/${month}/${year}`;
+    : language === "en" ? `${month}/${day}/${year}` : `${day}/${month}/${year}`;
 }
 
-function formatGeneratedAt(value: string): string {
-  return new Intl.DateTimeFormat("pt-BR", {
+function formatGeneratedAt(value: string, language: ProjectReport["options"]["language"]): string {
+  return new Intl.DateTimeFormat(language === "en" ? "en-US" : "pt-BR", {
     dateStyle: "short",
     timeStyle: "short",
     timeZone: "America/Sao_Paulo",
   }).format(new Date(value));
 }
 
+function statusLabel(report: ProjectReport, status: TaskStatus): string {
+  return report.options.language === "en"
+    ? ({ NOT_STARTED: "Not started", IN_PROGRESS: "In progress", BLOCKED: "Blocked", COMPLETED: "Completed", CANCELLED: "Cancelled" } as const)[status]
+    : ({ NOT_STARTED: "Não iniciada", IN_PROGRESS: "Em andamento", BLOCKED: "Bloqueada", COMPLETED: "Concluída", CANCELLED: "Cancelada" } as const)[status];
+}
+
+function priorityLabel(report: ProjectReport, priority: TaskPriority): string {
+  return report.options.language === "en"
+    ? ({ LOW: "Low", NORMAL: "Normal", HIGH: "High", CRITICAL: "Critical" } as const)[priority]
+    : ({ LOW: "Baixa", NORMAL: "Normal", HIGH: "Alta", CRITICAL: "Crítica" } as const)[priority];
+}
+
 function reportHeader(report: ProjectReport, subtitle: string): PdfNode[] {
+  const text = copy(report);
   return [
     {
       columns: [
         { stack: [{ text: "CHRONO PROJECT", style: "brand" }, { text: report.project.name, style: "title" }] },
-        { text: `Gerado em ${formatGeneratedAt(report.generatedAt)}`, style: "generated", alignment: "right" },
+        { text: `${text.generatedAt} ${formatGeneratedAt(report.generatedAt, report.options.language)}`, style: "generated", alignment: "right" },
       ],
       margin: [0, 0, 0, 4],
     },
@@ -99,19 +146,20 @@ function distributionChart(
 }
 
 function summarySection(report: ProjectReport): PdfNode[] {
+  const text = copy(report);
   const total = report.rows.length;
   const period = report.timelineStart === null || report.timelineEnd === null
-    ? "Sem datas"
-    : `${formatDate(report.timelineStart)} a ${formatDate(report.timelineEnd)}`;
+    ? text.noDates
+    : `${formatDate(report.timelineStart, report.options.language)} ${text.dateRangeSeparator} ${formatDate(report.timelineEnd, report.options.language)}`;
   return [
     {
       table: {
         widths: ["*", "*", "*", "*"],
         body: [[
-          metricCard("Atividades", String(total), `${String(report.scheduledCount)} agendadas`),
-          metricCard("Conclusão média", `${String(report.averageProgress)}%`, "Todas as atividades"),
-          metricCard("Concluídas", String(report.statusCounts.COMPLETED), `${String(report.statusCounts.BLOCKED)} bloqueadas`),
-          metricCard("Período", period, "Cronograma considerado"),
+          metricCard(text.activities, String(total), `${String(report.scheduledCount)} ${text.scheduled}`),
+          metricCard(text.averageCompletion, `${String(report.averageProgress)}%`, text.allActivities),
+          metricCard(text.completed, String(report.statusCounts.COMPLETED), `${String(report.statusCounts.BLOCKED)} ${text.blocked}`),
+          metricCard(text.period, period, text.scheduleConsidered),
         ]],
       },
       layout: "noBorders",
@@ -120,18 +168,18 @@ function summarySection(report: ProjectReport): PdfNode[] {
     {
       columns: [
         distributionChart(
-          "Distribuição por status",
+          text.statusDistribution,
           TASK_STATUSES.map((status, index) => ({
-            label: TASK_STATUS_LABELS[status],
+            label: statusLabel(report, status),
             value: report.statusCounts[status],
             color: STATUS_COLORS[index] ?? COLORS.blue,
           })),
           total,
         ),
         distributionChart(
-          "Distribuição por prioridade",
+          text.priorityDistribution,
           TASK_PRIORITIES.map((priority, index) => ({
-            label: TASK_PRIORITY_LABELS[priority],
+            label: priorityLabel(report, priority),
             value: report.priorityCounts[priority],
             color: PRIORITY_COLORS[index] ?? COLORS.blue,
           })),
@@ -145,26 +193,27 @@ function summarySection(report: ProjectReport): PdfNode[] {
 }
 
 function criticalPathSection(report: ProjectReport): PdfNode[] {
+  const text = copy(report);
   const analysis = report.criticalPath;
   if (analysis?.available !== true) return [];
   const criticalCount = report.rows.filter((row) => row.criticality?.isCritical === true).length;
   const nearCriticalCount = report.rows.filter((row) => row.criticality?.isNearCritical === true).length;
   const target = analysis.targetEndDate === null
-    ? "Sem prazo-limite global"
-    : `Meta ${formatDate(analysis.targetEndDate)}${analysis.projectTargetSlackDays === null ? "" : ` · ${analysis.projectTargetSlackDays >= 0 ? "+" : ""}${String(analysis.projectTargetSlackDays)}d`}`;
+    ? text.noGlobalDeadline
+    : `${text.target} ${formatDate(analysis.targetEndDate, report.options.language)}${analysis.projectTargetSlackDays === null ? "" : ` · ${analysis.projectTargetSlackDays >= 0 ? "+" : ""}${String(analysis.projectTargetSlackDays)}d`}`;
 
   return [
-    { text: "Indicadores do cronograma", style: "sectionSmall", margin: [0, 0, 0, 7] },
+    { text: text.scheduleIndicators, style: "sectionSmall", margin: [0, 0, 0, 7] },
     {
       columns: [
         {
           columns: [
-            { text: `Crítica · folga zero (${String(criticalCount)})`, style: "criticalLegendCritical" },
+            { text: `${text.criticalZeroSlack} (${String(criticalCount)})`, style: "criticalLegendCritical" },
           ],
         },
         {
           columns: [
-            { text: `Quase crítica · 1–2 dias de folga (${String(nearCriticalCount)})`, style: "criticalLegendNear" },
+            { text: `${text.nearCriticalSlack} (${String(nearCriticalCount)})`, style: "criticalLegendNear" },
           ],
         },
         { text: target, style: "criticalLegendMeta", alignment: "right" },
@@ -176,11 +225,12 @@ function criticalPathSection(report: ProjectReport): PdfNode[] {
   ];
 }
 
-function taskLabelCell(row: ProjectReport["rows"][number]): PdfNode {
+function taskLabelCell(report: ProjectReport, row: ProjectReport["rows"][number]): PdfNode {
+  const english = report.options.language === "en";
   const marker = row.criticality?.isCritical === true
-    ? { text: "[Crítica] ", style: "criticalMarker" }
+    ? { text: english ? "[Critical] " : "[Crítica] ", style: "criticalMarker" }
     : row.criticality?.isNearCritical === true
-      ? { text: "[Quase crítica] ", style: "nearCriticalMarker" }
+      ? { text: english ? "[Near critical] " : "[Quase crítica] ", style: "nearCriticalMarker" }
       : null;
   return {
     text: [
@@ -192,37 +242,34 @@ function taskLabelCell(row: ProjectReport["rows"][number]): PdfNode {
 }
 
 function taskTable(report: ProjectReport): PdfNode {
+  const text = copy(report);
   const includeBaseline = report.options.includeBaseline !== false && report.rows.some(
     (row) => row.baselineStartDate !== null || row.baselineEndDate !== null,
   );
   const healthLabel = (health: ProjectReport["rows"][number]["health"]): string => ({
-    NO_DEADLINE: "Sem prazo",
-    ON_TRACK: "No prazo",
-    AT_RISK: "Em risco",
-    OVERDUE: "Atrasada",
-    COMPLETED_LATE: "Concluída com atraso",
-    CANCELLED: "Cancelada",
+    NO_DEADLINE: text.noDeadline, ON_TRACK: text.onTrack, AT_RISK: text.atRisk, OVERDUE: text.overdue,
+    COMPLETED_LATE: text.completedLate, CANCELLED: text.cancelled,
   })[health];
   const headers = [
-    "Atividade", "Status", "Início", "Fim",
-    ...(includeBaseline ? ["Início planejado", "Fim planejado", "Desvio"] : []),
-    "Prazo", "Saúde", "%", "Predecessoras",
+    text.task, text.status, text.start, text.end,
+    ...(includeBaseline ? [text.plannedStart, text.plannedEnd, text.variance] : []),
+    text.deadline, text.health, "%", text.predecessors,
   ];
   const body: PdfNode[][] = [
     headers.map(
       (text) => ({ text, style: "tableHeader", fillColor: COLORS.ink, color: COLORS.white }),
     ),
     ...report.rows.map((row) => [
-      taskLabelCell(row),
+      taskLabelCell(report, row),
       row.statusLabel,
-      formatDate(row.startDate),
-      formatDate(row.endDate),
+      formatDate(row.startDate, report.options.language),
+      formatDate(row.endDate, report.options.language),
       ...(includeBaseline ? [
-        formatDate(row.baselineStartDate),
-        formatDate(row.baselineEndDate),
+        formatDate(row.baselineStartDate, report.options.language),
+        formatDate(row.baselineEndDate, report.options.language),
         row.endVarianceDays === null ? "-" : `${row.endVarianceDays > 0 ? "+" : ""}${String(row.endVarianceDays)}d`,
       ] : []),
-      formatDate(row.deadlineDate),
+      formatDate(row.deadlineDate, report.options.language),
       healthLabel(row.health),
       `${String(row.progress)}%`,
       row.predecessors.length === 0 ? "-" : row.predecessors.join(", "),
@@ -242,20 +289,21 @@ function taskTable(report: ProjectReport): PdfNode {
 }
 
 function detailSections(report: ProjectReport): PdfNode[] {
+  const text = copy(report);
   if (!report.options.includeDetails) return [];
   const detailed = report.rows.filter(
     (row) => row.description !== null || row.notes !== null || row.tags.length > 0 || row.assignee !== null,
   );
   if (detailed.length === 0) return [];
   return [
-    { text: "Detalhes das atividades", style: "section", margin: [0, 14, 0, 8] },
+    { text: text.taskDetails, style: "section", margin: [0, 14, 0, 8] },
     ...detailed.map((row) => ({
       stack: [
         { text: row.label, style: "detailTitle" },
-        row.assignee === null ? null : { text: `Responsável: ${row.assignee}`, style: "detailMeta" },
+        row.assignee === null ? null : { text: `${text.assignee}: ${row.assignee}`, style: "detailMeta" },
         row.tags.length === 0 ? null : { text: `Tags: ${row.tags.join(", ")}`, style: "detailMeta" },
         row.description === null ? null : { text: row.description, margin: [0, 4, 0, 0] },
-        row.notes === null ? null : { text: `Observações: ${row.notes}`, margin: [0, 4, 0, 0], color: COLORS.muted },
+        row.notes === null ? null : { text: `${text.notes}: ${row.notes}`, margin: [0, 4, 0, 0], color: COLORS.muted },
       ].filter((node) => node !== null),
       margin: [0, 0, 0, 10],
       unbreakable: true,
@@ -344,7 +392,7 @@ function ganttTimelineHeader(start: string, end: string): PdfNode {
 */
 function ganttTable(report: ProjectReport): PdfNode {
   if (report.timelineStart === null || report.timelineEnd === null) {
-    return { text: "Nenhuma atividade agendada para exibir no cronograma.", style: "empty" };
+    return { text: copy(report).noScheduledActivities, style: "empty" };
   }
   return {
     stack: buildGanttSvgPages(report).map((page, index) => ({
@@ -356,6 +404,7 @@ function ganttTable(report: ProjectReport): PdfNode {
 }
 
 function ganttLegend(report: ProjectReport): PdfNode {
+  const text = copy(report);
   const includesBaseline = report.options.includeBaseline !== false && report.rows.some(
     (row) => row.baselineStartDate !== null || row.baselineEndDate !== null,
   );
@@ -387,14 +436,10 @@ function ganttLegend(report: ProjectReport): PdfNode {
     width: "auto",
   });
   const items: PdfNode[] = [
-    item("TASK", "Tarefa"),
-    item("SUMMARY", "Resumo"),
-    item("CRITICAL", "Crítica"),
-    item("NEAR", "Quase crítica"),
-    item("WEEKEND", "Fim de semana"),
-    item("DEPENDENCY", "Dependência"),
+    item("TASK", text.task), item("SUMMARY", text.summary), item("CRITICAL", text.critical),
+    item("NEAR", text.nearCritical), item("WEEKEND", text.weekend), item("DEPENDENCY", text.dependency),
   ];
-  if (includesBaseline) items.push(item("BASELINE", "Plano de referência"));
+  if (includesBaseline) items.push(item("BASELINE", text.baseline));
   return {
     columns: items,
     columnGap: 7,
@@ -403,16 +448,17 @@ function ganttLegend(report: ProjectReport): PdfNode {
 }
 
 export function buildProjectPdfDefinition(report: ProjectReport): PdfDefinition {
-  const content: PdfNode[] = [...reportHeader(report, "Relatório de planejamento")];
+  const text = copy(report);
+  const content: PdfNode[] = [...reportHeader(report, text.planningReport)];
   if (report.options.format === "REPORT") content.push(...summarySection(report));
   content.push(...criticalPathSection(report));
   if (report.options.format === "REPORT" || report.options.format === "TASKS") {
-    content.push({ text: "Atividades", style: "section", margin: [0, 4, 0, 8] }, taskTable(report));
+    content.push({ text: text.activities, style: "section", margin: [0, 4, 0, 8] }, taskTable(report));
     content.push(...detailSections(report));
   }
   if (report.options.format === "REPORT" || report.options.format === "GANTT") {
     content.push({
-      text: "Cronograma Gantt",
+      text: text.ganttSchedule,
       style: "section",
       margin: [0, 4, 0, 8],
       ...(report.options.format === "REPORT" ? { pageBreak: "before" } : {}),
@@ -428,7 +474,7 @@ export function buildProjectPdfDefinition(report: ProjectReport): PdfDefinition 
     info: {
       title: `${report.project.name} - Chrono Project`,
       author: "Chrono Project",
-      subject: "Relatório local de planejamento",
+      subject: text.localPlanningReport,
     },
     content,
     defaultStyle: { font: "Roboto", fontSize: 8.5, color: COLORS.ink },
@@ -458,8 +504,8 @@ export function buildProjectPdfDefinition(report: ProjectReport): PdfDefinition 
     },
     footer: (currentPage: number, pageCount: number) => ({
       columns: [
-        { text: "Chrono Project - planejamento local", margin: [28, 0, 0, 0] },
-        { text: `Página ${String(currentPage)} de ${String(pageCount)}`, alignment: "right", margin: [0, 0, 28, 0] },
+        { text: `Chrono Project - ${text.localPlanningReport.toLocaleLowerCase(report.options.language === "en" ? "en-US" : "pt-BR")}`, margin: [28, 0, 0, 0] },
+        { text: `${text.page} ${String(currentPage)} ${text.of} ${String(pageCount)}`, alignment: "right", margin: [0, 0, 28, 0] },
       ],
       fontSize: 7,
       color: COLORS.muted,

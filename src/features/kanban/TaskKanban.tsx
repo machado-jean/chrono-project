@@ -9,11 +9,10 @@ import {
 } from "../../domain/tasks/outline-number";
 import {
   TASK_STATUSES,
-  TASK_STATUS_LABELS,
-  TASK_PRIORITY_LABELS,
   type Task,
   type TaskStatus,
 } from "../../domain/tasks/task";
+import { useLanguage } from "../../i18n/language";
 import { taskSaveWasCancelled, taskSaveSucceeded, type TaskSaveResult } from "../../domain/tasks/task-save";
 
 interface TaskKanbanProps {
@@ -44,8 +43,8 @@ function taskPath(
   return titles.length === 0 ? null : titles.join(" › ");
 }
 
-function taskDates(task: Task): string {
-  if (task.startDate === null || task.endDate === null) return "Sem cronograma";
+function taskDates(task: Task, english: boolean): string {
+  if (task.startDate === null || task.endDate === null) return english ? "Unscheduled" : "Sem cronograma";
   const formatDate = (date: string): string => {
     const [year, month, day] = date.split("-");
     return year === undefined || month === undefined || day === undefined
@@ -66,6 +65,8 @@ export function TaskKanban({
   onDuplicate,
   onDelete,
 }: TaskKanbanProps) {
+  const { language, priorityLabel, statusLabel, t } = useLanguage();
+  const english = language === "en";
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
   const [dropTargetStatus, setDropTargetStatus] = useState<TaskStatus | null>(null);
   const [savingTaskId, setSavingTaskId] = useState<string | null>(null);
@@ -97,12 +98,12 @@ export function TaskKanban({
     try {
       const saved = await onSave({ ...task, status });
       if (taskSaveSucceeded(saved)) {
-        setAnnouncement(`${task.title} movida para ${TASK_STATUS_LABELS[status]}.`);
+        setAnnouncement(`${task.title} ${t("kanban.movedTo")} ${statusLabel(status)}.`);
       } else if (!taskSaveWasCancelled(saved)) {
-        setLocalError("Não foi possível salvar o novo status. A tarefa permaneceu na coluna anterior.");
+        setLocalError(english ? "The new status could not be saved. The task remains in the previous column." : "Não foi possível salvar o novo status. A tarefa permaneceu na coluna anterior.");
       }
     } catch {
-      setLocalError("Não foi possível salvar o novo status. A tarefa permaneceu na coluna anterior.");
+      setLocalError(english ? "The new status could not be saved. The task remains in the previous column." : "Não foi possível salvar o novo status. A tarefa permaneceu na coluna anterior.");
     } finally {
       setSavingTaskId(null);
     }
@@ -140,31 +141,31 @@ export function TaskKanban({
       .filter((status) => status !== contextMenu.task.status)
       .map((status) => ({
         id: `status-${status}`,
-        label: `Mover para ${TASK_STATUS_LABELS[status]}`,
+        label: `${t("kanban.moveTo")} ${statusLabel(status)}`,
         disabled: disabled || savingTaskId === contextMenu.task.id,
         onSelect: () => { void changeStatus(contextMenu.task, status); },
       } satisfies ContextMenuItem)),
     {
       id: "duplicate",
-      label: "Duplicar tarefa",
+      label: english ? "Duplicate task" : "Duplicar tarefa",
       separatorBefore: true,
       disabled,
       onSelect: () => { void onDuplicate(contextMenu.task.id, false); },
     },
     ...(summaryIds.has(contextMenu.task.id) ? [{
       id: "duplicate-tree",
-      label: "Duplicar tarefa e subtarefas",
+      label: english ? "Duplicate task and subtasks" : "Duplicar tarefa e subtarefas",
       disabled,
       onSelect: () => { void onDuplicate(contextMenu.task.id, true); },
     } satisfies ContextMenuItem] : []),
     {
       id: "delete",
-      label: "Excluir tarefa…",
+      label: english ? "Delete task…" : "Excluir tarefa…",
       danger: true,
       separatorBefore: true,
       disabled,
       onSelect: () => {
-        if (window.confirm(`Excluir “${contextMenu.task.title}” e todas as suas subtarefas? Esta ação não pode ser desfeita.`)) {
+        if (window.confirm(english ? `Delete “${contextMenu.task.title}” and all its subtasks? This action cannot be undone.` : `Excluir “${contextMenu.task.title}” e todas as suas subtarefas? Esta ação não pode ser desfeita.`)) {
           void onDelete(contextMenu.task.id);
         }
       },
@@ -175,8 +176,8 @@ export function TaskKanban({
     <section className="kanban-section" aria-labelledby="kanban-title">
       <header className="view-heading">
         <div>
-          <h2 id="kanban-title">Quadro Kanban</h2>
-          <p>Arraste um cartão ou altere o campo “Status”.</p>
+          <h2 id="kanban-title">{t("kanban.title")}</h2>
+          <p>{t("kanban.description")}</p>
         </div>
         <span>{String(tasks.length)} tarefa{tasks.length === 1 ? "" : "s"}</span>
       </header>
@@ -185,11 +186,11 @@ export function TaskKanban({
 
       {tasks.length === 0 ? (
         <div className="view-empty" role="status">
-          <strong>Nenhuma tarefa corresponde aos filtros.</strong>
-          <span>Limpe ou ajuste os filtros para recuperar os cartões.</span>
+          <strong>{t("kanban.noTasks")}</strong>
+          <span>{t("kanban.adjustFilters")}</span>
         </div>
       ) : (
-        <div className="kanban-board" aria-label="Tarefas organizadas por status">
+        <div className="kanban-board" aria-label={t("kanban.board")}>
           {TASK_STATUSES.map((status) => {
             const columnTasks = tasks.filter((task) => task.status === status);
             return (
@@ -200,12 +201,12 @@ export function TaskKanban({
                 data-kanban-status={status}
               >
                 <header>
-                  <h3 id={`kanban-${status}`}>{TASK_STATUS_LABELS[status]}</h3>
-                  <span aria-label={`${String(columnTasks.length)} tarefas`}>{String(columnTasks.length)}</span>
+                  <h3 id={`kanban-${status}`}>{statusLabel(status)}</h3>
+                  <span aria-label={`${String(columnTasks.length)} ${english ? "tasks" : "tarefas"}`}>{String(columnTasks.length)}</span>
                 </header>
                 <div className="kanban-cards">
                   {columnTasks.length === 0 ? (
-                    <p className="kanban-column-empty">Solte uma tarefa aqui</p>
+                    <p className="kanban-column-empty">{t("kanban.dropHere")}</p>
                   ) : columnTasks.map((task) => {
                     const predecessors = dependencies.filter(
                       (dependency) => dependency.successorId === task.id,
@@ -226,8 +227,8 @@ export function TaskKanban({
                             <button
                               className="kanban-drag-handle"
                               type="button"
-                              aria-label={`Arrastar ${task.title}`}
-                              title="Arrastar para outra coluna"
+                              aria-label={english ? `Drag ${task.title}` : `Arrastar ${task.title}`}
+                              title={english ? "Drag to another column" : "Arrastar para outra coluna"}
                               disabled={disabled || isSaving}
                               onPointerDown={(event) => {
                                 if (event.button !== 0) return;
@@ -257,11 +258,11 @@ export function TaskKanban({
                             <strong>{titleWithoutMatchingOutline(task.title, outlineNumber)}</strong>
                           </div>
                           <div className="kanban-card-actions">
-                            {summaryIds.has(task.id) ? <span>Resumo</span> : null}
+                            {summaryIds.has(task.id) ? <span>{t("kanban.summary")}</span> : null}
                             <button
                               ref={contextMenu?.task.id === task.id ? contextMenuButtonRef : undefined}
                               type="button"
-                              aria-label={`Mais ações para ${task.title}`}
+                              aria-label={english ? `More actions for ${task.title}` : `Mais ações para ${task.title}`}
                               aria-haspopup="menu"
                               aria-expanded={contextMenu?.task.id === task.id}
                               disabled={disabled || isSaving}
@@ -274,11 +275,11 @@ export function TaskKanban({
                         </div>
                         <div className="kanban-meta">
                           <span className={`priority priority-${task.priority.toLocaleLowerCase()}`}>
-                            {TASK_PRIORITY_LABELS[task.priority]}
+                            {priorityLabel(task.priority)}
                           </span>
-                          <span>{taskDates(task)}</span>
+                          <span>{taskDates(task, english)}</span>
                         </div>
-                        <div className="kanban-progress" aria-label={`Progresso: ${String(task.progress)}%`}>
+                        <div className="kanban-progress" aria-label={`${english ? "Progress" : "Progresso"}: ${String(task.progress)}%`}>
                           <span style={{ width: `${String(task.progress)}%` }} />
                         </div>
                         <div className="kanban-card-footer">
@@ -287,14 +288,14 @@ export function TaskKanban({
                           {task.assignee === null ? null : <span>{task.assignee}</span>}
                         </div>
                         {task.tags.length === 0 ? null : (
-                          <ul className="kanban-tags" aria-label="Tags">
+                          <ul className="kanban-tags" aria-label={t("kanban.tags")}>
                             {task.tags.map((tag) => <li key={tag}>{tag}</li>)}
                           </ul>
                         )}
                         <label className="kanban-move">
-                          <span>Status</span>
+                          <span>{t("kanban.status")}</span>
                           <select
-                            aria-label={`Status de ${task.title}`}
+                            aria-label={`${english ? "Status of" : "Status de"} ${task.title}`}
                             value={task.status}
                             disabled={disabled || isSaving}
                             onChange={(event) => {
@@ -303,12 +304,12 @@ export function TaskKanban({
                           >
                             {TASK_STATUSES.map((candidate) => (
                               <option value={candidate} key={candidate}>
-                                {TASK_STATUS_LABELS[candidate]}
+                                {statusLabel(candidate)}
                               </option>
                             ))}
                           </select>
                         </label>
-                        {isSaving ? <span className="sr-only" role="status">Salvando status de {task.title}</span> : null}
+                        {isSaving ? <span className="sr-only" role="status">{english ? "Saving status for" : "Salvando status de"} {task.title}</span> : null}
                       </article>
                     );
                   })}
@@ -320,7 +321,7 @@ export function TaskKanban({
       )}
       {contextMenu === null ? null : (
         <ContextMenu
-          ariaLabel={`Ações de ${contextMenu.task.title}`}
+          ariaLabel={`${english ? "Actions for" : "Ações de"} ${contextMenu.task.title}`}
           heading={contextMenu.task.title}
           items={contextMenuItems}
           returnFocusRef={contextMenuButtonRef}

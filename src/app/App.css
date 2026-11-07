@@ -1521,6 +1521,28 @@ kbd { display: inline-block; min-width: 22px; padding: 2px 6px; color: #42526a; 
   box-shadow: 0 8px 22px rgb(16 24 32 / 16%);
 }
 
+.language-menu-popover { width: 194px; padding: 4px; overflow: hidden; }
+.language-menu-popover > button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 18px;
+  align-items: center;
+  width: 100%;
+  min-height: 42px;
+  padding: 6px 8px 6px 10px;
+  color: var(--chrono-text);
+  background: transparent;
+  border: 0;
+  border-left: 2px solid transparent;
+  text-align: left;
+}
+.language-menu-popover > button:hover,
+.language-menu-popover > button:focus-visible { color: var(--chrono-cyan-dark); background: #e9f3f3; outline: none; }
+.language-menu-popover > button.selected { color: var(--chrono-cyan-dark); background: #e5f0f0; border-left-color: var(--chrono-brass); }
+.language-option-copy { display: grid; gap: 1px; min-width: 0; }
+.language-option-copy strong { overflow: hidden; font-size: 12px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+.language-option-copy small { color: #6b7b83; font-size: 9px; font-weight: 700; letter-spacing: 0.08em; }
+.language-option-indicator { color: var(--chrono-brass-dark); font-size: 14px; font-weight: 800; text-align: center; }
+
 .workspace-menu.calendar-settings > .workspace-menu-popover,
 .workspace-menu.template-library > .workspace-menu-popover {
   top: calc(100% + 1px);

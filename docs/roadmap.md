@@ -31,13 +31,13 @@ Não usar percentuais subjetivos. O progresso deve ser demonstrado por entregáv
 
 | Item | Estado |
 | --- | --- |
-| Etapa do produto | candidato v0.2.9 preparado; submissão ao WinGet segue aguardando moderador |
+| Etapa do produto | candidato v0.3.0 preparado; submissão ao WinGet segue aguardando moderador |
 | Fase ativa | Hardening e distribuição Windows |
 | Próxima fase | Aprovação do moderador do WinGet e definição do próximo incremento |
-| Versão da aplicação | `0.2.9` |
+| Versão da aplicação | `0.3.0` |
 | Versão do schema SQLite | `9` |
 | Último commit de referência | `90630f5` — toolchain de frontend conciliado e importação estabilizada |
-| Branch de trabalho | `release/v0.2.9`; candidato local em preparação |
+| Branch de trabalho | `release/v0.3.0`; candidato local em preparação |
 | Checkpoints obrigatórios | A, B, C e D concluídos; E preparado localmente |
 | Funcionalidades de negócio | Core, scheduler, views, reutilização e portabilidade implementados |
 
@@ -1112,9 +1112,8 @@ matriz no host, na VM limpa e no CI Windows.
 - Feriados oficiais são pré-selecionados. Feriados bancários e pontos
   facultativos são exibidos com sua classificação e exigem seleção consciente.
 - Exceções já cadastradas nunca são sobrescritas pela importação.
-- `date-holidays` (atual 3.38.0) é carregada localmente sob demanda; o
-  código é ISC e os dados são CC BY-SA 3.0, com atribuição em
-  `THIRD_PARTY_NOTICES.md`.
+- O catálogo interno calcula localmente feriados nacionais, estaduais e móveis,
+  sem dependência de terceiros em tempo de execução.
 - Nenhuma migration foi necessária: as datas escolhidas usam a entidade de
   exceção existente, preservando compatibilidade com backups do schema 4.
 - Gates aprovados: 84 testes TypeScript/React, 29 testes Rust/SQLite, lint,
@@ -1808,9 +1807,10 @@ matriz no host, na VM limpa e no CI Windows.
 - O README principal foi condensado como página de produto em PT-BR, usando a
   marca oficial, badges verificáveis, downloads permanentes e acesso rápido à
   documentação técnica.
-- `README.en.md` apresenta o mesmo produto em inglês e informa explicitamente
-  que a interface do aplicativo ainda está disponível apenas em português do
-  Brasil.
+- `README.en.md` apresentou o mesmo produto em inglês e, naquele momento,
+  informou explicitamente que a interface do aplicativo ainda estava disponível
+  apenas em português do Brasil. O ADR 032 substitui essa condição: a interface
+  passou a oferecer também inglês com seleção local persistente.
 - A política de branding passou a registrar o uso da marca, badges, links de
   download e topics no GitHub.
 - A apresentação inicial declarou de forma transparente a ausência de licença;
